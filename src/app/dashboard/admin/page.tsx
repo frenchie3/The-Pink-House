@@ -318,7 +318,7 @@ export default async function AdminDashboard() {
           </Tabs>
 
           {/* Admin Navigation */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
             <Link
               href="/dashboard/admin/users"
               className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex items-center"
@@ -345,6 +345,23 @@ export default async function AdminDashboard() {
                 <h3 className="font-semibold text-gray-900">System Settings</h3>
                 <p className="text-sm text-gray-500">
                   Configure system parameters
+                </p>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/admin/cubbies"
+              className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex items-center"
+            >
+              <div className="bg-pink-100 p-3 rounded-lg mr-4">
+                <CreditCard className="h-6 w-6 text-pink-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  Cubby Management
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Add, edit, or deactivate cubbies
                 </p>
               </div>
             </Link>

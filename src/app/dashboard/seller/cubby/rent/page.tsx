@@ -49,7 +49,7 @@ export default function RentCubbyPage() {
       // Get available cubby
       const { data: availableCubby, error: cubbyError } = await supabase
         .from("cubbies")
-        .select("id, cubby_number")
+        .select("id, cubby_number, location")
         .eq("status", "available")
         .limit(1)
         .single();
