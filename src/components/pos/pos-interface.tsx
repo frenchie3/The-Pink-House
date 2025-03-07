@@ -184,10 +184,10 @@ export default function POSInterface({
     setIsScanning(false);
   };
 
-  // Process payment and complete sale
+  // Process payment and complete sale (fake payment processing)
   const processSale = async (paymentMethod: string) => {
     try {
-      // 1. Create sale record
+      // 1. Create sale record - payment always succeeds
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert({

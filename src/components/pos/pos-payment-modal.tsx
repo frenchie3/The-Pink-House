@@ -51,13 +51,13 @@ export default function POSPaymentModal({
 
     setIsProcessing(true);
 
-    // Simulate payment processing delay
+    // Fake payment processing - always succeeds
     setTimeout(() => {
       onProcessPayment(paymentMethod);
       setIsProcessing(false);
       setPaymentMethod(null);
       setCashReceived("");
-    }, 1000);
+    }, 500);
   };
 
   return (

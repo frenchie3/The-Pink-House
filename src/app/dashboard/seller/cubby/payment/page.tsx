@@ -64,11 +64,9 @@ export default function CubbyPaymentPage() {
     setIsProcessing(true);
 
     try {
-      // In a real app, this would integrate with a payment processor
-      // For demo purposes, we'll just update the payment status
-
-      // Simulate payment processing delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Fake payment processing - always succeeds without actual payment
+      // Simulate a brief delay for user experience
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Update payment status in database
       const { error } = await supabase
@@ -83,7 +81,7 @@ export default function CubbyPaymentPage() {
       // Redirect after a short delay
       setTimeout(() => {
         router.push("/dashboard/seller/cubby");
-      }, 3000);
+      }, 1000);
     } catch (err) {
       console.error("Payment processing error:", err);
       setError(

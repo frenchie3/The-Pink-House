@@ -100,8 +100,8 @@ export default function ExtendCubbyPage() {
           rental_fee:
             currentRental.rental_fee +
             rentalFees[rentalPeriod as keyof typeof rentalFees],
-          // Keep payment status as pending for the extension
-          payment_status: "pending",
+          // Auto-set to paid for demo purposes
+          payment_status: "paid",
         })
         .eq("id", currentRental.id);
 

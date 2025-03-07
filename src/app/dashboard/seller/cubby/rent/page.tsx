@@ -80,7 +80,7 @@ export default function RentCubbyPage() {
           end_date: endDate.toISOString(),
           rental_fee: rentalFees[rentalPeriod as keyof typeof rentalFees],
           status: "active",
-          payment_status: "pending", // This would be updated after payment processing
+          payment_status: "paid", // Auto-set to paid for demo purposes
         })
         .select();
 
