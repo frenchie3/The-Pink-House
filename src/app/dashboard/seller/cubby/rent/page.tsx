@@ -46,17 +46,50 @@ export default function RentCubbyPage() {
         throw new Error("User not authenticated");
       }
 
-      // Get available cubby
-      const { data: availableCubby, error: cubbyError } = await supabase
+      // First check if there are any available cubbies
+      const { count, error: countError } = await supabase
         .from("cubbies")
-        .select("id, cubby_number, location")
-        .eq("status", "available")
-        .limit(1)
-        .single();
+        .select("*", { count: "exact", head: true })
+        .eq("status", "available");
 
-      if (cubbyError || !availableCubby) {
-        throw new Error("No available cubbies found");
+      if (countError) {
+        console.error("Error checking available cubbies:", countError);
+        throw new Error("Error checking cubby availability");
       }
+
+      if (count === 0) {
+        throw new Error(
+          "No available cubbies found. Please contact an administrator.",
+        );
+      }
+
+      // Get available cubby with detailed logging
+      console.log("Attempting to fetch available cubbies...");
+      const { data: availableCubbies, error: cubbiesError } = await supabase
+        .from("cubbies")
+        .select("id, cubby_number, location, status")
+        .eq("status", "available");
+
+      console.log("Available cubbies query result:", {
+        availableCubbies,
+        cubbiesError,
+      });
+
+      if (cubbiesError) {
+        console.error("Error fetching available cubbies:", cubbiesError);
+        throw new Error(`Database error: ${cubbiesError.message}`);
+      }
+
+      if (!availableCubbies || availableCubbies.length === 0) {
+        console.error("No available cubbies found in the database");
+        throw new Error(
+          "No available cubbies found. Please contact an administrator.",
+        );
+      }
+
+      // Select the first available cubby
+      const availableCubby = availableCubbies[0];
+      console.log("Selected cubby for rental:", availableCubby);
 
       // Calculate rental dates
       const startDate = new Date();
@@ -89,10 +122,20 @@ export default function RentCubbyPage() {
       }
 
       // Update cubby status to occupied
-      const { error: updateError } = await supabase
+      console.log(
+        "Updating cubby status to occupied for cubby ID:",
+        availableCubby.id,
+      );
+      const { data: updatedCubby, error: updateError } = await supabase
         .from("cubbies")
-        .update({ status: "occupied" })
-        .eq("id", availableCubby.id);
+        .update({
+          status: "occupied",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", availableCubby.id)
+        .select();
+
+      console.log("Cubby update result:", { updatedCubby, updateError });
 
       if (updateError) {
         throw new Error("Failed to update cubby status");

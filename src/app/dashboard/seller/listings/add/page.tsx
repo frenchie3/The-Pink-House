@@ -176,9 +176,16 @@ export default async function AddListingPage({
     }
 
     revalidatePath("/dashboard/seller/listings");
+    // Get the newly created item
+    const { data: newItem } = await supabase
+      .from("inventory_items")
+      .select("id")
+      .eq("sku", sku)
+      .single();
+
     // Redirect to success page with item details
     return redirect(
-      `/dashboard/seller/listings/add/success?item_id=${rental[0].id}&name=${encodeURIComponent(name)}&type=${listingType}`,
+      `/dashboard/seller/listings/add/success?item_id=${newItem?.id || ""}&name=${encodeURIComponent(name)}&type=${formData.get("listing_type") || "self"}`,
     );
   }
 
