@@ -32,11 +32,11 @@ export default function POSItemGrid({
   onAddToCart,
   activeTab,
 }: POSItemGridProps) {
-  // Format price with currency symbol
+  // Format price with NZD currency symbol
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-NZ", {
       style: "currency",
-      currency: "USD",
+      currency: "NZD",
     }).format(price);
   };
 
@@ -44,8 +44,6 @@ export default function POSItemGrid({
   const getStockStatus = (quantity: number) => {
     if (quantity <= 0) {
       return { label: "Out of Stock", variant: "destructive" };
-    } else if (quantity < 5) {
-      return { label: "Low Stock", variant: "warning" };
     } else {
       return { label: "In Stock", variant: "success" };
     }

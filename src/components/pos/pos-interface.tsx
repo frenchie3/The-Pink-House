@@ -126,11 +126,8 @@ export default function POSInterface({
 
     setFilteredItems(filtered);
 
-    // Check for low stock items
-    const lowStockItems = inventoryItems
-      .filter((item) => item.quantity > 0 && item.quantity < 5)
-      .map((item) => item.name);
-    setLowStockAlerts(lowStockItems);
+    // No longer checking for low stock items as most sellers will only have one item
+    setLowStockAlerts([]);
   }, [searchQuery, selectedCategory, selectedCubby, inventoryItems]);
 
   // Handle adding item to cart
@@ -321,23 +318,7 @@ export default function POSInterface({
               )}
             </div>
 
-            {/* Low Stock Alerts */}
-            {lowStockAlerts.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
-                <div className="flex items-start">
-                  <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-2" />
-                  <div>
-                    <h4 className="text-sm font-medium text-amber-800">
-                      Low Stock Alert
-                    </h4>
-                    <p className="text-xs text-amber-700 mt-1">
-                      The following items are running low:{" "}
-                      {lowStockAlerts.join(", ")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Low Stock Alerts removed as most sellers will only have one item */}
 
             {/* Tabs for different views */}
             <Tabs

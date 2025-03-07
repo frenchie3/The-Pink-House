@@ -293,11 +293,19 @@ export default function CubbyPaymentPage() {
                           <p className="font-medium">
                             {new Date(
                               rentalDetails.start_date,
-                            ).toLocaleDateString()}{" "}
+                            ).toLocaleDateString("en-NZ", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })}{" "}
                             to{" "}
                             {new Date(
                               rentalDetails.end_date,
-                            ).toLocaleDateString()}
+                            ).toLocaleDateString("en-NZ", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })}
                           </p>
                         </div>
 

@@ -31,24 +31,48 @@ export default async function StaffDashboard() {
     return redirect("/sign-in");
   }
 
-  // Fetch summary data
-  const { data: inventoryItems } = await supabase
+  // Fetch summary data with proper count queries
+  const { data: inventoryItems, error: inventoryError } = await supabase
     .from("inventory_items")
     .select("*")
     .order("date_added", { ascending: false })
     .limit(10);
 
-  const { data: cubbies } = await supabase.from("cubbies").select("*");
+  const { data: cubbies, error: cubbiesError } = await supabase
+    .from("cubbies")
+    .select("*");
 
-  const { data: cubbyRentals } = await supabase
+  const { data: cubbyRentals, error: rentalsError } = await supabase
     .from("cubby_rentals")
     .select("*, cubby:cubbies(*), seller:users(name, full_name)")
     .order("end_date", { ascending: true });
 
-  const { data: sellers } = await supabase
+  const { data: sellers, error: sellersError } = await supabase
     .from("users")
     .select("*")
     .eq("role", "seller");
+
+  // Get total inventory count separately for accurate count
+  const { count: totalInventoryCount, error: countError } = await supabase
+    .from("inventory_items")
+    .select("*", { count: "exact", head: true });
+
+  // Log any errors for debugging
+  if (
+    inventoryError ||
+    cubbiesError ||
+    rentalsError ||
+    sellersError ||
+    countError
+  ) {
+    console.error("Error fetching staff dashboard data:", {
+      inventoryError,
+      cubbiesError,
+      rentalsError,
+      sellersError,
+      countError,
+    });
+  }
 
   // Calculate stats
   const availableCubbies =
@@ -109,7 +133,7 @@ export default async function StaffDashboard() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-3xl font-bold">
-                    {inventoryItems?.length || 0}
+                    {totalInventoryCount || 0}
                   </div>
                   <Tag className="h-8 w-8 text-pink-600" />
                 </div>
@@ -340,7 +364,11 @@ export default async function StaffDashboard() {
                                 <td className="py-3 px-4">
                                   {new Date(
                                     rental.start_date,
-                                  ).toLocaleDateString()}
+                                  ).toLocaleDateString("en-NZ", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  })}
                                 </td>
                                 <td className="py-3 px-4">
                                   <span
@@ -352,7 +380,11 @@ export default async function StaffDashboard() {
                                   >
                                     {new Date(
                                       rental.end_date,
-                                    ).toLocaleDateString()}
+                                    ).toLocaleDateString("en-NZ", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })}
                                     {isExpiringSoon && ` (${diffDays} days)`}
                                   </span>
                                 </td>
@@ -437,9 +469,14 @@ export default async function StaffDashboard() {
                               </td>
                               <td className="py-3 px-4">{seller.email}</td>
                               <td className="py-3 px-4">
-                                {new Date(
-                                  seller.created_at,
-                                ).toLocaleDateString()}
+                                {new Date(seller.created_at).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  },
+                                )}
                               </td>
                               <td className="py-3 px-4">—</td>
                               <td className="py-3 px-4">0</td>

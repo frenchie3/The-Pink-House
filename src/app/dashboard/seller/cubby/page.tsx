@@ -112,10 +112,24 @@ export default async function SellerCubbyPage() {
                             {rental.cubby?.cubby_number}
                           </td>
                           <td className="py-3 px-4">
-                            {new Date(rental.start_date).toLocaleDateString()}
+                            {new Date(rental.start_date).toLocaleDateString(
+                              "en-NZ",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              },
+                            )}
                           </td>
                           <td className="py-3 px-4">
-                            {new Date(rental.end_date).toLocaleDateString()}
+                            {new Date(rental.end_date).toLocaleDateString(
+                              "en-NZ",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              },
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             {formatPrice(rental.rental_fee)}

@@ -165,7 +165,14 @@ export default async function SellerEarningsPage() {
                           className="border-b hover:bg-gray-50"
                         >
                           <td className="py-3 px-4">
-                            {new Date(earning.created_at).toLocaleDateString()}
+                            {new Date(earning.created_at).toLocaleDateString(
+                              "en-NZ",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              },
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             {earning.sale_item?.inventory_item?.name ||
@@ -239,7 +246,14 @@ export default async function SellerEarningsPage() {
                           className="border-b hover:bg-gray-50"
                         >
                           <td className="py-3 px-4">
-                            {new Date(payout.created_at).toLocaleDateString()}
+                            {new Date(payout.created_at).toLocaleDateString(
+                              "en-NZ",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              },
+                            )}
                           </td>
                           <td className="py-3 px-4 font-medium">
                             {formatPrice(payout.amount)}
@@ -262,9 +276,14 @@ export default async function SellerEarningsPage() {
                           </td>
                           <td className="py-3 px-4">
                             {payout.payout_date
-                              ? new Date(
-                                  payout.payout_date,
-                                ).toLocaleDateString()
+                              ? new Date(payout.payout_date).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  },
+                                )
                               : "—"}
                           </td>
                           <td className="py-3 px-4">{payout.notes || "—"}</td>

@@ -73,8 +73,23 @@ export default function CubbyRentalCard({
                       Rental Period
                     </h3>
                     <p className="text-lg">
-                      {new Date(activeCubby.start_date).toLocaleDateString()} -{" "}
-                      {new Date(activeCubby.end_date).toLocaleDateString()}
+                      {new Date(activeCubby.start_date).toLocaleDateString(
+                        "en-NZ",
+                        {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        },
+                      )}{" "}
+                      -{" "}
+                      {new Date(activeCubby.end_date).toLocaleDateString(
+                        "en-NZ",
+                        {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        },
+                      )}
                     </p>
                   </div>
                   <div>

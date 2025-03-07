@@ -31,11 +31,11 @@ export default function POSPaymentModal({
   const [cashReceived, setCashReceived] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Format price with currency symbol
+  // Format price with NZD currency symbol
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-NZ", {
       style: "currency",
-      currency: "USD",
+      currency: "NZD",
     }).format(price);
   };
 

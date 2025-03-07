@@ -15,7 +15,7 @@ interface RoleGuardProps {
 export default function RoleGuard({
   children,
   allowedRoles,
-  redirectTo = "/sign-in",
+  redirectTo = "/",
 }: RoleGuardProps) {
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
@@ -30,7 +30,7 @@ export default function RoleGuard({
         } = await supabase.auth.getUser();
 
         if (authError || !user) {
-          redirect(redirectTo);
+          window.location.href = redirectTo;
           return;
         }
 
@@ -42,7 +42,7 @@ export default function RoleGuard({
 
         if (userError || !userData) {
           console.error("Error fetching user role:", userError);
-          redirect(redirectTo);
+          window.location.href = redirectTo;
           return;
         }
 
@@ -50,14 +50,14 @@ export default function RoleGuard({
         const hasPermission = allowedRoles.includes(userRole);
 
         if (!hasPermission) {
-          redirect("/dashboard");
+          window.location.href = "/";
           return;
         }
 
         setHasAccess(true);
       } catch (error) {
         console.error("Error in role guard:", error);
-        redirect(redirectTo);
+        window.location.href = redirectTo;
       } finally {
         setLoading(false);
       }

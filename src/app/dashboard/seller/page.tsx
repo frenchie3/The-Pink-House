@@ -168,7 +168,14 @@ export default async function SellerDashboard() {
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           Expires:{" "}
-                          {new Date(activeCubby.end_date).toLocaleDateString()}
+                          {new Date(activeCubby.end_date).toLocaleDateString(
+                            "en-NZ",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            },
+                          )}
                         </div>
                       </>
                     ) : (
@@ -316,11 +323,19 @@ export default async function SellerDashboard() {
                             <p className="text-lg">
                               {new Date(
                                 activeCubby.start_date,
-                              ).toLocaleDateString()}{" "}
+                              ).toLocaleDateString("en-NZ", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              })}{" "}
                               -{" "}
                               {new Date(
                                 activeCubby.end_date,
-                              ).toLocaleDateString()}
+                              ).toLocaleDateString("en-NZ", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              })}
                             </p>
                           </div>
                           <div>
@@ -445,7 +460,11 @@ export default async function SellerDashboard() {
                               <td className="py-3 px-4">
                                 {new Date(
                                   earning.created_at,
-                                ).toLocaleDateString()}
+                                ).toLocaleDateString("en-NZ", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                })}
                               </td>
                               <td className="py-3 px-4">
                                 Item #{earning.sale_item_id.substring(0, 8)}
@@ -511,7 +530,13 @@ export default async function SellerDashboard() {
                                 <span className="text-xs text-gray-500">
                                   {new Date(
                                     notification.created_at,
-                                  ).toLocaleString()}
+                                  ).toLocaleString("en-NZ", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </span>
                                 <Button variant="ghost" size="sm">
                                   Mark as Read

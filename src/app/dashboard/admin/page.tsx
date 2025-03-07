@@ -29,22 +29,32 @@ export default async function AdminDashboard() {
     return redirect("/sign-in");
   }
 
-  // Fetch summary data
-  const { data: userCount } = await supabase
+  // Fetch summary data with proper count queries
+  const { count: userCount, error: userError } = await supabase
     .from("users")
-    .select("id", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true });
 
-  const { data: inventoryCount } = await supabase
+  const { count: inventoryCount, error: inventoryError } = await supabase
     .from("inventory_items")
-    .select("id", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true });
 
-  const { data: salesCount } = await supabase
+  const { count: salesCount, error: salesError } = await supabase
     .from("sales")
-    .select("id", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true });
 
-  const { data: cubbyCount } = await supabase
+  const { count: cubbyCount, error: cubbyError } = await supabase
     .from("cubbies")
-    .select("id", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true });
+
+  // Log any errors for debugging
+  if (userError || inventoryError || salesError || cubbyError) {
+    console.error("Error fetching dashboard counts:", {
+      userError,
+      inventoryError,
+      salesError,
+      cubbyError,
+    });
+  }
 
   // Fetch system settings
   const { data: systemSettings } = await supabase
@@ -89,9 +99,7 @@ export default async function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <div className="text-3xl font-bold">
-                    {userCount?.count || 0}
-                  </div>
+                  <div className="text-3xl font-bold">{userCount || 0}</div>
                   <Users className="h-8 w-8 text-pink-600" />
                 </div>
               </CardContent>
@@ -106,7 +114,7 @@ export default async function AdminDashboard() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-3xl font-bold">
-                    {inventoryCount?.count || 0}
+                    {inventoryCount || 0}
                   </div>
                   <Package className="h-8 w-8 text-pink-600" />
                 </div>
@@ -121,9 +129,7 @@ export default async function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <div className="text-3xl font-bold">
-                    {salesCount?.count || 0}
-                  </div>
+                  <div className="text-3xl font-bold">{salesCount || 0}</div>
                   <ShoppingBag className="h-8 w-8 text-pink-600" />
                 </div>
               </CardContent>
@@ -137,9 +143,7 @@ export default async function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <div className="text-3xl font-bold">
-                    {cubbyCount?.count || 0}
-                  </div>
+                  <div className="text-3xl font-bold">{cubbyCount || 0}</div>
                   <CreditCard className="h-8 w-8 text-pink-600" />
                 </div>
               </CardContent>

@@ -193,7 +193,14 @@ export default async function AdminCubbiesPage() {
                           "Unknown"
                         : "—";
                       const endDate = isRented
-                        ? new Date(rental.end_date).toLocaleDateString()
+                        ? new Date(rental.end_date).toLocaleDateString(
+                            "en-NZ",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            },
+                          )
                         : "—";
 
                       return (
