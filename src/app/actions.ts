@@ -53,6 +53,8 @@ export const signUpAction = async (formData: FormData) => {
         token_identifier: user.id,
         role: "seller",
         created_at: new Date().toISOString(),
+        listing_preference: "self",
+        commission_rate: 0.15,
       });
 
       if (updateError) {

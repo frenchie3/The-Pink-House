@@ -26,7 +26,7 @@ export default async function DonationsPage() {
   return (
     <>
       <DashboardNavbar />
-      <main className="w-full bg-gray-50 min-h-screen">
+      <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">

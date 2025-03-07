@@ -176,17 +176,16 @@ export default async function AddListingPage({
     }
 
     revalidatePath("/dashboard/seller/listings");
-    return encodedRedirect(
-      "success",
-      "/dashboard/seller/listings",
-      "Item added successfully",
+    // Redirect to success page with item details
+    return redirect(
+      `/dashboard/seller/listings/add/success?item_id=${rental[0].id}&name=${encodeURIComponent(name)}&type=${listingType}`,
     );
   }
 
   return (
     <SellerGuard>
       <SellerNavbar />
-      <main className="w-full bg-gray-50 min-h-screen">
+      <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
@@ -306,6 +305,28 @@ export default async function AddListingPage({
                         <option value="Fair">Fair</option>
                         <option value="Poor">Poor</option>
                       </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="listing_type">Listing Type</Label>
+                      <select
+                        id="listing_type"
+                        name="listing_type"
+                        className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      >
+                        <option value="self">
+                          Self-Listing (15% commission)
+                        </option>
+                        <option value="staff">
+                          Staff-Managed (25% commission)
+                        </option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Self-listing: You manage the item details and photos.
+                        <br />
+                        Staff-managed: Our staff will handle the listing process
+                        for you.
+                      </p>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">

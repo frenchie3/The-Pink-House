@@ -4,8 +4,9 @@ import { createClient } from "../../../../../supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, Calendar, Clock } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import CubbyRentalCard from "@/components/seller/cubby-rental-card";
 
 export default async function SellerCubbyPage() {
   const supabase = await createClient();
@@ -43,7 +44,7 @@ export default async function SellerCubbyPage() {
   return (
     <SellerGuard>
       <SellerNavbar />
-      <main className="w-full bg-gray-50 min-h-screen">
+      <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
@@ -55,179 +56,20 @@ export default async function SellerCubbyPage() {
             </div>
 
             {!activeCubby && (
-              <Button className="bg-pink-600 hover:bg-pink-700">
-                <CreditCard className="mr-2 h-5 w-5" />
-                Rent a Cubby
+              <Button className="bg-pink-600 hover:bg-pink-700" asChild>
+                <a href="/dashboard/seller/cubby/rent">
+                  <CreditCard className="mr-2 h-5 w-5" />
+                  Rent a Cubby
+                </a>
               </Button>
             )}
           </header>
 
-          {activeCubby ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Cubby Details */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Cubby Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-500">
-                              Cubby Number
-                            </h3>
-                            <p className="text-2xl font-bold">
-                              {activeCubby.cubby?.cubby_number}
-                            </p>
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-500">
-                              Location
-                            </h3>
-                            <p className="text-lg">
-                              {activeCubby.cubby?.location || "Main Floor"}
-                            </p>
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-500">
-                              Status
-                            </h3>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Active
-                            </span>
-                          </div>
-                        </div>
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-500">
-                              Rental Period
-                            </h3>
-                            <p className="text-lg">
-                              {new Date(
-                                activeCubby.start_date,
-                              ).toLocaleDateString()}{" "}
-                              -{" "}
-                              {new Date(
-                                activeCubby.end_date,
-                              ).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-500">
-                              Rental Fee
-                            </h3>
-                            <p className="text-lg">
-                              {formatPrice(activeCubby.rental_fee)}
-                            </p>
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-500">
-                              Payment Status
-                            </h3>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              {activeCubby.payment_status
-                                .charAt(0)
-                                .toUpperCase() +
-                                activeCubby.payment_status.slice(1)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="border-t pt-6">
-                        <h3 className="text-lg font-medium mb-4">
-                          Rental Actions
-                        </h3>
-                        <div className="flex flex-wrap gap-4">
-                          <Button className="bg-pink-600 hover:bg-pink-700">
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Extend Rental
-                          </Button>
-                          <Button variant="outline">
-                            <Clock className="mr-2 h-4 w-4" />
-                            View Rental History
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Cubby Status */}
-              <div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Rental Status</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="text-sm font-medium text-gray-500">
-                          Days Remaining
-                        </h3>
-                        <div className="flex items-end gap-2">
-                          <p className="text-3xl font-bold">{daysRemaining}</p>
-                          <p className="text-sm text-gray-500 mb-1">days</p>
-                        </div>
-                        {daysRemaining <= 7 && (
-                          <p className="text-xs text-amber-600 mt-1">
-                            Your rental will expire soon. Consider extending it.
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">
-                          Rental Options
-                        </h3>
-                        <div className="space-y-2">
-                          <div className="p-3 border rounded-lg flex justify-between items-center">
-                            <div>
-                              <p className="font-medium">Weekly Rental</p>
-                              <p className="text-sm text-gray-500">7 days</p>
-                            </div>
-                            <p className="font-medium">{formatPrice(10)}</p>
-                          </div>
-                          <div className="p-3 border rounded-lg flex justify-between items-center">
-                            <div>
-                              <p className="font-medium">Monthly Rental</p>
-                              <p className="text-sm text-gray-500">30 days</p>
-                            </div>
-                            <p className="font-medium">{formatPrice(35)}</p>
-                          </div>
-                          <div className="p-3 border rounded-lg flex justify-between items-center bg-pink-50 border-pink-200">
-                            <div>
-                              <p className="font-medium">Quarterly Rental</p>
-                              <p className="text-sm text-gray-500">90 days</p>
-                            </div>
-                            <p className="font-medium">{formatPrice(90)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <CreditCard className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500">
-                  You don't have an active cubby rental
-                </p>
-                <p className="text-sm text-gray-400 mt-1 mb-6">
-                  Rent a cubby to display your items in our shop
-                </p>
-                <Button className="bg-pink-600 hover:bg-pink-700">
-                  Rent a Cubby
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          {/* Import and use the CubbyRentalCard component */}
+          <CubbyRentalCard
+            activeCubby={activeCubby}
+            daysRemaining={daysRemaining}
+          />
 
           {/* Rental History */}
           {cubbyRentals && cubbyRentals.length > 0 && (

@@ -17,7 +17,7 @@ export default async function ReportsPage() {
   return (
     <>
       <DashboardNavbar />
-      <main className="w-full bg-gray-50 min-h-screen">
+      <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <header className="mb-8">
