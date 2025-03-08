@@ -62,7 +62,7 @@ export default async function AdminDashboard() {
     .select("*");
 
   return (
-    <RoleGuard allowedRoles={["admin"]}>
+    <>
       <DashboardNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
@@ -389,6 +389,6 @@ export default async function AdminDashboard() {
           </div>
         </div>
       </main>
-    </RoleGuard>
+    </>
   );
 }

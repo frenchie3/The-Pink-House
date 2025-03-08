@@ -181,6 +181,7 @@ export default async function AddListingPage({
       is_active: true,
       listing_type: cubbyRental.listing_type || "self",
       commission_rate: cubbyRental.commission_rate || 0.15,
+      staff_reviewed: false, // New field to track if staff has reviewed the item
     });
 
     if (error) {
@@ -345,7 +346,7 @@ export default async function AddListingPage({
                         </p>
                         <p className="text-xs text-gray-500 mt-2">
                           {activeCubby.listing_type === "self"
-                            ? "You are responsible for managing item details and photos."
+                            ? "You are responsible for managing all item details and photos. You can edit items until they are reviewed by staff."
                             : "Our staff will handle the listing process for you."}
                         </p>
                         <input

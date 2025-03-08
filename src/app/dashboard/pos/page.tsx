@@ -28,7 +28,7 @@ export default async function POSPage() {
     .order("name", { ascending: true });
 
   return (
-    <RoleGuard allowedRoles={["admin", "staff"]}>
+    <>
       <DashboardNavbar />
       <main className="w-full bg-gray-50 min-h-screen">
         <POSInterface
@@ -37,6 +37,6 @@ export default async function POSPage() {
           userId={user.id}
         />
       </main>
-    </RoleGuard>
+    </>
   );
 }

@@ -62,10 +62,12 @@ export type Database = {
       }
       cubby_rentals: {
         Row: {
+          commission_rate: string | null
           created_at: string | null
           cubby_id: string
           end_date: string
           id: string
+          listing_type: string | null
           payment_date: string | null
           payment_status: string
           rental_fee: number
@@ -76,10 +78,12 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          commission_rate?: string | null
           created_at?: string | null
           cubby_id: string
           end_date: string
           id?: string
+          listing_type?: string | null
           payment_date?: string | null
           payment_status?: string
           rental_fee: number
@@ -90,10 +94,12 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          commission_rate?: string | null
           created_at?: string | null
           cubby_id?: string
           end_date?: string
           id?: string
+          listing_type?: string | null
           payment_date?: string | null
           payment_status?: string
           rental_fee?: number
@@ -142,6 +148,7 @@ export type Database = {
           quantity: number
           seller_id: string | null
           sku: string
+          staff_reviewed: boolean | null
         }
         Insert: {
           barcode?: string | null
@@ -164,6 +171,7 @@ export type Database = {
           quantity?: number
           seller_id?: string | null
           sku: string
+          staff_reviewed?: boolean | null
         }
         Update: {
           barcode?: string | null
@@ -186,6 +194,7 @@ export type Database = {
           quantity?: number
           seller_id?: string | null
           sku?: string
+          staff_reviewed?: boolean | null
         }
         Relationships: [
           {
@@ -553,9 +562,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      mark_item_reviewed: {
+        Args: {
+          item_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      listing_types: "self" | "staff"
       user_role: "admin" | "staff" | "seller"
     }
     CompositeTypes: {

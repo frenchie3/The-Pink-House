@@ -90,7 +90,7 @@ export default async function AdminCubbiesPage() {
   }
 
   return (
-    <RoleGuard allowedRoles={["admin"]}>
+    <>
       <DashboardNavbar />
       <main className="w-full bg-gray-50 min-h-screen">
         <div className="container mx-auto px-4 py-8">
@@ -299,6 +299,6 @@ export default async function AdminCubbiesPage() {
           </Card>
         </div>
       </main>
-    </RoleGuard>
+    </>
   );
 }

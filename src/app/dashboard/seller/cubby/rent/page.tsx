@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import SellerNavbar from "@/components/seller-navbar";
-import SellerGuard from "@/components/seller-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -195,7 +194,7 @@ export default function RentCubbyPage() {
   };
 
   return (
-    <SellerGuard>
+    <>
       <SellerNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
@@ -317,8 +316,9 @@ export default function RentCubbyPage() {
                               <div>
                                 <p className="font-medium">Self-Listing</p>
                                 <p className="text-sm text-gray-500 mb-2">
-                                  You'll enter item details yourself (name,
-                                  description, price, photos)
+                                  You'll enter all item details yourself (name,
+                                  description, price, photos). You can edit
+                                  items until they are reviewed by staff.
                                 </p>
                                 <div className="flex items-center text-sm text-pink-600">
                                   <span className="font-medium">
@@ -460,6 +460,6 @@ export default function RentCubbyPage() {
           </div>
         </div>
       </main>
-    </SellerGuard>
+    </>
   );
 }

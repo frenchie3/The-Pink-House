@@ -1,5 +1,4 @@
 import SellerNavbar from "@/components/seller-navbar";
-import SellerGuard from "@/components/seller-guard";
 import { createClient } from "../../../../../supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ export default async function SellerCubbyPage() {
   }
 
   return (
-    <SellerGuard>
+    <>
       <SellerNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
@@ -182,6 +181,6 @@ export default async function SellerCubbyPage() {
           )}
         </div>
       </main>
-    </SellerGuard>
+    </>
   );
 }

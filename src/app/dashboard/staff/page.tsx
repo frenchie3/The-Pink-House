@@ -1,5 +1,4 @@
 import DashboardNavbar from "@/components/dashboard-navbar";
-import RoleGuard from "@/components/role-guard";
 import { createClient } from "../../../../supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -90,7 +89,7 @@ export default async function StaffDashboard() {
     }).length || 0;
 
   return (
-    <RoleGuard allowedRoles={["admin", "staff"]}>
+    <>
       <DashboardNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
@@ -280,9 +279,33 @@ export default async function StaffDashboard() {
                                   : "Shop"}
                               </td>
                               <td className="py-3 px-4">
-                                <Button variant="ghost" size="sm">
-                                  Edit
-                                </Button>
+                                <div className="flex space-x-2">
+                                  <Button variant="ghost" size="sm">
+                                    Edit
+                                  </Button>
+                                  {item.listing_type === "self" &&
+                                    !item.staff_reviewed && (
+                                      <form
+                                        action={async (formData) => {
+                                          "use server";
+                                          const supabase = await createClient();
+                                          await supabase.rpc(
+                                            "mark_item_reviewed",
+                                            { item_id: item.id },
+                                          );
+                                        }}
+                                      >
+                                        <Button
+                                          type="submit"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-green-600"
+                                        >
+                                          Review & Approve
+                                        </Button>
+                                      </form>
+                                    )}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -578,6 +601,6 @@ export default async function StaffDashboard() {
           </div>
         </div>
       </main>
-    </RoleGuard>
+    </>
   );
 }

@@ -46,7 +46,7 @@ export default async function SellerEarningsPage() {
     payouts?.reduce((sum, payout) => sum + payout.amount, 0) || 0;
 
   return (
-    <SellerGuard>
+    <>
       <SellerNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
@@ -305,6 +305,6 @@ export default async function SellerEarningsPage() {
           </Card>
         </div>
       </main>
-    </SellerGuard>
+    </>
   );
 }

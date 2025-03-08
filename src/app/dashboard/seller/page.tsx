@@ -69,7 +69,7 @@ export default async function SellerDashboard() {
   );
 
   return (
-    <SellerGuard>
+    <>
       <SellerNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
@@ -612,6 +612,6 @@ export default async function SellerDashboard() {
           </div>
         </div>
       </main>
-    </SellerGuard>
+    </>
   );
 }

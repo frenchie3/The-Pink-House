@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SellerNavbar from "@/components/seller-navbar";
-import SellerGuard from "@/components/seller-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, PlusCircle, ArrowLeft } from "lucide-react";
@@ -28,7 +27,7 @@ export default function AddItemSuccessPage() {
   }, [itemName, listingType]);
 
   return (
-    <SellerGuard>
+    <>
       <SellerNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-8">
@@ -45,9 +44,14 @@ export default function AddItemSuccessPage() {
                   <>
                     Your item <strong>"{itemDetails.name}"</strong> has been
                     added to your inventory.
-                    {itemDetails.type === "staff" && (
+                    {itemDetails?.type === "staff" ? (
                       <span className="block mt-2 text-amber-600">
                         Our staff will review and finalize your listing soon.
+                      </span>
+                    ) : (
+                      <span className="block mt-2 text-amber-600">
+                        You can continue to edit this item until you bring it to
+                        the shop for staff review.
                       </span>
                     )}
                   </>
@@ -77,6 +81,6 @@ export default function AddItemSuccessPage() {
           </Card>
         </div>
       </main>
-    </SellerGuard>
+    </>
   );
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "../../supabase/client";
-import { redirect } from "next/navigation";
 import { UserRole } from "@/types/roles";
 import { Loader2 } from "lucide-react";
 

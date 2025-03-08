@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "../../supabase/client";
-import { redirect } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 interface SellerGuardProps {
@@ -23,7 +22,7 @@ export default function SellerGuard({ children }: SellerGuardProps) {
         } = await supabase.auth.getUser();
 
         if (authError || !user) {
-          redirect("/sign-in");
+          window.location.href = "/sign-in";
           return;
         }
 
@@ -35,19 +34,19 @@ export default function SellerGuard({ children }: SellerGuardProps) {
 
         if (userError || !userData) {
           console.error("Error fetching user role:", userError);
-          redirect("/sign-in");
+          window.location.href = "/sign-in";
           return;
         }
 
         if (userData.role !== "seller") {
-          redirect("/dashboard");
+          window.location.href = "/dashboard";
           return;
         }
 
         setHasAccess(true);
       } catch (error) {
         console.error("Error in seller guard:", error);
-        redirect("/sign-in");
+        window.location.href = "/sign-in";
       } finally {
         setLoading(false);
       }
