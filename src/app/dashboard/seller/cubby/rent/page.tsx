@@ -7,15 +7,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, Calendar, Clock, CheckCircle2 } from "lucide-react";
+import {
+  CreditCard,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../../../../supabase/client";
+import { Input } from "@/components/ui/input";
 
 export default function RentCubbyPage() {
   const [rentalPeriod, setRentalPeriod] = useState("monthly");
   const [listingType, setListingType] = useState("self");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [availableCubbies, setAvailableCubbies] = useState<any[]>([]);
+  const [selectedCubby, setSelectedCubby] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -31,6 +42,13 @@ export default function RentCubbyPage() {
     self: 0.15, // 15% for self-listing (default)
     staff: 0.25, // 25% for staff-managed listing (default)
   });
+
+  // Set default start date to today
+  useEffect(() => {
+    const today = new Date();
+    const formattedDate = today.toISOString().split("T")[0];
+    setStartDate(formattedDate);
+  }, []);
 
   useEffect(() => {
     // Fetch commission rates from system settings
@@ -58,10 +76,105 @@ export default function RentCubbyPage() {
     fetchCommissionRates();
   }, [supabase]);
 
+  // Calculate end date based on start date and rental period
+  const calculateEndDate = (start: string, period: string) => {
+    const startDateObj = new Date(start);
+    const endDateObj = new Date(startDateObj);
+
+    if (period === "weekly") {
+      endDateObj.setDate(endDateObj.getDate() + 7);
+    } else if (period === "monthly") {
+      endDateObj.setMonth(endDateObj.getMonth() + 1);
+    } else if (period === "quarterly") {
+      endDateObj.setMonth(endDateObj.getMonth() + 3);
+    }
+
+    return endDateObj.toISOString().split("T")[0];
+  };
+
+  // Check cubby availability when start date or rental period changes
+  useEffect(() => {
+    if (!startDate) return;
+
+    const checkAvailability = async () => {
+      setError(null);
+      setSelectedCubby(null);
+
+      try {
+        const endDate = calculateEndDate(startDate, rentalPeriod);
+
+        // Fetch all cubbies
+        const { data: allCubbies, error: cubbiesError } = await supabase
+          .from("cubbies")
+          .select("id, cubby_number, location, status");
+
+        if (cubbiesError) throw cubbiesError;
+        if (!allCubbies || allCubbies.length === 0) {
+          setError("No cubbies found in the system.");
+          setAvailableCubbies([]);
+          return;
+        }
+
+        // Fetch existing rentals that overlap with the requested period
+        const { data: existingRentals, error: rentalsError } = await supabase
+          .from("cubby_rentals")
+          .select("cubby_id, start_date, end_date, status")
+          .eq("status", "active")
+          .or(`start_date.lte.${endDate},end_date.gte.${startDate}`);
+
+        if (rentalsError) throw rentalsError;
+
+        // Create a set of occupied cubby IDs during the requested period
+        const occupiedCubbyIds = new Set();
+        existingRentals?.forEach((rental) => {
+          const rentalStart = new Date(rental.start_date);
+          const rentalEnd = new Date(rental.end_date);
+          const requestStart = new Date(startDate);
+          const requestEnd = new Date(endDate);
+
+          // Check if the rental period overlaps with the requested period
+          if (rentalStart <= requestEnd && rentalEnd >= requestStart) {
+            occupiedCubbyIds.add(rental.cubby_id);
+          }
+        });
+
+        // Filter available cubbies
+        const available = allCubbies.filter(
+          (cubby) =>
+            cubby.status === "available" && !occupiedCubbyIds.has(cubby.id),
+        );
+
+        setAvailableCubbies(available);
+
+        if (available.length === 0) {
+          setError(
+            "No cubbies available for the selected dates. Please try different dates.",
+          );
+        }
+      } catch (err) {
+        console.error("Error checking cubby availability:", err);
+        setError("Failed to check cubby availability. Please try again.");
+        setAvailableCubbies([]);
+      }
+    };
+
+    checkAvailability();
+  }, [startDate, rentalPeriod, supabase]);
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setError(null);
 
     try {
+      // Validate inputs
+      if (!startDate) {
+        throw new Error("Please select a start date");
+      }
+
+      if (!selectedCubby) {
+        throw new Error("Please select an available cubby");
+      }
+
       // Get the current user
       const {
         data: { user },
@@ -71,74 +184,32 @@ export default function RentCubbyPage() {
         throw new Error("User not authenticated");
       }
 
-      // First check if there are any available cubbies
-      const { count, error: countError } = await supabase
-        .from("cubbies")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "available");
-
-      if (countError) {
-        console.error("Error checking available cubbies:", countError);
-        throw new Error("Error checking cubby availability");
+      // Get the selected cubby
+      const selectedCubbyObj = availableCubbies.find(
+        (c) => c.id === selectedCubby,
+      );
+      if (!selectedCubbyObj) {
+        throw new Error("Selected cubby not found");
       }
-
-      if (count === 0) {
-        throw new Error(
-          "No available cubbies found. Please contact an administrator.",
-        );
-      }
-
-      // Get available cubby with detailed logging
-      console.log("Attempting to fetch available cubbies...");
-      const { data: availableCubbies, error: cubbiesError } = await supabase
-        .from("cubbies")
-        .select("id, cubby_number, location, status")
-        .eq("status", "available");
-
-      console.log("Available cubbies query result:", {
-        availableCubbies,
-        cubbiesError,
-      });
-
-      if (cubbiesError) {
-        console.error("Error fetching available cubbies:", cubbiesError);
-        throw new Error(`Database error: ${cubbiesError.message}`);
-      }
-
-      if (!availableCubbies || availableCubbies.length === 0) {
-        console.error("No available cubbies found in the database");
-        throw new Error(
-          "No available cubbies found. Please contact an administrator.",
-        );
-      }
-
-      // Select the first available cubby
-      const availableCubby = availableCubbies[0];
-      console.log("Selected cubby for rental:", availableCubby);
 
       // Calculate rental dates
-      const startDate = new Date();
-      const endDate = new Date();
-
-      if (rentalPeriod === "weekly") {
-        endDate.setDate(endDate.getDate() + 7);
-      } else if (rentalPeriod === "monthly") {
-        endDate.setMonth(endDate.getMonth() + 1);
-      } else if (rentalPeriod === "quarterly") {
-        endDate.setMonth(endDate.getMonth() + 3);
-      }
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(calculateEndDate(startDate, rentalPeriod));
 
       // Create cubby rental record
       const { data: rental, error: rentalError } = await supabase
         .from("cubby_rentals")
         .insert({
-          cubby_id: availableCubby.id,
+          cubby_id: selectedCubbyObj.id,
           seller_id: user.id,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
+          start_date: startDateObj.toISOString(),
+          end_date: endDateObj.toISOString(),
           rental_fee: rentalFees[rentalPeriod as keyof typeof rentalFees],
           status: "active",
           payment_status: "paid", // Auto-set to paid for demo purposes
+          listing_type: listingType,
+          commission_rate:
+            commissionRates[listingType as keyof typeof commissionRates],
         })
         .select();
 
@@ -147,48 +218,23 @@ export default function RentCubbyPage() {
       }
 
       // Update cubby status to occupied
-      console.log(
-        "Updating cubby status to occupied for cubby ID:",
-        availableCubby.id,
-      );
-      const { data: updatedCubby, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("cubbies")
         .update({
           status: "occupied",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", availableCubby.id)
-        .select();
-
-      console.log("Cubby update result:", { updatedCubby, updateError });
+        .eq("id", selectedCubbyObj.id);
 
       if (updateError) {
         throw new Error("Failed to update cubby status");
-      }
-
-      // Store the listing type directly in the cubby rental record
-      // This ensures the listing type is fixed for this specific rental period
-      const { error: rentalUpdateError } = await supabase
-        .from("cubby_rentals")
-        .update({
-          listing_type: listingType,
-          commission_rate:
-            commissionRates[listingType as keyof typeof commissionRates],
-        })
-        .eq("id", rental[0].id);
-
-      if (rentalUpdateError) {
-        console.error(
-          "Failed to update rental listing type",
-          rentalUpdateError,
-        );
       }
 
       // Redirect to payment page or confirmation
       router.push("/dashboard/seller/cubby/payment?rental_id=" + rental[0].id);
     } catch (error) {
       console.error("Error renting cubby:", error);
-      alert(error instanceof Error ? error.message : "Failed to rent cubby");
+      setError(error instanceof Error ? error.message : "Failed to rent cubby");
       setIsSubmitting(false);
     }
   };
@@ -217,14 +263,30 @@ export default function RentCubbyPage() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="period" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-8">
+                    <TabsList className="grid w-full grid-cols-3 mb-8">
                       <TabsTrigger value="period">Rental Period</TabsTrigger>
+                      <TabsTrigger value="cubby">Select Cubby</TabsTrigger>
                       <TabsTrigger value="listing">Listing Type</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="period" className="space-y-6">
                       <div className="space-y-4">
-                        <h3 className="text-lg font-medium">
+                        <div className="space-y-2">
+                          <Label htmlFor="start-date">Start Date</Label>
+                          <Input
+                            id="start-date"
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            min={new Date().toISOString().split("T")[0]}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Select when you want your rental to begin
+                          </p>
+                        </div>
+
+                        <h3 className="text-lg font-medium mt-6">
                           Select Rental Period
                         </h3>
                         <RadioGroup
@@ -294,6 +356,68 @@ export default function RentCubbyPage() {
                             </Label>
                           </div>
                         </RadioGroup>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="cubby" className="space-y-6">
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium">
+                          Available Cubbies
+                        </h3>
+
+                        {error && (
+                          <div className="bg-red-50 p-4 rounded-lg flex items-start gap-3 text-red-800 mb-4">
+                            <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                            <p>{error}</p>
+                          </div>
+                        )}
+
+                        {availableCubbies.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {availableCubbies.map((cubby) => (
+                              <div
+                                key={cubby.id}
+                                className={`border p-4 rounded-lg cursor-pointer transition-colors ${selectedCubby === cubby.id ? "bg-pink-50 border-pink-300" : "hover:bg-gray-50"}`}
+                                onClick={() => setSelectedCubby(cubby.id)}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <p className="font-medium">
+                                      Cubby #{cubby.cubby_number}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                      {cubby.location || "Main Floor"}
+                                    </p>
+                                  </div>
+                                  <div
+                                    className="h-6 w-6 rounded-full border-2 flex items-center justify-center
+                                    ${selectedCubby === cubby.id ? 'border-pink-500 bg-pink-100' : 'border-gray-300'}"
+                                  >
+                                    {selectedCubby === cubby.id && (
+                                      <div className="h-3 w-3 rounded-full bg-pink-500"></div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : !error ? (
+                          <div className="text-center py-8 bg-gray-50 rounded-lg">
+                            <Clock className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+                            <p className="text-gray-500">
+                              Checking availability...
+                            </p>
+                          </div>
+                        ) : null}
+
+                        <div className="bg-blue-50 p-4 rounded-lg text-blue-800 mt-4">
+                          <p className="text-sm">
+                            <strong>Note:</strong> Only cubbies that are
+                            available for your entire rental period are shown.
+                            If you don't see any available cubbies, try
+                            selecting different dates.
+                          </p>
+                        </div>
                       </div>
                     </TabsContent>
 
@@ -379,16 +503,46 @@ export default function RentCubbyPage() {
                   <div className="space-y-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h3 className="text-sm font-medium text-gray-500 mb-2">
-                        Selected Plan
+                        Rental Period
                       </h3>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-5 w-5 text-pink-600" />
-                        <p className="text-lg font-medium">
-                          {rentalPeriod.charAt(0).toUpperCase() +
-                            rentalPeriod.slice(1)}{" "}
-                          Rental
-                        </p>
+                        <div>
+                          <p className="text-lg font-medium">
+                            {rentalPeriod.charAt(0).toUpperCase() +
+                              rentalPeriod.slice(1)}
+                          </p>
+                          {startDate && (
+                            <p className="text-sm text-gray-600">
+                              {new Date(startDate).toLocaleDateString()} to{" "}
+                              {new Date(
+                                calculateEndDate(startDate, rentalPeriod),
+                              ).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">
+                        Selected Cubby
+                      </h3>
+                      {selectedCubby ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-pink-600" />
+                          <p className="text-lg font-medium">
+                            Cubby #
+                            {availableCubbies.find(
+                              (c) => c.id === selectedCubby,
+                            )?.cubby_number || ""}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 italic">
+                          No cubby selected
+                        </p>
+                      )}
                     </div>
 
                     <div className="bg-gray-50 p-4 rounded-lg">
@@ -436,11 +590,22 @@ export default function RentCubbyPage() {
                     </div>
                   </div>
 
+                  {error && (
+                    <div className="bg-red-50 p-3 rounded-md text-red-800 text-sm">
+                      {error}
+                    </div>
+                  )}
+
                   <Button
                     className="w-full bg-pink-600 hover:bg-pink-700"
                     size="lg"
                     onClick={handleSubmit}
-                    disabled={isSubmitting}
+                    disabled={
+                      isSubmitting ||
+                      !selectedCubby ||
+                      !startDate ||
+                      availableCubbies.length === 0
+                    }
                   >
                     {isSubmitting ? (
                       <>
