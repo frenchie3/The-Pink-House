@@ -149,7 +149,23 @@ export default async function AddListingPage({
       .toString()
       .padStart(3, "0")}`;
 
-    // Insert the item
+    // Get the listing type from the active cubby rental
+    const { data: cubbyRental, error: cubbyError } = await supabase
+      .from("cubby_rentals")
+      .select("listing_type, commission_rate")
+      .eq("id", activeCubby.id)
+      .single();
+
+    if (cubbyError) {
+      console.error("Error fetching cubby rental details:", cubbyError);
+      return encodedRedirect(
+        "error",
+        "/dashboard/seller/listings/add",
+        `Error fetching cubby details: ${cubbyError.message}`,
+      );
+    }
+
+    // Insert the item with the listing type and commission rate from the cubby rental
     const { error } = await supabase.from("inventory_items").insert({
       name,
       price,
@@ -163,7 +179,8 @@ export default async function AddListingPage({
       cubby_location: activeCubby.cubby?.cubby_number,
       date_added: new Date().toISOString(),
       is_active: true,
-      listing_type: "seller",
+      listing_type: cubbyRental.listing_type || "self",
+      commission_rate: cubbyRental.commission_rate || 0.15,
     });
 
     if (error) {
@@ -315,25 +332,28 @@ export default async function AddListingPage({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="listing_type">Listing Type</Label>
-                      <select
-                        id="listing_type"
-                        name="listing_type"
-                        className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                      >
-                        <option value="self">
-                          Self-Listing (15% commission)
-                        </option>
-                        <option value="staff">
-                          Staff-Managed (25% commission)
-                        </option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Self-listing: You manage the item details and photos.
-                        <br />
-                        Staff-managed: Our staff will handle the listing process
-                        for you.
-                      </p>
+                      <Label htmlFor="listing_info">Listing Type</Label>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="font-medium">
+                          {activeCubby.listing_type === "self"
+                            ? "Self-Listing"
+                            : "Staff-Managed"}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Commission Rate:{" "}
+                          {(activeCubby.commission_rate * 100).toFixed(0)}%
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {activeCubby.listing_type === "self"
+                            ? "You are responsible for managing item details and photos."
+                            : "Our staff will handle the listing process for you."}
+                        </p>
+                        <input
+                          type="hidden"
+                          name="listing_type"
+                          value={activeCubby.listing_type}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">

@@ -88,7 +88,7 @@ export default function EditListingPage() {
           description: item.description,
           quantity: parseInt(item.quantity),
           condition: item.condition,
-          listing_type: item.listing_type,
+          // Keep the existing listing_type and commission_rate
           last_updated: new Date().toISOString(),
         })
         .eq("id", itemId);
@@ -288,27 +288,34 @@ export default function EditListingPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="listing_type">Listing Type</Label>
-                    <select
-                      id="listing_type"
-                      name="listing_type"
-                      value={item?.listing_type || "self"}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    >
-                      <option value="self">
-                        Self-Listing (15% commission)
-                      </option>
-                      <option value="staff">
-                        Staff-Managed (25% commission)
-                      </option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Self-listing: You manage the item details and photos.
-                      <br />
-                      Staff-managed: Our staff will handle the listing process
-                      for you.
-                    </p>
+                    <Label htmlFor="listing_info">Listing Type</Label>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="font-medium">
+                        {item?.listing_type === "self"
+                          ? "Self-Listing"
+                          : "Staff-Managed"}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Commission Rate:{" "}
+                        {item?.commission_rate
+                          ? (item.commission_rate * 100).toFixed(0)
+                          : 15}
+                        %
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2">
+                        {item?.listing_type === "self"
+                          ? "You are responsible for managing item details and photos."
+                          : "Our staff will handle the listing process for you."}
+                      </p>
+                      <p className="text-xs text-amber-600 mt-2">
+                        Note: Listing type cannot be changed after cubby rental.
+                      </p>
+                      <input
+                        type="hidden"
+                        name="listing_type"
+                        value={item?.listing_type || "self"}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2 md:col-span-2">

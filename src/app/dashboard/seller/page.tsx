@@ -29,11 +29,12 @@ export default async function SellerDashboard() {
     return redirect("/sign-in");
   }
 
-  // Fetch seller data
+  // Fetch seller data - only available items (quantity > 0)
   const { data: inventoryItems } = await supabase
     .from("inventory_items")
     .select("*")
-    .eq("seller_id", user.id);
+    .eq("seller_id", user.id)
+    .gt("quantity", 0);
 
   const { data: cubbyRentals } = await supabase
     .from("cubby_rentals")
@@ -113,7 +114,7 @@ export default async function SellerDashboard() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-3xl font-bold">
-                    {inventoryItems?.length || 0}
+                    {activeCubby ? inventoryItems?.length || 0 : 0}
                   </div>
                   <Tag className="h-8 w-8 text-pink-600" />
                 </div>

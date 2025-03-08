@@ -92,7 +92,7 @@ export default function ExtendCubbyPage() {
         newEndDate.setMonth(newEndDate.getMonth() + 3);
       }
 
-      // Update the rental record
+      // Update the rental record - maintain the same listing_type and commission_rate
       const { error: updateError } = await supabase
         .from("cubby_rentals")
         .update({
@@ -102,6 +102,9 @@ export default function ExtendCubbyPage() {
             rentalFees[rentalPeriod as keyof typeof rentalFees],
           // Auto-set to paid for demo purposes
           payment_status: "paid",
+          // Explicitly keep the same listing_type and commission_rate
+          listing_type: currentRental.listing_type,
+          commission_rate: currentRental.commission_rate,
         })
         .eq("id", currentRental.id);
 

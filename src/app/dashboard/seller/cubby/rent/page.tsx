@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SellerNavbar from "@/components/seller-navbar";
 import SellerGuard from "@/components/seller-guard";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,37 @@ export default function RentCubbyPage() {
     quarterly: 90,
   };
 
-  // Commission rates based on listing type
-  const commissionRates = {
-    self: 0.15, // 15% for self-listing
-    staff: 0.25, // 25% for staff-managed listing
-  };
+  // Commission rates based on listing type - will be fetched from system settings
+  const [commissionRates, setCommissionRates] = useState({
+    self: 0.15, // 15% for self-listing (default)
+    staff: 0.25, // 25% for staff-managed listing (default)
+  });
+
+  useEffect(() => {
+    // Fetch commission rates from system settings
+    const fetchCommissionRates = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("system_settings")
+          .select("setting_value")
+          .eq("setting_key", "commission_rates")
+          .single();
+
+        if (error) throw error;
+        if (data && data.setting_value) {
+          setCommissionRates({
+            self: data.setting_value.default || 0.15,
+            staff: data.setting_value.staff || 0.25,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching commission rates:", err);
+        // Keep default values if there's an error
+      }
+    };
+
+    fetchCommissionRates();
+  }, [supabase]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -141,18 +167,22 @@ export default function RentCubbyPage() {
         throw new Error("Failed to update cubby status");
       }
 
-      // Store the listing type preference in user profile
-      const { error: userUpdateError } = await supabase
-        .from("users")
+      // Store the listing type directly in the cubby rental record
+      // This ensures the listing type is fixed for this specific rental period
+      const { error: rentalUpdateError } = await supabase
+        .from("cubby_rentals")
         .update({
-          listing_preference: listingType,
+          listing_type: listingType,
           commission_rate:
             commissionRates[listingType as keyof typeof commissionRates],
         })
-        .eq("id", user.id);
+        .eq("id", rental[0].id);
 
-      if (userUpdateError) {
-        console.error("Failed to update user preferences", userUpdateError);
+      if (rentalUpdateError) {
+        console.error(
+          "Failed to update rental listing type",
+          rentalUpdateError,
+        );
       }
 
       // Redirect to payment page or confirmation
@@ -296,6 +326,11 @@ export default function RentCubbyPage() {
                                     {commissionRates.self * 100}%
                                   </span>
                                 </div>
+                                <div className="mt-2 bg-amber-50 p-2 rounded-md text-xs text-amber-800">
+                                  <strong>Note:</strong> This choice cannot be
+                                  changed after rental and applies to all items
+                                  in this cubby.
+                                </div>
                               </div>
                             </Label>
                           </div>
@@ -307,9 +342,7 @@ export default function RentCubbyPage() {
                               className="flex-1 cursor-pointer"
                             >
                               <div>
-                                <p className="font-medium">
-                                  Staff-Managed Listing
-                                </p>
+                                <p className="font-medium">Staff-Managed</p>
                                 <p className="text-sm text-gray-500 mb-2">
                                   Drop off your items and our staff will handle
                                   the listing process
@@ -319,6 +352,11 @@ export default function RentCubbyPage() {
                                     Commission Rate:{" "}
                                     {commissionRates.staff * 100}%
                                   </span>
+                                </div>
+                                <div className="mt-2 bg-amber-50 p-2 rounded-md text-xs text-amber-800">
+                                  <strong>Note:</strong> This choice cannot be
+                                  changed after rental and applies to all items
+                                  in this cubby.
                                 </div>
                               </div>
                             </Label>

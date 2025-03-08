@@ -147,6 +147,16 @@ export default async function SellerCubbyPage() {
                               {rental.status.charAt(0).toUpperCase() +
                                 rental.status.slice(1)}
                             </span>
+                            <div className="mt-1 text-xs text-gray-500">
+                              {rental.listing_type === "self"
+                                ? "Self-Listing"
+                                : "Staff-Managed"}
+                              (
+                              {rental.commission_rate
+                                ? (rental.commission_rate * 100).toFixed(0)
+                                : 15}
+                              %)
+                            </div>
                           </td>
                           <td className="py-3 px-4">
                             <span
