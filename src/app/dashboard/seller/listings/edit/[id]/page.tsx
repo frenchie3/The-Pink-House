@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { createClient } from "../../../../../../../supabase/client";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Clock, LockIcon } from "lucide-react";
 
 export default function EditListingPage() {
   const [item, setItem] = useState<any>(null);
@@ -78,10 +78,10 @@ export default function EditListingPage() {
     setIsSubmitting(true);
 
     try {
-      // Check if the item is self-listed and has been reviewed by staff
-      if (item.listing_type === "self" && item.staff_reviewed) {
+      // Check if the item has labels printed
+      if (item.editing_locked) {
         setError(
-          "This item has already been reviewed by staff and can no longer be edited.",
+          "This item has already had labels printed and can no longer be edited.",
         );
         setIsSubmitting(false);
         return;
@@ -215,10 +215,15 @@ export default function EditListingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Item Details</CardTitle>
-              {item.staff_reviewed && item.listing_type === "self" && (
+              {item.editing_locked && (
                 <div className="mt-2 p-2 bg-amber-50 text-amber-800 rounded-md text-sm">
-                  This item has been reviewed by staff and can no longer be
-                  edited.
+                  This item has had labels printed and can no longer be edited.
+                </div>
+              )}
+              {!item.editing_locked && (
+                <div className="mt-2 p-2 bg-blue-50 text-blue-800 rounded-md text-sm">
+                  You can edit this item until labels are printed. Once labels
+                  are printed, the item details will be locked.
                 </div>
               )}
             </CardHeader>
@@ -234,9 +239,7 @@ export default function EditListingPage() {
                       onChange={handleInputChange}
                       placeholder="Vintage Teacup Set"
                       required
-                      disabled={
-                        item.staff_reviewed && item.listing_type === "self"
-                      }
+                      disabled={item.editing_locked}
                     />
                   </div>
 
@@ -252,9 +255,7 @@ export default function EditListingPage() {
                       onChange={handleInputChange}
                       placeholder="15.99"
                       required
-                      disabled={
-                        item.staff_reviewed && item.listing_type === "self"
-                      }
+                      disabled={item.editing_locked}
                     />
                   </div>
 
@@ -267,9 +268,7 @@ export default function EditListingPage() {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                       required
-                      disabled={
-                        item.staff_reviewed && item.listing_type === "self"
-                      }
+                      disabled={item.editing_locked}
                     >
                       <option value="">Select a category</option>
                       {categories.map((category) => (
@@ -290,9 +289,7 @@ export default function EditListingPage() {
                       value={item?.quantity || ""}
                       onChange={handleInputChange}
                       required
-                      disabled={
-                        item.staff_reviewed && item.listing_type === "self"
-                      }
+                      disabled={item.editing_locked}
                     />
                   </div>
 
@@ -304,9 +301,7 @@ export default function EditListingPage() {
                       value={item?.condition || "Good"}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                      disabled={
-                        item.staff_reviewed && item.listing_type === "self"
-                      }
+                      disabled={item.editing_locked}
                     >
                       <option value="New">New</option>
                       <option value="Like New">Like New</option>
@@ -333,7 +328,7 @@ export default function EditListingPage() {
                       </p>
                       <p className="text-xs text-gray-500 mt-2">
                         {item?.listing_type === "self"
-                          ? "You are responsible for managing all item details and photos. You can edit items until they are reviewed by staff."
+                          ? "You are responsible for managing all item details and photos. You can edit items until labels are printed."
                           : "Our staff will handle the listing process for you."}
                       </p>
                       <p className="text-xs text-amber-600 mt-2">
@@ -356,9 +351,7 @@ export default function EditListingPage() {
                       onChange={handleInputChange}
                       placeholder="Describe your item..."
                       rows={4}
-                      disabled={
-                        item.staff_reviewed && item.listing_type === "self"
-                      }
+                      disabled={item.editing_locked}
                     />
                   </div>
                 </div>
@@ -374,10 +367,7 @@ export default function EditListingPage() {
                   <Button
                     type="submit"
                     className="bg-pink-600 hover:bg-pink-700"
-                    disabled={
-                      isSubmitting ||
-                      (item.staff_reviewed && item.listing_type === "self")
-                    }
+                    disabled={isSubmitting || item.editing_locked}
                   >
                     {isSubmitting ? "Updating..." : "Update Item"}
                   </Button>

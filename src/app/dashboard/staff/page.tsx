@@ -14,6 +14,8 @@ import {
   Search,
   Bell,
   Plus,
+  CheckCircle,
+  Printer,
 } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -283,28 +285,33 @@ export default async function StaffDashboard() {
                                   <Button variant="ghost" size="sm">
                                     Edit
                                   </Button>
-                                  {item.listing_type === "self" &&
-                                    !item.staff_reviewed && (
-                                      <form
-                                        action={async (formData) => {
-                                          "use server";
-                                          const supabase = await createClient();
-                                          await supabase.rpc(
-                                            "mark_item_reviewed",
-                                            { item_id: item.id },
-                                          );
-                                        }}
+                                  {!item.editing_locked && (
+                                    <form
+                                      action={async (formData) => {
+                                        "use server";
+                                        const supabase = await createClient();
+                                        await supabase
+                                          .from("inventory_items")
+                                          .update({ editing_locked: true })
+                                          .eq("id", item.id);
+                                      }}
+                                    >
+                                      <Button
+                                        type="submit"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-green-600"
                                       >
-                                        <Button
-                                          type="submit"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-green-600"
-                                        >
-                                          Review & Approve
-                                        </Button>
-                                      </form>
-                                    )}
+                                        Print Labels
+                                      </Button>
+                                    </form>
+                                  )}
+                                  {item.editing_locked && (
+                                    <span className="text-xs text-green-600 flex items-center gap-1">
+                                      <CheckCircle className="h-4 w-4" />
+                                      Labels Printed
+                                    </span>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -538,7 +545,7 @@ export default async function StaffDashboard() {
           </Tabs>
 
           {/* Staff Navigation */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-8">
             <Link
               href="/dashboard/pos"
               className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex items-center"
@@ -564,6 +571,21 @@ export default async function StaffDashboard() {
               <div>
                 <h3 className="font-semibold text-gray-900">Inventory</h3>
                 <p className="text-sm text-gray-500">Manage items and stock</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/staff/print-labels"
+              className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex items-center"
+            >
+              <div className="bg-pink-100 p-3 rounded-lg mr-4">
+                <Printer className="h-6 w-6 text-pink-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Print Labels</h3>
+                <p className="text-sm text-gray-500">
+                  Print labels and lock items
+                </p>
               </div>
             </Link>
 

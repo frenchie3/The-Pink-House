@@ -1,0 +1,42 @@
+/* Styling for the print labels page */
+
+/* Checkbox styling */
+.select-all-checkbox:indeterminate {
+  background-color: #f472b6;
+  border-color: #f472b6;
+}
+
+/* Disabled button styling */
+.print-labels-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Animation for success message */
+.success-message {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Hover effect for rows */
+tr.hover\:bg-gray-50:hover {
+  background-color: #f9fafb;
+  cursor: pointer;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

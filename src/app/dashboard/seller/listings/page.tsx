@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tag, Search, Plus, Filter } from "lucide-react";
+import { Tag, Search, Plus, Filter, LockIcon } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 
@@ -117,71 +117,77 @@ export default async function SellerListingsPage() {
                   </Button>
                 </div>
               ) : inventoryItems && inventoryItems.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-medium text-gray-500">
-                          Item
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500">
-                          SKU
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500">
-                          Price
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500">
-                          Quantity
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500">
-                          Status
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inventoryItems.map((item) => (
-                        <tr key={item.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4">{item.name}</td>
-                          <td className="py-3 px-4">{item.sku}</td>
-                          <td className="py-3 px-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {inventoryItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 border border-gray-100"
+                    >
+                      <div className="bg-gray-50 p-5">
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-medium text-gray-900 truncate max-w-[70%]">
+                            {item.name}
+                          </h3>
+                          <span className="text-lg font-bold text-pink-600">
                             {formatPrice(item.price)}
-                          </td>
-                          <td className="py-3 px-4">{item.quantity}</td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                item.quantity > 0
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {item.quantity > 0 ? "In Stock" : "Sold Out"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-5">
+                        {item.description && (
+                          <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                            {item.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-3 mb-4">
+                          <span className="text-sm text-gray-500">
+                            Qty: {item.quantity}
+                          </span>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              item.quantity > 0
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {item.quantity > 0 ? "In Stock" : "Sold Out"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                          {!item.editing_locked ? (
+                            <span className="text-xs text-amber-600 flex items-center gap-1.5">
+                              Editable until labels are printed
                             </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex space-x-2">
-                              <Button variant="ghost" size="sm" asChild>
+                          ) : (
+                            <span className="text-xs text-red-600 flex items-center gap-1.5">
+                              <LockIcon className="h-3 w-3" />
+                              Labels printed - editing locked
+                            </span>
+                          )}
+
+                          <div className="ml-auto">
+                            {!item.editing_locked && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                asChild
+                                className="rounded-full"
+                              >
                                 <Link
                                   href={`/dashboard/seller/listings/edit/${item.id}`}
                                 >
                                   Edit
                                 </Link>
                               </Button>
-                              {item.listing_type === "self" &&
-                                !item.staff_reviewed && (
-                                  <span className="text-xs text-amber-600 flex items-center">
-                                    Editable until staff review
-                                  </span>
-                                )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-12">

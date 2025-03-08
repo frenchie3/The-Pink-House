@@ -136,6 +136,7 @@ export type Database = {
           cubby_location: string | null
           date_added: string | null
           description: string | null
+          editing_locked: boolean | null
           id: string
           image_url: string | null
           is_active: boolean | null
@@ -159,6 +160,7 @@ export type Database = {
           cubby_location?: string | null
           date_added?: string | null
           description?: string | null
+          editing_locked?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
@@ -182,6 +184,7 @@ export type Database = {
           cubby_location?: string | null
           date_added?: string | null
           description?: string | null
+          editing_locked?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
