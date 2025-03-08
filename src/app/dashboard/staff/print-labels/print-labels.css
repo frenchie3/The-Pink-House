@@ -26,6 +26,23 @@
   }
 }
 
+/* Animation for processing items */
+.processing-item {
+  animation: fadeOut 0.5s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
 /* Hover effect for rows */
 tr.hover\:bg-gray-50:hover {
   background-color: #f9fafb;

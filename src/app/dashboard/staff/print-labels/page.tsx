@@ -21,6 +21,10 @@ export default function PrintLabelsPage() {
     Record<string, Set<string>>
   >({});
   const [submitting, setSubmitting] = useState(false);
+  const [processingItems, setProcessingItems] = useState<Set<string>>(
+    new Set(),
+  );
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -146,6 +150,7 @@ export default function PrintLabelsPage() {
   const handleSubmit = async (cubbyId: string) => {
     try {
       setSubmitting(true);
+      setError(null);
 
       const selected = Array.from(selectedItems[cubbyId] || new Set());
 
@@ -154,19 +159,58 @@ export default function PrintLabelsPage() {
         return;
       }
 
+      // Mark items as processing (for animation)
+      setProcessingItems(new Set(selected));
+
       // Update the database
       const { error: updateError } = await supabase
         .from("inventory_items")
-        .update({ editing_locked: true })
+        .update({
+          editing_locked: true,
+          labels_printed: true,
+        })
         .in("id", selected);
 
       if (updateError) throw updateError;
 
-      // Redirect to show success message
-      router.push("/dashboard/staff/print-labels?success=true");
+      // Wait for animation to complete
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Update local state to remove processed items
+      setItemsByCubby((prev) => {
+        const newItemsByCubby = { ...prev };
+
+        // Remove the processed items from each cubby
+        if (newItemsByCubby[cubbyId]) {
+          newItemsByCubby[cubbyId] = newItemsByCubby[cubbyId].filter(
+            (item) => !selected.includes(item.id),
+          );
+        }
+
+        return newItemsByCubby;
+      });
+
+      // Clear selection for this cubby
+      setSelectedItems((prev) => {
+        const newSelectedItems = { ...prev };
+        if (newSelectedItems[cubbyId]) {
+          newSelectedItems[cubbyId] = new Set();
+        }
+        return newSelectedItems;
+      });
+
+      // Set success message
+      setSuccessMessage(
+        `${selected.length} item${selected.length !== 1 ? "s" : ""} successfully processed and locked for editing.`,
+      );
+
+      // Clear processing items
+      setProcessingItems(new Set());
     } catch (err) {
       console.error("Error updating items:", err);
       setError("Failed to update items. Please try again.");
+      // Clear processing items on error
+      setProcessingItems(new Set());
     } finally {
       setSubmitting(false);
     }
@@ -217,11 +261,11 @@ export default function PrintLabelsPage() {
             </div>
           )}
 
-          {success && (
+          {(success || successMessage) && (
             <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md flex items-center gap-2 success-message">
               <CheckCircle className="h-5 w-5" />
-              Labels printed successfully! Selected items have been locked for
-              editing.
+              {successMessage ||
+                "Labels printed successfully! Selected items have been locked for editing."}
             </div>
           )}
 
@@ -298,7 +342,10 @@ export default function PrintLabelsPage() {
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
                             {cubbyItems.map((item) => (
-                              <tr key={item.id} className="hover:bg-gray-50">
+                              <tr
+                                key={item.id}
+                                className={`hover:bg-gray-50 ${processingItems.has(item.id) ? "processing-item" : ""}`}
+                              >
                                 <td className="px-4 py-3 whitespace-nowrap">
                                   <Checkbox
                                     id={`item-${item.id}`}
@@ -390,6 +437,39 @@ export default function PrintLabelsPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Refresh button when all items are processed */}
+            {activeRentals.length > 0 &&
+              !activeRentals.some(
+                (rental) => (itemsByCubby[rental.cubby_id] || []).length > 0,
+              ) &&
+              successMessage && (
+                <div className="flex justify-center mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                    className="flex items-center gap-2"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 2v6h-6"></path>
+                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                      <path d="M3 22v-6h6"></path>
+                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                    </svg>
+                    Refresh Page
+                  </Button>
+                </div>
+              )}
           </div>
         </div>
       </main>
