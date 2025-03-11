@@ -9,7 +9,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+  Edit,
+  Eye,
+  MoreHorizontal,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,6 +24,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { InventoryTablePagination } from "./inventory-table-pagination";
+import { InventoryTableRow } from "./inventory-table-row";
+import { InventoryEmptyState } from "./inventory-empty-state";
 
 interface InventoryItem {
   id: string;
@@ -32,9 +42,21 @@ interface InventoryItem {
 
 interface InventoryTableProps {
   items: InventoryItem[];
+  totalItems: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+  itemsPerPage: number;
 }
 
-export default function InventoryTable({ items = [] }: InventoryTableProps) {
+export default function InventoryTable({
+  items = [],
+  totalItems,
+  currentPage,
+  onPageChange,
+  itemsPerPage,
+}: InventoryTableProps) {
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
   // Function to determine stock status and badge color
   const getStockStatus = (quantity: number) => {
     if (quantity <= 0) {
@@ -62,92 +84,55 @@ export default function InventoryTable({ items = [] }: InventoryTableProps) {
     }).format(price);
   };
 
+  // Calculate start and end item numbers for display
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(startItem + itemsPerPage - 1, totalItems);
+
   return (
     <div>
       {items.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No inventory items found</p>
-          <Button className="mt-4 bg-teal-600 hover:bg-teal-700">
-            Add Your First Item
-          </Button>
-        </div>
+        <InventoryEmptyState />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>SKU</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Date Added</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => {
-              const stockStatus = getStockStatus(item.quantity);
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>SKU</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Date Added</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <InventoryTableRow
+                  key={item.id}
+                  item={item}
+                  formatPrice={formatPrice}
+                  formatDate={formatDate}
+                  getStockStatus={getStockStatus}
+                />
+              ))}
+            </TableBody>
+          </Table>
 
-              return (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.sku}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.category}</TableCell>
-                  <TableCell>{formatPrice(item.price)}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        stockStatus.variant as
-                          | "default"
-                          | "secondary"
-                          | "destructive"
-                          | "outline"
-                      }
-                      className={`
-                        ${stockStatus.variant === "success" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
-                        ${stockStatus.variant === "warning" ? "bg-amber-100 text-amber-800 hover:bg-amber-100" : ""}
-                        ${stockStatus.variant === "destructive" ? "bg-red-100 text-red-800 hover:bg-red-100" : ""}
-                      `}
-                    >
-                      {stockStatus.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {item.cubby_location || item.location || "—"}
-                  </TableCell>
-                  <TableCell>{formatDate(item.date_added)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="flex items-center">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="flex items-center">
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Item
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="flex items-center text-red-600 focus:text-red-600">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Item
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+          {/* Pagination Controls */}
+          {totalItems > itemsPerPage && (
+            <InventoryTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+              startItem={startItem}
+              endItem={endItem}
+              totalItems={totalItems}
+            />
+          )}
+        </>
       )}
     </div>
   );

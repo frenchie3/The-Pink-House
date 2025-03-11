@@ -19,16 +19,18 @@ export default async function AdminCubbiesPage() {
     return redirect("/sign-in");
   }
 
-  // Fetch all cubbies
+  // Fetch all cubbies with optimized fields selection
   const { data: cubbies } = await supabase
     .from("cubbies")
-    .select("*")
+    .select("id, cubby_number, location, status, updated_at")
     .order("cubby_number", { ascending: true });
 
-  // Fetch active rentals to see which cubbies are currently rented
+  // Fetch active rentals with a join to get only necessary user fields
   const { data: activeRentals } = await supabase
     .from("cubby_rentals")
-    .select("*, seller:users(full_name, name, email)")
+    .select(
+      "id, cubby_id, end_date, seller_id, seller:users(full_name, name, email)",
+    )
     .eq("status", "active");
 
   // Create a map of cubby_id to rental info for easier lookup
@@ -37,57 +39,10 @@ export default async function AdminCubbiesPage() {
     rentalMap.set(rental.cubby_id, rental);
   });
 
-  // Handle cubby status toggle
-  async function toggleCubbyStatus(formData: FormData) {
-    "use server";
-
-    const cubbyId = formData.get("cubby_id") as string;
-    const currentStatus = formData.get("current_status") as string;
-    const newStatus =
-      currentStatus === "available" ? "maintenance" : "available";
-
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("cubbies")
-      .update({ status: newStatus })
-      .eq("id", cubbyId);
-
-    if (error) {
-      console.error("Error updating cubby status:", error);
-    }
-
-    revalidatePath("/dashboard/admin/cubbies");
-  }
-
-  // Handle cubby deletion
-  async function deleteCubby(formData: FormData) {
-    "use server";
-
-    const cubbyId = formData.get("cubby_id") as string;
-
-    const supabase = await createClient();
-
-    // Check if the cubby is currently rented
-    const { data: rental } = await supabase
-      .from("cubby_rentals")
-      .select("*")
-      .eq("cubby_id", cubbyId)
-      .eq("status", "active")
-      .single();
-
-    if (rental) {
-      // Cannot delete a rented cubby
-      return;
-    }
-
-    const { error } = await supabase.from("cubbies").delete().eq("id", cubbyId);
-
-    if (error) {
-      console.error("Error deleting cubby:", error);
-    }
-
-    revalidatePath("/dashboard/admin/cubbies");
-  }
+  // Import the server actions at the top level
+  const { toggleCubbyStatus, deleteCubby } = await import(
+    "@/app/actions/cubby-actions"
+  );
 
   return (
     <>

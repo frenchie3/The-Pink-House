@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "../../../supabase/client";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { useCubbyAvailability } from "@/hooks/use-cubby-availability";
 
 interface AvailableCubbiesProps {
   startDate: string;
@@ -12,94 +12,45 @@ interface AvailableCubbiesProps {
   onSelectCubby: (cubbyId: string) => void;
 }
 
-export default function AvailableCubbies({
+const AvailableCubbies = memo(function AvailableCubbies({
   startDate,
   endDate,
   onSelectCubby,
 }: AvailableCubbiesProps) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [availableCubbies, setAvailableCubbies] = useState<any[]>([]);
   const [selectedCubby, setSelectedCubby] = useState<string | null>(null);
-  const supabase = createClient();
 
-  useEffect(() => {
-    async function fetchAvailableCubbies() {
-      if (!startDate || !endDate) {
-        setError("Please select valid start and end dates");
-        setLoading(false);
-        return;
-      }
+  // Use custom hook for cubby availability
+  const { availableCubbies, loading, error } = useCubbyAvailability(
+    startDate,
+    endDate,
+  );
 
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch all cubbies
-        const { data: cubbiesData, error: cubbiesError } = await supabase
-          .from("cubbies")
-          .select("*");
-
-        if (cubbiesError) throw cubbiesError;
-
-        // Fetch active rentals that might overlap with the requested period
-        const requestedStartDate = new Date(startDate);
-        const requestedEndDate = new Date(endDate);
-
-        const { data: rentalsData, error: rentalsError } = await supabase
-          .from("cubby_rentals")
-          .select("*")
-          .eq("status", "active")
-          .or(`start_date.lte.${endDate},end_date.gte.${startDate}`);
-
-        if (rentalsError) throw rentalsError;
-
-        // Create a set of occupied cubby IDs during the requested period
-        const occupiedCubbyIds = new Set();
-        rentalsData?.forEach((rental) => {
-          const rentalStart = new Date(rental.start_date);
-          const rentalEnd = new Date(rental.end_date);
-
-          // Check if the rental period overlaps with the requested period
-          if (
-            rentalStart < requestedEndDate &&
-            rentalEnd > requestedStartDate
-          ) {
-            occupiedCubbyIds.add(rental.cubby_id);
-          }
-        });
-
-        // Filter available cubbies - exclude maintenance cubbies and occupied ones
-        const available = cubbiesData?.filter(
-          (cubby) =>
-            cubby.status !== "maintenance" && !occupiedCubbyIds.has(cubby.id),
-        );
-
-        setAvailableCubbies(available || []);
-      } catch (err) {
-        console.error("Error fetching available cubbies:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to fetch available cubbies",
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchAvailableCubbies();
-  }, [startDate, endDate, supabase]);
-
-  const handleCubbySelect = (cubbyId: string) => {
+  // Memoize the selection handler to prevent recreation on each render
+  const handleCubbySelect = useCallback((cubbyId: string) => {
     setSelectedCubby(cubbyId);
-  };
+  }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-pink-600 mr-2" />
-        <p>Checking cubby availability...</p>
+      <div className="p-8">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-gray-200 border-t-pink-600 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-gray-200 border-b-teal-600 rounded-full animate-spin"></div>
+              </div>
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="font-medium text-gray-700">
+              Checking cubby availability
+            </p>
+            <p className="text-sm text-gray-500">
+              Finding the perfect spot for your items...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -167,4 +118,6 @@ export default function AvailableCubbies({
       </div>
     </div>
   );
-}
+});
+
+export default AvailableCubbies;

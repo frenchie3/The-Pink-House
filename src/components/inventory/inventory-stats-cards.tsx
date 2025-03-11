@@ -1,4 +1,5 @@
 import { BoxIcon, AlertTriangle, ShoppingBag } from "lucide-react";
+import { memo } from "react";
 
 interface InventoryStatsCardsProps {
   totalItems: number;
@@ -6,7 +7,8 @@ interface InventoryStatsCardsProps {
   recentSales: number;
 }
 
-export default function InventoryStatsCards({
+// Memoized to prevent re-renders when parent components update but props don't change
+const InventoryStatsCards = memo(function InventoryStatsCards({
   totalItems = 0,
   lowStockItems = 0,
   recentSales = 0,
@@ -52,4 +54,6 @@ export default function InventoryStatsCards({
       </div>
     </div>
   );
-}
+});
+
+export default InventoryStatsCards;

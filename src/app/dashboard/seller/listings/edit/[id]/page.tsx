@@ -87,21 +87,27 @@ export default function EditListingPage() {
         return;
       }
 
-      const { error: updateError } = await supabase
-        .from("inventory_items")
-        .update({
-          name: item.name,
-          price: parseFloat(item.price),
-          category: item.category,
-          description: item.description,
-          quantity: parseInt(item.quantity),
-          condition: item.condition,
-          // Keep the existing listing_type and commission_rate
-          last_updated: new Date().toISOString(),
-        })
-        .eq("id", itemId);
+      // Create form data to submit to server action
+      const formData = new FormData();
+      formData.append("id", itemId);
+      formData.append("name", item.name);
+      formData.append("price", item.price.toString());
+      formData.append("category", item.category);
+      formData.append("description", item.description || "");
+      formData.append("quantity", item.quantity.toString());
+      formData.append("condition", item.condition || "Good");
 
-      if (updateError) throw updateError;
+      // Submit to server action
+      const response = await fetch("/api/update-inventory", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update item");
+      }
 
       setSuccess(true);
       setTimeout(() => {

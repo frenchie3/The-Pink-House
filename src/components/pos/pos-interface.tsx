@@ -1,34 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "../../../supabase/client";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  BoxIcon,
-  Search,
-  QrCode,
-  ShoppingCart,
-  Plus,
-  Minus,
-  Trash2,
-  CreditCard,
-  Banknote,
-  Receipt,
-  Printer,
-  Tag,
-  AlertCircle,
-  Filter,
-} from "lucide-react";
+import { Search, QrCode, Filter } from "lucide-react";
 import POSItemGrid from "./pos-item-grid";
 import POSCart from "./pos-cart";
 import POSPaymentModal from "./pos-payment-modal";
 import POSBarcodeScanner from "./pos-barcode-scanner";
 import POSCategoryFilter from "./pos-category-filter";
 import POSCubbyFilter from "./pos-cubby-filter";
+import { useProcessSale } from "@/hooks/use-sales";
+import { POSSearchBar } from "./pos-search-bar";
+import { POSFilterBar } from "./pos-filter-bar";
+import { POSViewTabs } from "./pos-view-tabs";
+import { useInventoryFilters } from "@/hooks/use-inventory-filters";
 
 interface InventoryItem {
   id: string;
@@ -66,17 +53,23 @@ export default function POSInterface({
   categories,
   userId,
 }: POSInterfaceProps) {
-  const supabase = createClient();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedCubby, setSelectedCubby] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [filteredItems, setFilteredItems] =
-    useState<InventoryItem[]>(inventoryItems);
-  const [lowStockAlerts, setLowStockAlerts] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("grid");
+
+  // Use custom hook for filtering inventory items
+  const {
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    selectedCubby,
+    setSelectedCubby,
+    filteredItems,
+    setFilteredItems,
+    resetFilters,
+  } = useInventoryFilters(inventoryItems);
 
   // Extract unique cubby locations
   const cubbyLocations = Array.from(
@@ -93,82 +86,102 @@ export default function POSInterface({
     0,
   );
 
-  // Apply filters when search, category, or cubby changes
-  useEffect(() => {
-    let filtered = inventoryItems;
+  // Handle adding item to cart - memoized to prevent recreation on each render
+  const addToCart = useCallback((item: InventoryItem) => {
+    // If item has cartQuantity already set, use that value (for the update case)
+    // If cartQuantity is undefined, default to 1 (adding a new item)
+    const quantityToAdd =
+      item.cartQuantity !== undefined ? item.cartQuantity : 1;
 
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          item.sku.toLowerCase().includes(query) ||
-          (item.barcode && item.barcode.toLowerCase().includes(query)) ||
-          (item.description && item.description.toLowerCase().includes(query)),
-      );
-    }
-
-    // Apply category filter
-    if (selectedCategory) {
-      filtered = filtered.filter((item) => item.category === selectedCategory);
-    }
-
-    // Apply cubby filter
-    if (selectedCubby) {
-      filtered = filtered.filter(
-        (item) => item.cubby_location === selectedCubby,
-      );
-    }
-
-    // Only show items with quantity > 0
-    filtered = filtered.filter((item) => item.quantity > 0);
-
-    setFilteredItems(filtered);
-
-    // No longer checking for low stock items as most sellers will only have one item
-    setLowStockAlerts([]);
-  }, [searchQuery, selectedCategory, selectedCubby, inventoryItems]);
-
-  // Handle adding item to cart
-  const addToCart = (item: InventoryItem) => {
     setCart((prevCart) => {
       const existingItemIndex = prevCart.findIndex(
         (cartItem) => cartItem.id === item.id,
       );
 
       if (existingItemIndex >= 0) {
-        // Item already in cart, increase quantity if possible
+        // Item already in cart, set to the specified quantity or increase by 1
         const updatedCart = [...prevCart];
         const existingItem = updatedCart[existingItemIndex];
 
-        if (existingItem.cartQuantity < existingItem.quantity) {
+        if (item.cartQuantity !== undefined) {
+          // If quantity is 0, remove the item
+          if (item.cartQuantity === 0) {
+            return updatedCart.filter((item) => item.id !== existingItem.id);
+          }
+          // Otherwise set to the specified quantity
+          existingItem.cartQuantity = Math.min(
+            item.cartQuantity,
+            existingItem.quantity,
+          );
+        } else if (existingItem.cartQuantity < existingItem.quantity) {
+          // Increase by 1 if no specific quantity provided
           existingItem.cartQuantity += 1;
         }
 
         return updatedCart;
+      } else if (quantityToAdd > 0) {
+        // Add new item to cart with the specified quantity
+        return [...prevCart, { ...item, cartQuantity: quantityToAdd }];
       } else {
-        // Add new item to cart
-        return [...prevCart, { ...item, cartQuantity: 1 }];
+        // If quantity is 0 and item not in cart, don't add it
+        return prevCart;
       }
     });
-  };
 
-  // Handle removing item from cart
-  const removeFromCart = (itemId: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
-  };
-
-  // Handle updating cart item quantity
-  const updateCartItemQuantity = (itemId: string, newQuantity: number) => {
-    setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.id === itemId
-          ? { ...item, cartQuantity: Math.min(newQuantity, item.quantity) }
-          : item,
+    // Update the cartQuantity in the filteredItems for UI updates
+    setFilteredItems((prevItems) =>
+      prevItems.map((prevItem) =>
+        prevItem.id === item.id
+          ? {
+              ...prevItem,
+              cartQuantity:
+                item.cartQuantity !== undefined
+                  ? item.cartQuantity
+                  : (prevItem.cartQuantity || 0) + 1,
+            }
+          : prevItem,
       ),
     );
-  };
+  }, []);
+
+  // Handle removing item from cart - memoized to prevent recreation on each render
+  const removeFromCart = useCallback((itemId: string) => {
+    setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
+
+    // Reset the cartQuantity in filteredItems to undefined so it shows the add button
+    setFilteredItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === itemId ? { ...item, cartQuantity: undefined } : item,
+      ),
+    );
+  }, []);
+
+  // Handle updating cart item quantity - memoized to prevent recreation on each render
+  const updateCartItemQuantity = useCallback(
+    (itemId: string, newQuantity: number) => {
+      setCart((prevCart) => {
+        // If quantity is 0, remove the item
+        if (newQuantity === 0) {
+          return prevCart.filter((item) => item.id !== itemId);
+        }
+
+        // Otherwise update the quantity
+        return prevCart.map((item) =>
+          item.id === itemId
+            ? { ...item, cartQuantity: Math.min(newQuantity, item.quantity) }
+            : item,
+        );
+      });
+
+      // Also update the cartQuantity in filteredItems for UI consistency
+      setFilteredItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === itemId ? { ...item, cartQuantity: newQuantity } : item,
+        ),
+      );
+    },
+    [],
+  );
 
   // Handle barcode scanning
   const handleBarcodeScanned = (barcode: string) => {
@@ -181,63 +194,25 @@ export default function POSInterface({
     setIsScanning(false);
   };
 
-  // Process payment and complete sale (fake payment processing)
+  // Use the process sale mutation hook
+  const processSaleMutation = useProcessSale();
+
+  // Process payment and complete sale
   const processSale = async (paymentMethod: string) => {
     try {
-      // 1. Create sale record - payment always succeeds
-      const { data: sale, error: saleError } = await supabase
-        .from("sales")
-        .insert({
-          sale_date: new Date().toISOString(),
-          total_amount: cartTotal,
-          payment_method: paymentMethod,
-          created_by: userId,
-        })
-        .select();
+      await processSaleMutation.mutateAsync({
+        cartItems: cart,
+        cartTotal,
+        paymentMethod,
+        userId,
+      });
 
-      if (saleError || !sale || sale.length === 0) {
-        throw new Error(saleError?.message || "Failed to create sale record");
-      }
-
-      const saleId = sale[0].id;
-
-      // 2. Create sale items
-      const saleItems = cart.map((item) => ({
-        sale_id: saleId,
-        inventory_item_id: item.id,
-        quantity: item.cartQuantity,
-        price_sold: item.price,
-      }));
-
-      const { error: saleItemsError } = await supabase
-        .from("sale_items")
-        .insert(saleItems);
-
-      if (saleItemsError) {
-        throw new Error(saleItemsError.message);
-      }
-
-      // 3. Update inventory quantities
-      for (const item of cart) {
-        const { error: updateError } = await supabase
-          .from("inventory_items")
-          .update({ quantity: item.quantity - item.cartQuantity })
-          .eq("id", item.id);
-
-        if (updateError) {
-          throw new Error(updateError.message);
-        }
-      }
-
-      // 4. Clear cart and close payment modal
+      // Clear cart and close payment modal
       setCart([]);
       setIsPaymentModalOpen(false);
 
-      // 5. Show success message or print receipt
+      // Show success message
       alert("Sale completed successfully!");
-
-      // Refresh inventory data (in a real app, you might use a more efficient approach)
-      window.location.reload();
     } catch (error) {
       console.error("Error processing sale:", error);
       alert(
@@ -252,101 +227,34 @@ export default function POSInterface({
         {/* Left Side - Items */}
         <div className="lg:w-2/3">
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-4">
-            <div className="flex flex-col md:flex-row gap-4 mb-4">
-              {/* Search Bar */}
-              <div className="relative flex-grow">
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-                <Input
-                  type="search"
-                  placeholder="Search by name, SKU, or barcode..."
-                  className="pl-10 w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+            {/* Search Bar Component */}
+            <POSSearchBar
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              setIsScanning={setIsScanning}
+            />
 
-              {/* Barcode Scanner Button */}
-              <Button
-                onClick={() => setIsScanning(true)}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <QrCode className="mr-2 h-5 w-5" />
-                Scan Barcode
-              </Button>
-            </div>
+            {/* Filters Component */}
+            <POSFilterBar
+              categories={categories}
+              cubbyLocations={cubbyLocations}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedCubby={selectedCubby}
+              setSelectedCubby={setSelectedCubby}
+              hasActiveFilters={
+                !!(selectedCategory || selectedCubby || searchQuery)
+              }
+              resetFilters={resetFilters}
+            />
 
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              <div className="flex items-center">
-                <Filter className="h-4 w-4 mr-2 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  Filters:
-                </span>
-              </div>
-
-              {/* Category Filter */}
-              <POSCategoryFilter
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-              />
-
-              {/* Cubby Filter */}
-              <POSCubbyFilter
-                cubbyLocations={cubbyLocations}
-                selectedCubby={selectedCubby}
-                onSelectCubby={setSelectedCubby}
-              />
-
-              {/* Clear Filters */}
-              {(selectedCategory || selectedCubby || searchQuery) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedCategory(null);
-                    setSelectedCubby(null);
-                    setSearchQuery("");
-                  }}
-                  className="ml-auto"
-                >
-                  Clear Filters
-                </Button>
-              )}
-            </div>
-
-            {/* Low Stock Alerts removed as most sellers will only have one item */}
-
-            {/* Tabs for different views */}
-            <Tabs
-              defaultValue="grid"
-              className="w-full"
-              onValueChange={setActiveTab}
-            >
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="grid">Grid View</TabsTrigger>
-                <TabsTrigger value="list">List View</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="grid" className="mt-0">
-                <POSItemGrid
-                  items={filteredItems}
-                  onAddToCart={addToCart}
-                  activeTab={activeTab}
-                />
-              </TabsContent>
-
-              <TabsContent value="list" className="mt-0">
-                <POSItemGrid
-                  items={filteredItems}
-                  onAddToCart={addToCart}
-                  activeTab={activeTab}
-                />
-              </TabsContent>
-            </Tabs>
+            {/* View Tabs Component */}
+            <POSViewTabs
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              filteredItems={filteredItems}
+              onAddToCart={addToCart}
+            />
           </div>
         </div>
 

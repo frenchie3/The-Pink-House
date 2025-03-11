@@ -19,17 +19,21 @@ export default async function SellerListingsPage() {
     return redirect("/sign-in");
   }
 
-  // Fetch seller's inventory items
+  // Fetch seller's inventory items with optimized fields selection
   const { data: inventoryItems } = await supabase
     .from("inventory_items")
-    .select("*")
+    .select(
+      "id, name, sku, price, quantity, category, description, date_added, cubby_location, editing_locked",
+    )
     .eq("seller_id", user.id)
     .order("date_added", { ascending: false });
 
-  // Fetch seller's active cubby rental
+  // Fetch seller's active cubby rental with only needed fields
   const { data: activeCubby } = await supabase
     .from("cubby_rentals")
-    .select("*, cubby:cubbies(*)")
+    .select(
+      "id, cubby_id, listing_type, commission_rate, cubby:cubbies(cubby_number, location)",
+    )
     .eq("seller_id", user.id)
     .eq("status", "active")
     .single();

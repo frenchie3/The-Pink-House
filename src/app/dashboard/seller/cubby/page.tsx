@@ -18,10 +18,12 @@ export default async function SellerCubbyPage() {
     return redirect("/sign-in");
   }
 
-  // Fetch seller's cubby rental
+  // Fetch seller's cubby rental with optimized fields
   const { data: cubbyRentals } = await supabase
     .from("cubby_rentals")
-    .select("*, cubby:cubbies(*)")
+    .select(
+      "id, cubby_id, start_date, end_date, rental_fee, status, payment_status, listing_type, commission_rate, cubby:cubbies(id, cubby_number, location)",
+    )
     .eq("seller_id", user.id)
     .order("end_date", { ascending: true });
 

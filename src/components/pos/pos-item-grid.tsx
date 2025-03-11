@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Tag, BoxIcon } from "lucide-react";
 import Image from "next/image";
+import { memo } from "react";
 
 interface InventoryItem {
   id: string;
@@ -19,17 +20,21 @@ interface InventoryItem {
   image_url?: string;
   barcode?: string;
   description?: string;
+  cartQuantity?: number;
 }
 
 interface POSItemGridProps {
   items: InventoryItem[];
   onAddToCart: (item: InventoryItem) => void;
+  onUpdateQuantity?: (itemId: string, quantity: number) => void;
   activeTab: string;
 }
 
-export default function POSItemGrid({
+// Memoize the component to prevent unnecessary re-renders
+const POSItemGrid = memo(function POSItemGrid({
   items,
   onAddToCart,
+  onUpdateQuantity = () => {},
   activeTab,
 }: POSItemGridProps) {
   // Format price with NZD currency symbol
@@ -73,6 +78,8 @@ export default function POSItemGrid({
                   src={item.image_url}
                   alt={item.name}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  loading="lazy"
                   className="object-cover"
                 />
               ) : (
@@ -105,21 +112,53 @@ export default function POSItemGrid({
               <h3 className="font-semibold text-gray-900 truncate">
                 {item.name}
               </h3>
-              <div className="flex justify-between items-center mt-1">
+              <div className="flex justify-between items-center mt-1 space-x-2">
                 <div>
                   <p className="text-sm text-gray-500">SKU: {item.sku}</p>
                   <p className="text-lg font-bold text-gray-900 mt-1">
                     {formatPrice(item.price)}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  className="bg-teal-600 hover:bg-teal-700"
-                  onClick={() => onAddToCart(item)}
-                  disabled={item.quantity <= 0}
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center space-x-1">
+                  {item.cartQuantity && item.cartQuantity > 0 ? (
+                    <div className="flex items-center h-8 border rounded-md overflow-hidden">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-none p-0"
+                        onClick={() =>
+                          onUpdateQuantity(
+                            item.id,
+                            Math.max(0, item.cartQuantity - 1),
+                          )
+                        }
+                      >
+                        <span className="text-lg font-medium">-</span>
+                      </Button>
+                      <span className="w-8 text-center text-sm font-medium">
+                        {item.cartQuantity}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-none p-0"
+                        onClick={() => onAddToCart(item)}
+                        disabled={item.cartQuantity >= item.quantity}
+                      >
+                        <span className="text-lg font-medium">+</span>
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="bg-teal-600 hover:bg-teal-700"
+                      onClick={() => onAddToCart(item)}
+                      disabled={item.quantity <= 0}
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
               {item.cubby_location && (
                 <p className="text-xs text-gray-500 mt-2">
@@ -188,6 +227,7 @@ export default function POSItemGrid({
                           alt={item.name}
                           width={40}
                           height={40}
+                          loading="lazy"
                           className="rounded-md object-cover"
                         />
                       ) : (
@@ -234,15 +274,47 @@ export default function POSItemGrid({
                   </Badge>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                  <Button
-                    size="sm"
-                    className="bg-teal-600 hover:bg-teal-700"
-                    onClick={() => onAddToCart(item)}
-                    disabled={item.quantity <= 0}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
+                  {item.cartQuantity && item.cartQuantity > 0 ? (
+                    <div className="flex items-center justify-end space-x-1">
+                      <div className="flex items-center h-8 border rounded-md overflow-hidden">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-none p-0"
+                          onClick={() =>
+                            onUpdateQuantity(
+                              item.id,
+                              Math.max(0, item.cartQuantity - 1),
+                            )
+                          }
+                        >
+                          <span className="text-lg font-medium">-</span>
+                        </Button>
+                        <span className="w-8 text-center text-sm font-medium">
+                          {item.cartQuantity}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-none p-0"
+                          onClick={() => onAddToCart(item)}
+                          disabled={item.cartQuantity >= item.quantity}
+                        >
+                          <span className="text-lg font-medium">+</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="bg-teal-600 hover:bg-teal-700"
+                      onClick={() => onAddToCart(item)}
+                      disabled={item.quantity <= 0}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  )}
                 </td>
               </tr>
             );
@@ -251,4 +323,6 @@ export default function POSItemGrid({
       </table>
     </div>
   );
-}
+});
+
+export default POSItemGrid;

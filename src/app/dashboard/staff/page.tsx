@@ -32,25 +32,29 @@ export default async function StaffDashboard() {
     return redirect("/sign-in");
   }
 
-  // Fetch summary data with proper count queries
+  // Fetch summary data with optimized queries
   const { data: inventoryItems, error: inventoryError } = await supabase
     .from("inventory_items")
-    .select("*")
+    .select(
+      "id, name, sku, price, quantity, cubby_location, seller_id, editing_locked",
+    )
     .order("date_added", { ascending: false })
     .limit(10);
 
   const { data: cubbies, error: cubbiesError } = await supabase
     .from("cubbies")
-    .select("*");
+    .select("id, cubby_number, status, location");
 
   const { data: cubbyRentals, error: rentalsError } = await supabase
     .from("cubby_rentals")
-    .select("*, cubby:cubbies(*), seller:users(name, full_name)")
+    .select(
+      "id, cubby_id, seller_id, start_date, end_date, status, cubby:cubbies(cubby_number, location), seller:users(name, full_name)",
+    )
     .order("end_date", { ascending: true });
 
   const { data: sellers, error: sellersError } = await supabase
     .from("users")
-    .select("*")
+    .select("id, name, full_name, email, created_at, role")
     .eq("role", "seller");
 
   // Get total inventory count separately for accurate count

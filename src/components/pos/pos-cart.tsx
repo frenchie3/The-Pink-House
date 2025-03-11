@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Minus, Plus, ShoppingCart, Trash2, CreditCard } from "lucide-react";
+import { memo } from "react";
 
 interface CartItem {
   id: string;
@@ -27,7 +28,8 @@ interface POSCartProps {
   onCheckout: () => void;
 }
 
-export default function POSCart({
+// Memoized to prevent re-renders when parent components update but cart items don't change
+const POSCart = memo(function POSCart({
   cartItems,
   onUpdateQuantity,
   onRemoveItem,
@@ -145,4 +147,6 @@ export default function POSCart({
       </CardFooter>
     </Card>
   );
-}
+});
+
+export default POSCart;

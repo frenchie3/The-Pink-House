@@ -18,21 +18,25 @@ export default async function SellerEarningsPage() {
     return redirect("/sign-in");
   }
 
-  // Fetch seller's earnings
+  // Fetch seller's earnings with pagination (20 items per page)
+  const itemsPerPage = 20;
+
   const { data: earnings } = await supabase
     .from("seller_earnings")
     .select(
-      "*, sale_item:sale_items(inventory_item:inventory_items(name, sku))",
+      "id, gross_amount, commission_amount, net_amount, created_at, payout_id, sale_item_id, sale_item:sale_items(inventory_item:inventory_items(name, sku))",
     )
     .eq("seller_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(0, itemsPerPage - 1);
 
-  // Fetch seller's payouts
+  // Fetch seller's payouts with pagination
   const { data: payouts } = await supabase
     .from("seller_payouts")
-    .select("*")
+    .select("id, amount, created_at, payout_date, status, notes")
     .eq("seller_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(0, itemsPerPage - 1);
 
   // Calculate totals
   const totalEarnings =

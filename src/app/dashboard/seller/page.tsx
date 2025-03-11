@@ -29,30 +29,42 @@ export default async function SellerDashboard() {
     return redirect("/sign-in");
   }
 
-  // Fetch seller data - only available items (quantity > 0)
+  // Fetch seller data with optimized queries
   const { data: inventoryItems } = await supabase
     .from("inventory_items")
-    .select("*")
+    .select("id, name, sku, price, quantity")
     .eq("seller_id", user.id)
-    .gt("quantity", 0);
+    .gt("quantity", 0)
+    .limit(10); // Limit to 10 items for dashboard preview
 
   const { data: cubbyRentals } = await supabase
     .from("cubby_rentals")
-    .select("*, cubby:cubbies(*)")
+    .select(
+      "id, start_date, end_date, status, cubby_id, cubby:cubbies(cubby_number, location)",
+    )
     .eq("seller_id", user.id)
     .order("end_date", { ascending: true });
 
   const { data: earnings } = await supabase
     .from("seller_earnings")
-    .select("*")
+    .select("id, net_amount, payout_id")
     .eq("seller_id", user.id);
 
+  // Only fetch count of unread notifications for the badge
+  const { count: notificationCount } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("is_read", false);
+
+  // Fetch a few notifications for preview
   const { data: notifications } = await supabase
     .from("notifications")
-    .select("*")
+    .select("id, title, message, type, created_at")
     .eq("user_id", user.id)
     .eq("is_read", false)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(5);
 
   // Calculate total earnings
   const totalEarnings =

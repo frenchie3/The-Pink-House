@@ -4,6 +4,10 @@ import "./globals.css";
 import Script from "next/script";
 import { TempoInit } from "@/components/tempo-init";
 import { ThemeProvider } from "@/components/theme-provider";
+import ReactQueryProvider from "@/lib/react-query";
+import { LoadingTransition } from "@/components/loading-transition";
+import { ButtonClickEffect } from "@/components/button-click-effect";
+import { usePathname } from "next/navigation";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,14 +25,18 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <ReactQueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <LoadingTransition />
+            <ButtonClickEffect />
+            {children}
+          </ThemeProvider>
+        </ReactQueryProvider>
         <TempoInit />
       </body>
     </html>

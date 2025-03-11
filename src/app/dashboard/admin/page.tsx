@@ -29,22 +29,22 @@ export default async function AdminDashboard() {
     return redirect("/sign-in");
   }
 
-  // Fetch summary data with proper count queries
+  // Fetch summary data with optimized count queries (no need to fetch actual data)
   const { count: userCount, error: userError } = await supabase
     .from("users")
-    .select("*", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true });
 
   const { count: inventoryCount, error: inventoryError } = await supabase
     .from("inventory_items")
-    .select("*", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true });
 
   const { count: salesCount, error: salesError } = await supabase
     .from("sales")
-    .select("*", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true });
 
   const { count: cubbyCount, error: cubbyError } = await supabase
     .from("cubbies")
-    .select("*", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true });
 
   // Log any errors for debugging
   if (userError || inventoryError || salesError || cubbyError) {

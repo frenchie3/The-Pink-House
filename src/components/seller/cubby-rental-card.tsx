@@ -3,13 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, Calendar, Clock } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
+import { memo } from "react";
 
 interface CubbyRentalCardProps {
   activeCubby: any;
   daysRemaining: number;
 }
 
-export default function CubbyRentalCard({
+// Memoized to prevent re-renders when parent components update but props don't change
+const CubbyRentalCard = memo(function CubbyRentalCard({
   activeCubby,
   daysRemaining,
 }: CubbyRentalCardProps) {
@@ -207,4 +209,6 @@ export default function CubbyRentalCard({
       </div>
     </div>
   );
-}
+});
+
+export default CubbyRentalCard;

@@ -2,9 +2,9 @@ import DashboardNavbar from "@/components/dashboard-navbar";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../../supabase/server";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, SlidersHorizontal } from "lucide-react";
-import InventoryTable from "@/components/inventory/inventory-table";
+import { PlusCircle } from "lucide-react";
+import InventorySearchFilters from "@/components/inventory/inventory-search-filters";
+import InventoryClientTable from "@/components/inventory/inventory-client-table";
 
 export default async function InventoryPage() {
   const supabase = await createClient();
@@ -17,11 +17,11 @@ export default async function InventoryPage() {
     return redirect("/sign-in");
   }
 
-  // Fetch inventory items
-  const { data: inventoryItems } = await supabase
-    .from("inventory_items")
-    .select("*")
-    .order("date_added", { ascending: false });
+  // Fetch categories for filters
+  const { data: categories } = await supabase
+    .from("categories")
+    .select("id, name")
+    .order("name", { ascending: true });
 
   return (
     <>
@@ -45,51 +45,12 @@ export default async function InventoryPage() {
             </Button>
           </header>
 
-          {/* Search and Filter Bar */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4">
-            <div className="relative flex-grow">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={18}
-              />
-              <Input
-                type="search"
-                placeholder="Search by SKU, name, or location..."
-                className="pl-10 w-full bg-white"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-shrink-0">
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Filters
-              </Button>
-              <select
-                className="px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                defaultValue="all"
-              >
-                <option value="all">All Categories</option>
-                <option value="clothing">Clothing</option>
-                <option value="furniture">Furniture</option>
-                <option value="electronics">Electronics</option>
-                <option value="books">Books</option>
-                <option value="toys">Toys</option>
-                <option value="kitchenware">Kitchenware</option>
-              </select>
-              <select
-                className="px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                defaultValue="in-stock"
-              >
-                <option value="all">All Stock</option>
-                <option value="in-stock">In Stock</option>
-                <option value="low-stock">Low Stock</option>
-                <option value="out-of-stock">Out of Stock</option>
-              </select>
-            </div>
-          </div>
+          {/* Search and Filter Bar - Client Component */}
+          <InventorySearchFilters categories={categories || []} />
 
-          {/* Inventory Table */}
+          {/* Inventory Table - Client Component with React Query */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-            <InventoryTable items={inventoryItems || []} />
+            <InventoryClientTable />
           </div>
         </div>
       </main>

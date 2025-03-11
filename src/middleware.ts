@@ -37,33 +37,29 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
-  // Redirect sellers to their dashboard
-  if (!error && user && req.nextUrl.pathname === "/dashboard") {
-    const { data } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    if (data?.role === "seller") {
-      return NextResponse.redirect(new URL("/dashboard/seller", req.url));
-    }
-  }
-
-  // Restrict sellers from accessing staff/admin routes
+  // Combine role checks to reduce database calls
   if (
     !error &&
     user &&
-    req.nextUrl.pathname.match(
-      /^\/dashboard\/(inventory|pos|sales|reports|admin|staff)/,
-    )
+    (req.nextUrl.pathname === "/dashboard" ||
+      req.nextUrl.pathname.match(
+        /^\/dashboard\/(inventory|pos|sales|reports|admin|staff)/,
+      ))
   ) {
+    // Cache user role to avoid multiple DB calls
     const { data } = await supabase
       .from("users")
       .select("role")
       .eq("id", user.id)
       .single();
+
     if (data?.role === "seller") {
-      return NextResponse.redirect(new URL("/dashboard/seller", req.url));
+      if (req.nextUrl.pathname === "/dashboard") {
+        return NextResponse.redirect(new URL("/dashboard/seller", req.url));
+      } else {
+        // Restrict sellers from accessing staff/admin routes
+        return NextResponse.redirect(new URL("/dashboard/seller", req.url));
+      }
     }
   }
 

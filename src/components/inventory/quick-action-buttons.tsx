@@ -8,17 +8,18 @@ import {
   Package,
   ArrowUpDown,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 
-export default function QuickActionButtons() {
+const QuickActionButtons = memo(function QuickActionButtons() {
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleScanClick = () => {
+  // Memoize the scan click handler to prevent recreation on each render
+  const handleScanClick = useCallback(() => {
     setIsScanning(true);
     // In a real implementation, this would activate the camera
     // For demo purposes, we'll just toggle it back after a delay
     setTimeout(() => setIsScanning(false), 3000);
-  };
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -51,4 +52,6 @@ export default function QuickActionButtons() {
       </Button>
     </div>
   );
-}
+});
+
+export default QuickActionButtons;

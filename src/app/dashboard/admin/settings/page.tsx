@@ -25,10 +25,10 @@ export default async function AdminSettingsPage({
     return redirect("/sign-in");
   }
 
-  // Fetch system settings
+  // Fetch only needed system settings
   const { data: systemSettings } = await supabase
     .from("system_settings")
-    .select("*")
+    .select("id, setting_key, setting_value, description")
     .order("setting_key", { ascending: true });
 
   // Find specific settings

@@ -1,6 +1,8 @@
 import { ShoppingBag, Package, Tag, Clock } from "lucide-react";
+import { memo } from "react";
 
-export default function RecentActivityFeed() {
+// Memoized to prevent re-renders when parent components update
+const RecentActivityFeed = memo(function RecentActivityFeed() {
   // This would normally be fetched from the database
   const activities = [
     {
@@ -86,4 +88,6 @@ export default function RecentActivityFeed() {
       </div>
     </div>
   );
-}
+});
+
+export default RecentActivityFeed;
