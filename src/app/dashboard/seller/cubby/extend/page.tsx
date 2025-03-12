@@ -195,9 +195,10 @@ export default function ExtendCubbyPage() {
       }
 
       // Redirect to payment page after a short delay to show the success message
+      // Pass the additional fee as a parameter to ensure correct fee calculation
       setTimeout(() => {
         router.push(
-          `/dashboard/seller/cubby/payment?rental_id=${currentRental.id}&extended=true`,
+          `/dashboard/seller/cubby/payment?rental_id=${currentRental.id}&extended=true&additional_fee=${rentalFees[rentalPeriod as keyof typeof rentalFees]}`,
         );
       }, 2000);
     } catch (err) {

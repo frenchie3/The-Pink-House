@@ -37,7 +37,20 @@ export default function CubbyExtensionOptions({
 }: CubbyExtensionOptionsProps) {
   // If we can extend the current cubby, select it by default
   useEffect(() => {
-    if (canExtendCurrentCubby && currentCubby && !selectedCubbyId) {
+    if (
+      canExtendCurrentCubby &&
+      currentCubby &&
+      currentCubby.cubby_id &&
+      !selectedCubbyId
+    ) {
+      onSelectCubby(currentCubby.cubby_id);
+    } else if (
+      canExtendCurrentCubby &&
+      currentCubby &&
+      currentCubby.id &&
+      !selectedCubbyId
+    ) {
+      // Fallback to using id if cubby_id is not available
       onSelectCubby(currentCubby.id);
     }
   }, [canExtendCurrentCubby, currentCubby, onSelectCubby, selectedCubbyId]);

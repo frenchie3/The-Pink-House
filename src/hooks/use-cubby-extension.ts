@@ -74,11 +74,25 @@ export function useCubbyExtension(
 
       if (conflictError) throw conflictError;
 
+      // Get the current rental ID (not just the cubby ID)
+      const { data: currentRentalData } = await supabase
+        .from("cubby_rentals")
+        .select("id")
+        .eq("cubby_id", currentCubbyId)
+        .eq("status", "active")
+        .single();
+
+      const currentRentalId = currentRentalData?.id;
+
+      if (!currentRentalId) {
+        throw new Error("Could not find active rental for the current cubby");
+      }
+
       // Then manually filter out the current rental and check for overlaps
       // This avoids potential issues with the .neq() filter in Supabase
       const conflictingRentals = allCubbyRentals.filter((rental) => {
         // Skip the current rental we're trying to extend
-        if (rental.id === currentCubbyId) return false;
+        if (rental.id === currentRentalId) return false;
 
         // Check for overlap: other rental starts before our new end AND ends after our extension start
         const rentalStart = new Date(rental.start_date);
@@ -110,19 +124,13 @@ export function useCubbyExtension(
       // Create a set of occupied cubby IDs during the extension period
       const occupiedCubbyIds = new Set();
 
-      // Get the current rental ID (not just the cubby ID)
-      const { data: currentRentalData } = await supabase
-        .from("cubby_rentals")
-        .select("id")
-        .eq("cubby_id", currentCubbyId)
-        .eq("status", "active")
-        .single();
-
-      const currentRentalId = currentRentalData?.id;
+      // We already have currentRentalId from above, so we can use it directly
 
       rentals.forEach((rental) => {
-        // Skip the current rental we're trying to extend
-        if (rental.id === currentRentalId) return;
+        // We need to check if this rental's cubby_id matches our current cubby_id AND
+        // if the rental ID matches our current rental ID - if so, skip it
+        if (rental.cubby_id === currentCubbyId && rental.id === currentRentalId)
+          return;
 
         const rentalStart = new Date(rental.start_date);
         const rentalEnd = new Date(rental.end_date);
