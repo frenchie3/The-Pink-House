@@ -140,6 +140,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          labels_printed: boolean | null
           last_updated: string | null
           listing_type: string | null
           location: string | null
@@ -149,7 +150,6 @@ export type Database = {
           quantity: number
           seller_id: string | null
           sku: string
-          staff_reviewed: boolean | null
         }
         Insert: {
           barcode?: string | null
@@ -164,6 +164,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          labels_printed?: boolean | null
           last_updated?: string | null
           listing_type?: string | null
           location?: string | null
@@ -173,7 +174,6 @@ export type Database = {
           quantity?: number
           seller_id?: string | null
           sku: string
-          staff_reviewed?: boolean | null
         }
         Update: {
           barcode?: string | null
@@ -188,6 +188,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          labels_printed?: boolean | null
           last_updated?: string | null
           listing_type?: string | null
           location?: string | null
@@ -197,7 +198,6 @@ export type Database = {
           quantity?: number
           seller_id?: string | null
           sku?: string
-          staff_reviewed?: boolean | null
         }
         Relationships: [
           {
@@ -565,6 +565,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_cubby_extension_availability: {
+        Args: {
+          p_cubby_id: string
+          p_current_rental_id: string
+          p_extension_start: string
+          p_extension_end: string
+        }
+        Returns: boolean
+      }
+      extend_cubby_rental: {
+        Args: {
+          p_rental_id: string
+          p_new_end_date: string
+          p_new_cubby_id: string
+          p_additional_fee: number
+          p_is_reassignment?: boolean
+        }
+        Returns: undefined
+      }
       mark_item_reviewed: {
         Args: {
           item_id: string

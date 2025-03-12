@@ -120,18 +120,21 @@ const POSItemGrid = memo(function POSItemGrid({
                   </p>
                 </div>
                 <div className="flex items-center space-x-1">
-                  {item.cartQuantity && item.cartQuantity > 0 ? (
+                  {item.cartQuantity !== undefined && item.cartQuantity > 0 ? (
                     <div className="flex items-center h-8 border rounded-md overflow-hidden">
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 rounded-none p-0"
-                        onClick={() =>
-                          onUpdateQuantity(
-                            item.id,
-                            Math.max(0, item.cartQuantity - 1),
-                          )
-                        }
+                        onClick={() => {
+                          if (item.cartQuantity === 1) {
+                            // If this is the last item, set to 0 to remove it
+                            onUpdateQuantity(item.id, 0);
+                          } else {
+                            // Otherwise just decrease by 1
+                            onUpdateQuantity(item.id, item.cartQuantity - 1);
+                          }
+                        }}
                       >
                         <span className="text-lg font-medium">-</span>
                       </Button>
@@ -274,19 +277,22 @@ const POSItemGrid = memo(function POSItemGrid({
                   </Badge>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                  {item.cartQuantity && item.cartQuantity > 0 ? (
+                  {item.cartQuantity !== undefined && item.cartQuantity > 0 ? (
                     <div className="flex items-center justify-end space-x-1">
                       <div className="flex items-center h-8 border rounded-md overflow-hidden">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 rounded-none p-0"
-                          onClick={() =>
-                            onUpdateQuantity(
-                              item.id,
-                              Math.max(0, item.cartQuantity - 1),
-                            )
-                          }
+                          onClick={() => {
+                            if (item.cartQuantity === 1) {
+                              // If this is the last item, set to 0 to remove it
+                              onUpdateQuantity(item.id, 0);
+                            } else {
+                              // Otherwise just decrease by 1
+                              onUpdateQuantity(item.id, item.cartQuantity - 1);
+                            }
+                          }}
                         >
                           <span className="text-lg font-medium">-</span>
                         </Button>

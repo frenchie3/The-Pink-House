@@ -48,6 +48,15 @@ interface POSInterfaceProps {
   userId: string;
 }
 
+// Simple helper function
+function removeCartQuantity(item: any) {
+  if (item && item.cartQuantity !== undefined) {
+    const { cartQuantity, ...rest } = item;
+    return rest;
+  }
+  return item;
+}
+
 export default function POSInterface({
   inventoryItems,
   categories,
@@ -71,6 +80,23 @@ export default function POSInterface({
     resetFilters,
   } = useInventoryFilters(inventoryItems);
 
+  // Simplified synchronization effect
+  useEffect(() => {
+    // Only update filtered items when cart changes
+    if (cart.length === 0) {
+      // If cart is empty, reset all cartQuantity values
+      setFilteredItems((prevItems) =>
+        prevItems.map((item) => {
+          if (item.cartQuantity !== undefined) {
+            const { cartQuantity, ...rest } = item;
+            return rest;
+          }
+          return item;
+        }),
+      );
+    }
+  }, [cart.length]);
+
   // Extract unique cubby locations
   const cubbyLocations = Array.from(
     new Set(
@@ -86,86 +112,96 @@ export default function POSInterface({
     0,
   );
 
-  // Handle adding item to cart - memoized to prevent recreation on each render
-  const addToCart = useCallback((item: InventoryItem) => {
-    // If item has cartQuantity already set, use that value (for the update case)
-    // If cartQuantity is undefined, default to 1 (adding a new item)
-    const quantityToAdd =
-      item.cartQuantity !== undefined ? item.cartQuantity : 1;
+  // Handle adding item to cart - simplified version
+  const addToCart = useCallback(
+    (item: InventoryItem) => {
+      // Always add 1 when clicking the cart button
+      const quantityToAdd = 1;
 
-    setCart((prevCart) => {
-      const existingItemIndex = prevCart.findIndex(
-        (cartItem) => cartItem.id === item.id,
-      );
+      setCart((prevCart) => {
+        const existingItemIndex = prevCart.findIndex(
+          (cartItem) => cartItem.id === item.id,
+        );
 
-      if (existingItemIndex >= 0) {
-        // Item already in cart, set to the specified quantity or increase by 1
-        const updatedCart = [...prevCart];
-        const existingItem = updatedCart[existingItemIndex];
+        if (existingItemIndex >= 0) {
+          // Item already in cart, increment by 1
+          const updatedCart = [...prevCart];
+          const existingItem = updatedCart[existingItemIndex];
 
-        if (item.cartQuantity !== undefined) {
-          // If quantity is 0, remove the item
-          if (item.cartQuantity === 0) {
-            return updatedCart.filter((item) => item.id !== existingItem.id);
-          }
-          // Otherwise set to the specified quantity
+          // Increment by 1, respecting the max quantity
           existingItem.cartQuantity = Math.min(
-            item.cartQuantity,
+            existingItem.cartQuantity + 1,
             existingItem.quantity,
           );
-        } else if (existingItem.cartQuantity < existingItem.quantity) {
-          // Increase by 1 if no specific quantity provided
-          existingItem.cartQuantity += 1;
+
+          return updatedCart;
+        } else {
+          // Add new item to cart with quantity 1
+          return [...prevCart, { ...item, cartQuantity: quantityToAdd }];
         }
+      });
 
-        return updatedCart;
-      } else if (quantityToAdd > 0) {
-        // Add new item to cart with the specified quantity
-        return [...prevCart, { ...item, cartQuantity: quantityToAdd }];
-      } else {
-        // If quantity is 0 and item not in cart, don't add it
-        return prevCart;
-      }
-    });
-
-    // Update the cartQuantity in the filteredItems for UI updates
-    setFilteredItems((prevItems) =>
-      prevItems.map((prevItem) =>
-        prevItem.id === item.id
-          ? {
+      // Update the filtered items to show the item is in cart
+      setFilteredItems((prevItems) =>
+        prevItems.map((prevItem) => {
+          if (prevItem.id === item.id) {
+            // Get current quantity from cart or default to 1
+            const cartItem = cart.find((ci) => ci.id === item.id);
+            const newQuantity = cartItem ? cartItem.cartQuantity + 1 : 1;
+            return {
               ...prevItem,
-              cartQuantity:
-                item.cartQuantity !== undefined
-                  ? item.cartQuantity
-                  : (prevItem.cartQuantity || 0) + 1,
-            }
-          : prevItem,
-      ),
-    );
-  }, []);
+              cartQuantity: Math.min(newQuantity, prevItem.quantity),
+            };
+          }
+          return prevItem;
+        }),
+      );
+    },
+    [cart, setCart, setFilteredItems],
+  );
 
   // Handle removing item from cart - memoized to prevent recreation on each render
-  const removeFromCart = useCallback((itemId: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
+  const removeFromCart = useCallback(
+    (itemId: string) => {
+      console.log("Removing from cart:", itemId);
 
-    // Reset the cartQuantity in filteredItems to undefined so it shows the add button
-    setFilteredItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId ? { ...item, cartQuantity: undefined } : item,
-      ),
-    );
-  }, []);
+      // Remove the item from the cart
+      setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
+
+      // Reset the cartQuantity in filteredItems to undefined so it shows the add button
+      setFilteredItems((prevItems) => {
+        return prevItems.map((item) => {
+          if (item.id === itemId) {
+            // Create a completely new object without cartQuantity
+            const { cartQuantity, ...rest } = item;
+            return rest;
+          }
+          return item;
+        });
+      });
+    },
+    [setCart, setFilteredItems],
+  );
 
   // Handle updating cart item quantity - memoized to prevent recreation on each render
   const updateCartItemQuantity = useCallback(
     (itemId: string, newQuantity: number) => {
-      setCart((prevCart) => {
-        // If quantity is 0, remove the item
-        if (newQuantity === 0) {
-          return prevCart.filter((item) => item.id !== itemId);
-        }
+      // If quantity is 0, remove the item
+      if (newQuantity === 0) {
+        // Remove from cart
+        setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
 
-        // Otherwise update the quantity
+        // Reset the item in filteredItems
+        setFilteredItems((prevItems) =>
+          prevItems.map((item) =>
+            item.id === itemId ? { ...item, cartQuantity: undefined } : item,
+          ),
+        );
+        return;
+      }
+
+      // Otherwise update the quantity
+      setCart((prevCart) => {
         return prevCart.map((item) =>
           item.id === itemId
             ? { ...item, cartQuantity: Math.min(newQuantity, item.quantity) }
@@ -180,7 +216,7 @@ export default function POSInterface({
         ),
       );
     },
-    [],
+    [setCart, setFilteredItems],
   );
 
   // Handle barcode scanning
