@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { encodedRedirect } from "@/utils/utils";
 import { revalidatePath } from "next/cache";
+import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 
 export default async function AddListingPage({
   searchParams,
@@ -209,182 +210,188 @@ export default async function AddListingPage({
 
   return (
     <SellerGuard>
-      <SellerNavbar />
-      <main className="w-full bg-gray-50 h-screen overflow-auto">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header Section */}
-          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Add New Item</h1>
-              <p className="text-gray-600 mt-1">Add a new item to your cubby</p>
-            </div>
-          </header>
-
-          {!activeCubby ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <p className="text-gray-500 mb-4">
-                  You need an active cubby rental to add items
+      <LayoutWrapper>
+        <SellerNavbar />
+        <MainContent>
+          <div className="container mx-auto px-4 py-8">
+            {/* Header Section */}
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Add New Item
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Add a new item to your cubby
                 </p>
-                <Button className="bg-pink-600 hover:bg-pink-700" asChild>
-                  <a href="/dashboard/seller/cubby">Rent a Cubby</a>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : remainingItems <= 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <p className="text-gray-500 mb-4">
-                  You've reached your limit of {itemLimit} items
-                </p>
-                <Button className="bg-pink-600 hover:bg-pink-700" asChild>
-                  <a href="/dashboard/seller/listings">View Your Listings</a>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Item Details</CardTitle>
-                <p className="text-sm text-gray-500">
-                  You can add {remainingItems} more item
-                  {remainingItems !== 1 ? "s" : ""} to your cubby
-                </p>
-              </CardHeader>
-              <CardContent>
-                {searchParams.error && (
-                  <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md">
-                    {searchParams.error}
-                  </div>
-                )}
-                {searchParams.success && (
-                  <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-md">
-                    {searchParams.success}
-                  </div>
-                )}
+              </div>
+            </header>
 
-                <form action={addItem} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Item Name *</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        placeholder="Vintage Teacup Set"
-                        required
-                      />
+            {!activeCubby ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <p className="text-gray-500 mb-4">
+                    You need an active cubby rental to add items
+                  </p>
+                  <Button className="bg-pink-600 hover:bg-pink-700" asChild>
+                    <a href="/dashboard/seller/cubby">Rent a Cubby</a>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : remainingItems <= 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <p className="text-gray-500 mb-4">
+                    You've reached your limit of {itemLimit} items
+                  </p>
+                  <Button className="bg-pink-600 hover:bg-pink-700" asChild>
+                    <a href="/dashboard/seller/listings">View Your Listings</a>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Item Details</CardTitle>
+                  <p className="text-sm text-gray-500">
+                    You can add {remainingItems} more item
+                    {remainingItems !== 1 ? "s" : ""} to your cubby
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {searchParams.error && (
+                    <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md">
+                      {searchParams.error}
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Price ($) *</Label>
-                      <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        placeholder="15.99"
-                        required
-                      />
+                  )}
+                  {searchParams.success && (
+                    <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-md">
+                      {searchParams.success}
                     </div>
+                  )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category *</Label>
-                      <select
-                        id="category"
-                        name="category"
-                        className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                        required
-                      >
-                        <option value="">Select a category</option>
-                        {categories?.map((category) => (
-                          <option key={category.id} value={category.name}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <form action={addItem} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Item Name *</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="Vintage Teacup Set"
+                          required
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantity *</Label>
-                      <Input
-                        id="quantity"
-                        name="quantity"
-                        type="number"
-                        min="1"
-                        defaultValue="1"
-                        required
-                      />
-                    </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="price">Price ($) *</Label>
+                        <Input
+                          id="price"
+                          name="price"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          placeholder="15.99"
+                          required
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="condition">Condition</Label>
-                      <select
-                        id="condition"
-                        name="condition"
-                        className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                      >
-                        <option value="New">New</option>
-                        <option value="Like New">Like New</option>
-                        <option value="Good">Good</option>
-                        <option value="Fair">Fair</option>
-                        <option value="Poor">Poor</option>
-                      </select>
-                    </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="category">Category *</Label>
+                        <select
+                          id="category"
+                          name="category"
+                          className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                          required
+                        >
+                          <option value="">Select a category</option>
+                          {categories?.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="listing_info">Listing Type</Label>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium">
-                          {activeCubby.listing_type === "self"
-                            ? "Self-Listing"
-                            : "Staff-Managed"}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Commission Rate:{" "}
-                          {(activeCubby.commission_rate * 100).toFixed(0)}%
-                        </p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          {activeCubby.listing_type === "self"
-                            ? "You are responsible for managing all item details and photos. You can edit items until they are reviewed by staff."
-                            : "Our staff will handle the listing process for you."}
-                        </p>
-                        <input
-                          type="hidden"
-                          name="listing_type"
-                          value={activeCubby.listing_type}
+                      <div className="space-y-2">
+                        <Label htmlFor="quantity">Quantity *</Label>
+                        <Input
+                          id="quantity"
+                          name="quantity"
+                          type="number"
+                          min="1"
+                          defaultValue="1"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="condition">Condition</Label>
+                        <select
+                          id="condition"
+                          name="condition"
+                          className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                        >
+                          <option value="New">New</option>
+                          <option value="Like New">Like New</option>
+                          <option value="Good">Good</option>
+                          <option value="Fair">Fair</option>
+                          <option value="Poor">Poor</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="listing_info">Listing Type</Label>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <p className="font-medium">
+                            {activeCubby.listing_type === "self"
+                              ? "Self-Listing"
+                              : "Staff-Managed"}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Commission Rate:{" "}
+                            {(activeCubby.commission_rate * 100).toFixed(0)}%
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            {activeCubby.listing_type === "self"
+                              ? "You are responsible for managing all item details and photos. You can edit items until they are reviewed by staff."
+                              : "Our staff will handle the listing process for you."}
+                          </p>
+                          <input
+                            type="hidden"
+                            name="listing_type"
+                            value={activeCubby.listing_type}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          name="description"
+                          placeholder="Describe your item..."
+                          rows={4}
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        placeholder="Describe your item..."
-                        rows={4}
-                      />
+                    <div className="flex justify-end gap-4">
+                      <Button type="button" variant="outline" asChild>
+                        <a href="/dashboard/seller/listings">Cancel</a>
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="bg-pink-600 hover:bg-pink-700"
+                      >
+                        Add Item
+                      </Button>
                     </div>
-                  </div>
-
-                  <div className="flex justify-end gap-4">
-                    <Button type="button" variant="outline" asChild>
-                      <a href="/dashboard/seller/listings">Cancel</a>
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="bg-pink-600 hover:bg-pink-700"
-                    >
-                      Add Item
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </main>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </MainContent>
+      </LayoutWrapper>
     </SellerGuard>
   );
 }
