@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SellerNavbar from "@/components/seller-navbar";
 import SellerGuard from "@/components/seller-guard";
@@ -8,9 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Calendar, Clock, ArrowLeft } from "lucide-react";
+import {
+  CreditCard,
+  Calendar,
+  Clock,
+  ArrowLeft,
+  AlertCircle,
+} from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { createClient } from "../../../../../../supabase/client";
+import CubbyExtensionOptions from "@/components/seller/cubby-extension-options";
+import { useCubbyExtension } from "@/hooks/use-cubby-extension";
 
 export default function ExtendCubbyPage() {
   const [rentalPeriod, setRentalPeriod] = useState("monthly");
@@ -18,6 +26,9 @@ export default function ExtendCubbyPage() {
   const [currentRental, setCurrentRental] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCubbyId, setSelectedCubbyId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showCubbyOptions, setShowCubbyOptions] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,6 +41,40 @@ export default function ExtendCubbyPage() {
     monthly: 35,
     quarterly: 90,
   };
+
+  // Calculate new end date based on current end date and rental period
+  const calculatedNewEndDate = useMemo(() => {
+    if (!currentRental) return null;
+
+    const currentEndDate = new Date(currentRental.end_date);
+    const newEndDate = new Date(currentEndDate);
+
+    if (rentalPeriod === "weekly") {
+      newEndDate.setDate(newEndDate.getDate() + 7);
+    } else if (rentalPeriod === "monthly") {
+      newEndDate.setMonth(newEndDate.getMonth() + 1);
+    } else if (rentalPeriod === "quarterly") {
+      newEndDate.setMonth(newEndDate.getMonth() + 3);
+    }
+
+    return newEndDate;
+  }, [currentRental, rentalPeriod]);
+
+  // Format dates for display and API calls
+  const formattedCurrentEndDate = currentRental?.end_date || "";
+  const formattedNewEndDate = calculatedNewEndDate?.toISOString() || "";
+
+  // Use the cubby extension hook to check availability
+  const {
+    canExtendCurrentCubby,
+    alternativeCubbies,
+    loading: extensionLoading,
+    error: extensionError,
+  } = useCubbyExtension(
+    currentRental?.cubby_id || "",
+    formattedCurrentEndDate,
+    formattedNewEndDate,
+  );
 
   useEffect(() => {
     const fetchCurrentRental = async () => {
@@ -61,6 +106,8 @@ export default function ExtendCubbyPage() {
         if (!data) throw new Error("No active rental found");
 
         setCurrentRental(data);
+        // Initially select the current cubby ID
+        setSelectedCubbyId(data.cubby_id);
       } catch (err) {
         console.error("Error fetching rental:", err);
         setError(
@@ -74,46 +121,86 @@ export default function ExtendCubbyPage() {
     fetchCurrentRental();
   }, [supabase, rentalId]);
 
+  // Reset selected cubby when rental period changes
+  useEffect(() => {
+    if (currentRental) {
+      setSelectedCubbyId(null);
+      setShowCubbyOptions(false);
+      setSuccessMessage(null);
+    }
+  }, [rentalPeriod]);
+
+  const handleCheckAvailability = () => {
+    setShowCubbyOptions(true);
+  };
+
   const handleExtendRental = async () => {
-    if (!currentRental) return;
+    if (!currentRental || !selectedCubbyId || !calculatedNewEndDate) return;
 
     setIsSubmitting(true);
+    setError(null);
 
     try {
-      // Calculate new end date based on current end date
-      const currentEndDate = new Date(currentRental.end_date);
-      const newEndDate = new Date(currentEndDate);
+      // Check if we're keeping the same cubby or reassigning
+      const isReassignment = selectedCubbyId !== currentRental.cubby_id;
 
-      if (rentalPeriod === "weekly") {
-        newEndDate.setDate(newEndDate.getDate() + 7);
-      } else if (rentalPeriod === "monthly") {
-        newEndDate.setMonth(newEndDate.getMonth() + 1);
-      } else if (rentalPeriod === "quarterly") {
-        newEndDate.setMonth(newEndDate.getMonth() + 3);
+      // Start a transaction to ensure data consistency
+      const { error: transactionError } = await supabase.rpc(
+        "extend_cubby_rental",
+        {
+          p_rental_id: currentRental.id,
+          p_new_end_date: calculatedNewEndDate.toISOString(),
+          p_new_cubby_id: selectedCubbyId,
+          p_additional_fee: rentalFees[rentalPeriod as keyof typeof rentalFees],
+          p_is_reassignment: isReassignment,
+        },
+      );
+
+      if (transactionError) {
+        throw new Error(`Transaction failed: ${transactionError.message}`);
       }
 
-      // Update the rental record - maintain the same listing_type and commission_rate
-      const { error: updateError } = await supabase
-        .from("cubby_rentals")
-        .update({
-          end_date: newEndDate.toISOString(),
-          rental_fee:
-            currentRental.rental_fee +
-            rentalFees[rentalPeriod as keyof typeof rentalFees],
-          // Auto-set to paid for demo purposes
-          payment_status: "paid",
-          // Explicitly keep the same listing_type and commission_rate
-          listing_type: currentRental.listing_type,
-          commission_rate: currentRental.commission_rate,
-        })
-        .eq("id", currentRental.id);
+      // If we need to update inventory items' cubby location for a reassignment
+      if (isReassignment) {
+        // Get the new cubby number for updating inventory items
+        const { data: newCubbyData } = await supabase
+          .from("cubbies")
+          .select("cubby_number")
+          .eq("id", selectedCubbyId)
+          .single();
 
-      if (updateError) throw updateError;
+        if (newCubbyData) {
+          // Update all inventory items linked to this rental
+          const { error: updateItemsError } = await supabase
+            .from("inventory_items")
+            .update({
+              cubby_id: selectedCubbyId,
+              cubby_location: newCubbyData.cubby_number,
+              last_updated: new Date().toISOString(),
+            })
+            .eq("seller_id", currentRental.seller_id)
+            .eq("cubby_id", currentRental.cubby_id);
 
-      // Redirect to payment page
-      router.push(
-        `/dashboard/seller/cubby/payment?rental_id=${currentRental.id}`,
-      );
+          if (updateItemsError) {
+            console.error("Error updating inventory items:", updateItemsError);
+            // Continue anyway as the rental was updated successfully
+          }
+        }
+
+        setSuccessMessage(
+          "Your cubby rental has been extended with a new cubby assignment. Please relocate your items to the new cubby.",
+        );
+      } else {
+        setSuccessMessage("Your cubby rental has been successfully extended.");
+      }
+
+      // Redirect to payment page after a short delay to show the success message
+      // Pass the additional fee as a parameter to ensure correct fee calculation
+      setTimeout(() => {
+        router.push(
+          `/dashboard/seller/cubby/payment?rental_id=${currentRental.id}&extended=true&additional_fee=${rentalFees[rentalPeriod as keyof typeof rentalFees]}`,
+        );
+      }, 2000);
     } catch (err) {
       console.error("Error extending rental:", err);
       setError(err instanceof Error ? err.message : "Failed to extend rental");
@@ -174,6 +261,30 @@ export default function ExtendCubbyPage() {
               </p>
             </div>
           </header>
+
+          {successMessage && (
+            <div className="mb-6 bg-green-50 p-4 rounded-md flex items-start gap-3 text-green-800">
+              <div className="h-5 w-5 mt-0.5 flex-shrink-0 bg-green-100 rounded-full flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-green-600"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">Success!</p>
+                <p className="text-sm mt-1">{successMessage}</p>
+                <p className="text-sm mt-2">Redirecting to payment page...</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Extension Options */}
@@ -273,6 +384,34 @@ export default function ExtendCubbyPage() {
                         </div>
                       </RadioGroup>
                     </div>
+
+                    {!showCubbyOptions && (
+                      <div className="flex justify-end mt-6">
+                        <Button
+                          onClick={handleCheckAvailability}
+                          className="bg-pink-600 hover:bg-pink-700"
+                        >
+                          Check Availability
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Cubby Extension Options */}
+                    {showCubbyOptions &&
+                      currentRental &&
+                      calculatedNewEndDate && (
+                        <div className="mt-6">
+                          <CubbyExtensionOptions
+                            currentCubby={currentRental}
+                            canExtendCurrentCubby={canExtendCurrentCubby}
+                            alternativeCubbies={alternativeCubbies}
+                            loading={extensionLoading}
+                            error={extensionError}
+                            onSelectCubby={setSelectedCubbyId}
+                            selectedCubbyId={selectedCubbyId}
+                          />
+                        </div>
+                      )}
                   </div>
                 </CardContent>
               </Card>
@@ -305,25 +444,32 @@ export default function ExtendCubbyPage() {
                         <div className="flex items-center gap-2">
                           <Calendar className="h-5 w-5 text-pink-600" />
                           <p className="text-lg font-medium">
-                            {(() => {
-                              const currentEndDate = new Date(
-                                currentRental.end_date,
-                              );
-                              const newEndDate = new Date(currentEndDate);
-
-                              if (rentalPeriod === "weekly") {
-                                newEndDate.setDate(newEndDate.getDate() + 7);
-                              } else if (rentalPeriod === "monthly") {
-                                newEndDate.setMonth(newEndDate.getMonth() + 1);
-                              } else if (rentalPeriod === "quarterly") {
-                                newEndDate.setMonth(newEndDate.getMonth() + 3);
-                              }
-
-                              return newEndDate.toLocaleDateString();
-                            })()}
+                            {calculatedNewEndDate?.toLocaleDateString() || ""}
                           </p>
                         </div>
                       </div>
+
+                      {showCubbyOptions && selectedCubbyId && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">
+                            Selected Cubby
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <p className="text-lg font-medium">
+                              {selectedCubbyId === currentRental.cubby_id
+                                ? `Current Cubby #${currentRental.cubby?.cubby_number}`
+                                : `New Cubby #${alternativeCubbies.find((c) => c.id === selectedCubbyId)?.cubby_number || ""}`}
+                            </p>
+                          </div>
+                          {selectedCubbyId !== currentRental.cubby_id && (
+                            <p className="text-xs text-amber-600 mt-2">
+                              <AlertCircle className="h-3 w-3 inline mr-1" />
+                              You will need to relocate your items to the new
+                              cubby
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       <div className="border-t pt-4">
                         <div className="flex justify-between items-center mt-4">
@@ -346,7 +492,12 @@ export default function ExtendCubbyPage() {
                     className="w-full bg-pink-600 hover:bg-pink-700"
                     size="lg"
                     onClick={handleExtendRental}
-                    disabled={isSubmitting}
+                    disabled={
+                      isSubmitting ||
+                      !showCubbyOptions ||
+                      !selectedCubbyId ||
+                      !!successMessage
+                    }
                   >
                     {isSubmitting ? (
                       <>

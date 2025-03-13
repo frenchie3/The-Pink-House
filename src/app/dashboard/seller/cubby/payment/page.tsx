@@ -9,14 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CreditCard, Banknote, CheckCircle2, ArrowLeft } from "lucide-react";
+import {
+  CreditCard,
+  Banknote,
+  CheckCircle2,
+  ArrowLeft,
+  Loader2,
+} from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { createClient } from "../../../../../../supabase/client";
 
 export default function CubbyPaymentPage() {
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [rentalDetails, setRentalDetails] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentRental, setCurrentRental] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -24,6 +30,8 @@ export default function CubbyPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rentalId = searchParams.get("rental_id");
+  const isExtension = searchParams.get("extended") === "true";
+  const additionalFee = searchParams.get("additional_fee");
   const supabase = createClient();
 
   useEffect(() => {
@@ -44,7 +52,7 @@ export default function CubbyPaymentPage() {
         if (error) throw error;
         if (!data) throw new Error("Rental not found");
 
-        setRentalDetails(data);
+        setCurrentRental(data);
       } catch (err) {
         console.error("Error fetching rental details:", err);
         setError(
@@ -58,36 +66,77 @@ export default function CubbyPaymentPage() {
     fetchRentalDetails();
   }, [rentalId, supabase]);
 
-  const handleProcessPayment = async () => {
-    if (!rentalDetails) return;
+  // Get only the current transaction fee, not cumulative historical fees
+  // For extensions, we use the additional fee from the URL parameter
+  // For new rentals, we use the base rental fee
+  const currentTransactionFee = isExtension
+    ? parseFloat(additionalFee || "0")
+    : currentRental?.rental_fee || 0;
 
-    setIsProcessing(true);
+  const handlePayment = async () => {
+    setIsSubmitting(true);
+    setError(null);
 
     try {
-      // Fake payment processing - always succeeds without actual payment
-      // Simulate a brief delay for user experience
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // In a real app, this would integrate with a payment processor like Stripe
+      // For demo purposes, we'll just simulate a successful payment
 
-      // Update payment status in database
-      const { error } = await supabase
-        .from("cubby_rentals")
-        .update({ payment_status: "paid" })
-        .eq("id", rentalId);
+      // For extensions, we need to update the rental fee to reflect only the additional fee
+      // rather than accumulating historical fees
+      if (isExtension && additionalFee) {
+        // Get the current rental fee before adding the extension fee
+        const baseRentalFee = currentRental?.rental_fee || 0;
+        const extensionFeeValue = parseFloat(additionalFee);
 
-      if (error) throw error;
+        // Update the rental record with payment status and the correct total fee
+        // (base fee + extension fee, not cumulative historical fees)
+        const { error: updateError } = await supabase
+          .from("cubby_rentals")
+          .update({
+            payment_status: "paid",
+            rental_fee: baseRentalFee + extensionFeeValue, // Set the correct total fee
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", currentRental?.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // For new rentals, just update the payment status
+        const { error: updateError } = await supabase
+          .from("cubby_rentals")
+          .update({
+            payment_status: "paid",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", currentRental?.id);
+
+        if (updateError) throw updateError;
+      }
+
+      // Create a payment record
+      const { error: paymentError } = await supabase.from("payments").insert({
+        rental_id: currentRental?.id,
+        amount: currentTransactionFee,
+        payment_method: paymentMethod,
+        status: "completed",
+        is_extension: isExtension,
+        created_at: new Date().toISOString(),
+      });
+
+      if (paymentError) throw paymentError;
 
       setSuccess(true);
 
       // Redirect after a short delay
       setTimeout(() => {
         router.push("/dashboard/seller/cubby");
-      }, 1000);
+      }, 2000);
     } catch (err) {
       console.error("Payment processing error:", err);
       setError(
         err instanceof Error ? err.message : "Payment processing failed",
       );
-      setIsProcessing(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -271,7 +320,7 @@ export default function CubbyPaymentPage() {
                   <CardTitle>Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {rentalDetails && (
+                  {currentRental && (
                     <>
                       <div className="space-y-4">
                         <div className="bg-gray-50 p-4 rounded-lg">
@@ -279,10 +328,10 @@ export default function CubbyPaymentPage() {
                             Cubby Details
                           </h3>
                           <p className="font-medium">
-                            Cubby #{rentalDetails.cubby?.cubby_number}
+                            Cubby #{currentRental.cubby?.cubby_number}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {rentalDetails.cubby?.location || "Main Floor"}
+                            {currentRental.cubby?.location || "Main Floor"}
                           </p>
                         </div>
 
@@ -292,7 +341,7 @@ export default function CubbyPaymentPage() {
                           </h3>
                           <p className="font-medium">
                             {new Date(
-                              rentalDetails.start_date,
+                              currentRental.start_date,
                             ).toLocaleDateString("en-NZ", {
                               day: "2-digit",
                               month: "2-digit",
@@ -300,7 +349,7 @@ export default function CubbyPaymentPage() {
                             })}{" "}
                             to{" "}
                             {new Date(
-                              rentalDetails.end_date,
+                              currentRental.end_date,
                             ).toLocaleDateString("en-NZ", {
                               day: "2-digit",
                               month: "2-digit",
@@ -311,15 +360,11 @@ export default function CubbyPaymentPage() {
 
                         <div className="border-t pt-4">
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-600">Rental Fee:</span>
-                            <span className="font-medium">
-                              {formatPrice(rentalDetails.rental_fee)}
+                            <span className="text-lg font-medium">
+                              {isExtension ? "Extension Fee:" : "Rental Fee:"}
                             </span>
-                          </div>
-                          <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                            <span className="text-lg font-medium">Total:</span>
                             <span className="text-lg font-bold text-pink-600">
-                              {formatPrice(rentalDetails.rental_fee)}
+                              {formatPrice(currentTransactionFee)}
                             </span>
                           </div>
                         </div>
@@ -328,18 +373,19 @@ export default function CubbyPaymentPage() {
                       <Button
                         className="w-full bg-pink-600 hover:bg-pink-700"
                         size="lg"
-                        onClick={handleProcessPayment}
-                        disabled={isProcessing}
+                        onClick={handlePayment}
+                        disabled={isSubmitting}
                       >
-                        {isProcessing ? (
+                        {isSubmitting ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Processing...
                           </>
-                        ) : paymentMethod === "card" ? (
-                          "Complete Payment"
                         ) : (
-                          "Reserve Cubby"
+                          <>
+                            <CreditCard className="mr-2 h-5 w-5" />
+                            Pay {formatPrice(currentTransactionFee)}
+                          </>
                         )}
                       </Button>
                     </>
