@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Minus, Plus, ShoppingCart, Trash2, CreditCard } from "lucide-react";
 import { memo } from "react";
+import { formatPrice } from "@/lib/utils";
 
 interface CartItem {
   id: string;
@@ -36,13 +37,7 @@ const POSCart = memo(function POSCart({
   cartTotal,
   onCheckout,
 }: POSCartProps) {
-  // Format price with currency symbol
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
-  };
+  // Use the centralized formatPrice utility function
 
   return (
     <Card className="h-full">

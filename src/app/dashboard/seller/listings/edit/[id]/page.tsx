@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "../../../../../../../supabase/client";
 import { ArrowLeft, Loader2, Clock, LockIcon } from "lucide-react";
 import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
+import { formatPrice } from "@/lib/utils";
 
 export default function EditListingPage() {
   const [item, setItem] = useState<any>(null);
@@ -249,7 +250,7 @@ export default function EditListingPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="price">Price (£) *</Label>
+                    <Label htmlFor="price">Price ($) *</Label>
                     <Input
                       id="price"
                       name="price"
