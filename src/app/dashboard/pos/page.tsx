@@ -22,10 +22,12 @@ export default async function POSPage() {
 
   return (
     <>
-      <DashboardNavbar />
-      <main className="w-full bg-gray-50 min-h-screen">
-        <POSClientInterface categories={categories || []} userId={user.id} />
-      </main>
+      <div className="flex flex-col h-screen">
+        <DashboardNavbar />
+        <main className="flex-1 bg-gray-50 overflow-auto">
+          <POSClientInterface categories={categories || []} userId={user.id} />
+        </main>
+      </div>
     </>
   );
 }
