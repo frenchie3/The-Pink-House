@@ -23,40 +23,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Preload CSS to avoid render blocking - improves LCP by 433ms */}
-        <link
-          rel="preload"
-          href="/css/app/layout.css"
-          as="style"
-          onLoad="this.onload=null;this.rel='stylesheet'"
-        />
-        {/* Fallback for browsers with JavaScript disabled */}
-        <noscript>
-          <link rel="stylesheet" href="/css/app/layout.css" />
-        </noscript>
-
-        {/* Polyfill for browsers that don't support preload */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-          (function(w){
-            // Check if the browser doesn't support preload
-            if(!w.document.querySelector('link[rel="preload"][as="style"]')){
-              // If preload isn't supported, load CSS normally
-              var link = w.document.createElement('link');
-              link.rel = 'stylesheet';
-              link.href = '/css/app/layout.css';
-              document.head.appendChild(link);
-            }
-          })(window);
-        `,
-          }}
-        />
-
-        {/* Add HTTP caching headers on server */}
-        {/* Cache-Control: public, max-age=31536000, immutable */}
-      </head>
       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body className={inter.className}>
         <ReactQueryProvider>
