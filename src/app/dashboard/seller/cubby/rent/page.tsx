@@ -221,23 +221,54 @@ export default function RentCubbyPage() {
     <>
       <SellerNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-6">
           {/* Header Section */}
-          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Rent a Cubby</h1>
-              <p className="text-gray-600 mt-1">
-                Choose your rental period and listing preferences
-              </p>
-            </div>
+          <header className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-pink-600 mr-2"
+              >
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+              Rent Your Cubby Space
+            </h1>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Rental Options */}
             <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cubby Rental Options</CardTitle>
+              <Card className="border-t-2 border-t-pink-500 shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center text-lg">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-pink-600 mr-2"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <line x1="3" y1="9" x2="21" y2="9" />
+                      <line x1="9" y1="21" x2="9" y2="9" />
+                    </svg>
+                    Cubby Rental Options
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="period" className="w-full">
@@ -260,12 +291,12 @@ export default function RentCubbyPage() {
                             className="w-full"
                           />
                           <p className="text-xs text-gray-500">
-                            Select when you want your rental to begin
+                            Rental start date
                           </p>
                         </div>
 
-                        <h3 className="text-lg font-medium mt-6">
-                          Select Rental Period
+                        <h3 className="text-sm font-medium mt-4">
+                          Rental Period
                         </h3>
                         <RadioGroup
                           value={rentalPeriod}
@@ -341,19 +372,13 @@ export default function RentCubbyPage() {
                       <div className="space-y-4">
                         {startDate ? (
                           <>
-                            <div className="bg-blue-50 p-4 rounded-lg text-blue-800 mb-4">
+                            <div className="bg-blue-50 p-3 rounded-lg text-blue-800 mb-4">
                               <p className="text-sm">
-                                <strong>Rental Period:</strong>{" "}
+                                <strong>Rental:</strong>{" "}
                                 {new Date(startDate).toLocaleDateString()} to{" "}
                                 {new Date(
                                   calculatedEndDate,
                                 ).toLocaleDateString()}
-                              </p>
-                              <p className="text-xs mt-1">
-                                Only cubbies that are available for your entire
-                                rental period are shown. If you don't see any
-                                available cubbies, try selecting different
-                                dates.
                               </p>
                             </div>
 
@@ -376,69 +401,303 @@ export default function RentCubbyPage() {
 
                     <TabsContent value="listing" className="space-y-6">
                       <div className="space-y-4">
-                        <h3 className="text-lg font-medium">
-                          Choose Listing Type
+                        <h3 className="text-sm font-medium mb-4">
+                          Listing Preference
                         </h3>
-                        <RadioGroup
-                          value={listingType}
-                          onValueChange={setListingType}
-                          className="space-y-4"
-                        >
-                          <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <RadioGroupItem value="self" id="self" />
-                            <Label
-                              htmlFor="self"
-                              className="flex-1 cursor-pointer"
-                            >
-                              <div>
-                                <p className="font-medium">Self-Listing</p>
-                                <p className="text-sm text-gray-500 mb-2">
-                                  You'll enter all item details yourself (name,
-                                  description, price, photos). You can edit
-                                  items until they are reviewed by staff.
-                                </p>
-                                <div className="flex items-center text-sm text-pink-600">
-                                  <span className="font-medium">
-                                    Commission Rate:{" "}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Self-Listing Option */}
+                          <div
+                            className={`relative overflow-hidden rounded-xl border-2 transition-all duration-200 cursor-pointer ${listingType === "self" ? "border-pink-500 bg-pink-50/30 shadow-md" : "border-gray-200 hover:border-gray-300 hover:shadow-sm"}`}
+                            onClick={() => setListingType("self")}
+                          >
+                            <div className="p-6">
+                              <div className="flex items-start mb-4">
+                                <div className="mr-4 p-3 rounded-full bg-gray-100">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-gray-700"
+                                  >
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h4 className="text-lg font-semibold">
+                                    Self-Listing
+                                  </h4>
+                                  <p className="text-gray-500 text-sm mt-1">
+                                    You manage your own listings
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-3">
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-gray-500 mr-2 mt-0.5"
+                                  >
+                                    <polyline points="9 11 12 14 22 4" />
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                  </svg>
+                                  <p className="text-sm text-gray-600">
+                                    Full control over item descriptions
+                                  </p>
+                                </div>
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-gray-500 mr-2 mt-0.5"
+                                  >
+                                    <polyline points="9 11 12 14 22 4" />
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                  </svg>
+                                  <p className="text-sm text-gray-600">
+                                    Set your own prices and photos
+                                  </p>
+                                </div>
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-gray-500 mr-2 mt-0.5"
+                                  >
+                                    <polyline points="9 11 12 14 22 4" />
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                  </svg>
+                                  <p className="text-sm text-gray-600">
+                                    Lower commission rate
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 pt-4 border-t border-gray-100">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium">
+                                    Commission Rate:
+                                  </span>
+                                  <span className="text-lg font-semibold text-pink-600">
                                     {commissionRates.self * 100}%
                                   </span>
                                 </div>
-                                <div className="mt-2 bg-amber-50 p-2 rounded-md text-xs text-amber-800">
-                                  <strong>Note:</strong> This choice cannot be
-                                  changed after rental and applies to all items
-                                  in this cubby.
+                              </div>
+
+                              <div className="absolute top-4 right-4">
+                                <div
+                                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${listingType === "self" ? "border-pink-500 bg-pink-100" : "border-gray-300"}`}
+                                >
+                                  {listingType === "self" && (
+                                    <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                                  )}
                                 </div>
                               </div>
-                            </Label>
+                            </div>
                           </div>
 
-                          <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <RadioGroupItem value="staff" id="staff" />
-                            <Label
-                              htmlFor="staff"
-                              className="flex-1 cursor-pointer"
-                            >
-                              <div>
-                                <p className="font-medium">Staff-Managed</p>
-                                <p className="text-sm text-gray-500 mb-2">
-                                  Drop off your items and our staff will handle
-                                  the listing process
-                                </p>
-                                <div className="flex items-center text-sm text-pink-600">
-                                  <span className="font-medium">
-                                    Commission Rate:{" "}
+                          {/* Staff-Managed Option */}
+                          <div
+                            className={`relative overflow-hidden rounded-xl border-2 transition-all duration-200 cursor-pointer ${listingType === "staff" ? "border-pink-500 bg-pink-50/30 shadow-md" : "border-gray-200 hover:border-gray-300 hover:shadow-sm"}`}
+                            onClick={() => setListingType("staff")}
+                          >
+                            {/* Popular Badge */}
+                            <div className="absolute -right-12 top-7 bg-pink-600 text-white px-10 py-1 transform rotate-45 text-xs font-semibold">
+                              MOST POPULAR
+                            </div>
+
+                            <div className="p-6">
+                              <div className="flex items-start mb-4">
+                                <div className="mr-4 p-3 rounded-full bg-pink-100">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-pink-600"
+                                  >
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h4 className="text-lg font-semibold">
+                                    Staff-Managed
+                                  </h4>
+                                  <p className="text-pink-600 text-sm mt-1 font-medium">
+                                    Let our experts handle everything
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-3">
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-pink-500 mr-2 mt-0.5"
+                                  >
+                                    <polyline points="9 11 12 14 22 4" />
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                  </svg>
+                                  <p className="text-sm text-gray-600">
+                                    Professional photography & descriptions
+                                  </p>
+                                </div>
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-pink-500 mr-2 mt-0.5"
+                                  >
+                                    <polyline points="9 11 12 14 22 4" />
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                  </svg>
+                                  <p className="text-sm text-gray-600">
+                                    Optimal pricing for maximum sales
+                                  </p>
+                                </div>
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-pink-500 mr-2 mt-0.5"
+                                  >
+                                    <polyline points="9 11 12 14 22 4" />
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                  </svg>
+                                  <p className="text-sm text-gray-600">
+                                    Save time & hassle - just drop off items
+                                  </p>
+                                </div>
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-pink-500 mr-2 mt-0.5"
+                                  >
+                                    <polyline points="9 11 12 14 22 4" />
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                  </svg>
+                                  <p className="text-sm text-gray-600">
+                                    Premium display placement in shop
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 pt-4 border-t border-gray-100">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium">
+                                    Commission Rate:
+                                  </span>
+                                  <span className="text-lg font-semibold text-pink-600">
                                     {commissionRates.staff * 100}%
                                   </span>
                                 </div>
-                                <div className="mt-2 bg-amber-50 p-2 rounded-md text-xs text-amber-800">
-                                  <strong>Note:</strong> This choice cannot be
-                                  changed after rental and applies to all items
-                                  in this cubby.
+                              </div>
+
+                              <div className="absolute top-4 right-4">
+                                <div
+                                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${listingType === "staff" ? "border-pink-500 bg-pink-100" : "border-gray-300"}`}
+                                >
+                                  {listingType === "staff" && (
+                                    <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                                  )}
                                 </div>
                               </div>
-                            </Label>
+                            </div>
                           </div>
-                        </RadioGroup>
+                        </div>
+
+                        <div className="mt-4 bg-blue-50 p-3 rounded-lg">
+                          <div className="flex items-start">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-blue-500 mr-2 mt-0.5 flex-shrink-0"
+                            >
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="12" y1="16" x2="12" y2="12" />
+                              <line x1="12" y1="8" x2="12.01" y2="8" />
+                            </svg>
+                            <p className="text-xs text-blue-800">
+                              <strong>Note:</strong> Preference cannot be
+                              changed after rental
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -448,43 +707,75 @@ export default function RentCubbyPage() {
 
             {/* Summary */}
             <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Rental Summary</CardTitle>
+              <Card className="sticky top-4">
+                <CardHeader className="border-b pb-3">
+                  <CardTitle className="flex items-center text-base">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-pink-600 mr-2"
+                    >
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg>
+                    Rental Summary
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 pt-6">
                   <div className="space-y-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">
+                    <div className="p-4 rounded-lg border border-gray-200">
+                      <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                        <Calendar className="h-3 w-3 mr-1 text-pink-600" />
                         Rental Period
                       </h3>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-pink-600" />
-                        <div>
-                          <p className="text-lg font-medium">
-                            {rentalPeriod.charAt(0).toUpperCase() +
-                              rentalPeriod.slice(1)}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {rentalPeriod.charAt(0).toUpperCase() +
+                            rentalPeriod.slice(1)}
+                        </p>
+                        {startDate && (
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            {new Date(startDate).toLocaleDateString()} to{" "}
+                            {new Date(
+                              calculateEndDate(startDate, rentalPeriod),
+                            ).toLocaleDateString()}
                           </p>
-                          {startDate && (
-                            <p className="text-sm text-gray-600">
-                              {new Date(startDate).toLocaleDateString()} to{" "}
-                              {new Date(
-                                calculateEndDate(startDate, rentalPeriod),
-                              ).toLocaleDateString()}
-                            </p>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">
+                    <div className="p-4 rounded-lg border border-gray-200">
+                      <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-1 text-blue-600"
+                        >
+                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                          <line x1="12" y1="22.08" x2="12" y2="12" />
+                        </svg>
                         Selected Cubby
                       </h3>
                       {selectedCubby ? (
                         <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-5 w-5 text-pink-600" />
-                          <p className="text-lg font-medium">
+                          <div className="bg-blue-100 p-2 rounded-full">
+                            <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <p className="text-lg font-semibold text-gray-900">
                             Cubby #
                             {availableCubbies.find(
                               (c) => c.id === selectedCubby,
@@ -492,37 +783,120 @@ export default function RentCubbyPage() {
                           </p>
                         </div>
                       ) : (
-                        <p className="text-gray-500 italic">
-                          No cubby selected
-                        </p>
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                          </svg>
+                          <p className="italic">Please select a cubby</p>
+                        </div>
                       )}
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">
+                    <div className="p-4 rounded-lg border border-gray-200">
+                      <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-1 text-green-600"
+                        >
+                          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                          <rect
+                            x="8"
+                            y="2"
+                            width="8"
+                            height="4"
+                            rx="1"
+                            ry="1"
+                          />
+                        </svg>
                         Listing Preference
                       </h3>
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-pink-600" />
-                        <p className="text-lg font-medium">
-                          {listingType === "self"
-                            ? "Self-Listing"
-                            : "Staff-Managed"}
-                        </p>
+                        <div
+                          className={`p-2 rounded-full ${listingType === "staff" ? "bg-pink-100" : "bg-gray-100"}`}
+                        >
+                          <CheckCircle2
+                            className={`h-5 w-5 ${listingType === "staff" ? "text-pink-600" : "text-gray-600"}`}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {listingType === "self"
+                              ? "Self-Listing"
+                              : "Staff-Managed"}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {listingType === "self"
+                              ? "You manage listings"
+                              : "Staff manages listings"}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="border-t pt-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Rental Fee:</span>
+                    <div className="border-t pt-6 mt-2">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-gray-600 flex items-center">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-2 text-gray-400"
+                          >
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="M7 15h0M12 15h0" />
+                          </svg>
+                          Rental Fee:
+                        </span>
                         <span className="font-medium">
                           {formatPrice(
                             rentalFees[rentalPeriod as keyof typeof rentalFees],
                           )}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="text-gray-600">Commission Rate:</span>
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-gray-600 flex items-center">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-2 text-gray-400"
+                          >
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                          </svg>
+                          Commission Rate:
+                        </span>
                         <span className="font-medium">
                           {commissionRates[
                             listingType as keyof typeof commissionRates
@@ -530,8 +904,8 @@ export default function RentCubbyPage() {
                           %
                         </span>
                       </div>
-                      <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                        <span className="text-lg font-medium">
+                      <div className="flex justify-between items-center mt-4 pt-3 border-t bg-pink-50 p-3 rounded-lg">
+                        <span className="text-sm font-medium">
                           Total Due Now:
                         </span>
                         <span className="text-lg font-bold text-pink-600">
@@ -550,7 +924,7 @@ export default function RentCubbyPage() {
                   )}
 
                   <Button
-                    className="w-full bg-pink-600 hover:bg-pink-700"
+                    className="w-full bg-pink-600 hover:bg-pink-700 transition-all shadow-sm py-5"
                     size="lg"
                     onClick={handleSubmit}
                     disabled={
@@ -568,10 +942,13 @@ export default function RentCubbyPage() {
                     ) : (
                       <>
                         <CreditCard className="mr-2 h-5 w-5" />
-                        Proceed to Payment
+                        Rent Cubby
                       </>
                     )}
                   </Button>
+                  <p className="text-center text-gray-500 text-xs mt-2">
+                    Secure payment • Instant confirmation
+                  </p>
                 </CardContent>
               </Card>
             </div>
