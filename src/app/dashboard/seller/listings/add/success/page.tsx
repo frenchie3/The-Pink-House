@@ -14,6 +14,7 @@ export default function AddItemSuccessPage() {
   const itemId = searchParams.get("item_id");
   const itemName = searchParams.get("name");
   const listingType = searchParams.get("type");
+  const [isAddingAnother, setIsAddingAnother] = useState(false);
 
   useEffect(() => {
     // In a real app, you might fetch the item details here
@@ -25,6 +26,11 @@ export default function AddItemSuccessPage() {
       });
     }
   }, [itemName, listingType]);
+
+  const handleAddAnother = () => {
+    setIsAddingAnother(true);
+    router.push("/dashboard/seller/listings/add");
+  };
 
   return (
     <>
@@ -62,19 +68,20 @@ export default function AddItemSuccessPage() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
+                  className="bg-pink-600 hover:bg-pink-700"
+                  onClick={handleAddAnother}
+                  disabled={isAddingAnother}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  {isAddingAnother ? "Redirecting..." : "Add Another Item"}
+                </Button>
+
+                <Button
                   variant="outline"
                   onClick={() => router.push("/dashboard/seller/listings")}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   View My Listings
-                </Button>
-
-                <Button
-                  className="bg-pink-600 hover:bg-pink-700"
-                  onClick={() => router.push("/dashboard/seller/listings/add")}
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Another Item
                 </Button>
               </div>
             </CardContent>
