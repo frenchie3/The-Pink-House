@@ -37,15 +37,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
-  // Combine role checks to reduce database calls
-  if (
-    !error &&
-    user &&
-    (req.nextUrl.pathname === "/dashboard" ||
-      req.nextUrl.pathname.match(
-        /^\/dashboard\/(inventory|pos|sales|reports|admin|staff)/,
-      ))
-  ) {
+  // Role-based access control
+  if (!error && user && req.nextUrl.pathname.startsWith("/dashboard")) {
     // Cache user role to avoid multiple DB calls
     const { data } = await supabase
       .from("users")
@@ -53,12 +46,31 @@ export async function middleware(req: NextRequest) {
       .eq("id", user.id)
       .single();
 
+    // Handle role-specific access restrictions
     if (data?.role === "seller") {
-      if (req.nextUrl.pathname === "/dashboard") {
+      // Prevent sellers from accessing admin/staff routes
+      if (
+        req.nextUrl.pathname.match(
+          /^\/dashboard\/(admin|staff|inventory|pos|sales|reports)/,
+        )
+      ) {
         return NextResponse.redirect(new URL("/dashboard/seller", req.url));
-      } else {
-        // Restrict sellers from accessing staff/admin routes
+      }
+    } else if (data?.role === "staff") {
+      // Prevent staff from accessing admin routes
+      if (req.nextUrl.pathname.match(/^\/dashboard\/admin/)) {
+        return NextResponse.redirect(new URL("/dashboard/staff", req.url));
+      }
+    }
+
+    // Handle the generic /dashboard route - redirect to role-specific dashboard
+    if (req.nextUrl.pathname === "/dashboard") {
+      if (data?.role === "seller") {
         return NextResponse.redirect(new URL("/dashboard/seller", req.url));
+      } else if (data?.role === "staff") {
+        return NextResponse.redirect(new URL("/dashboard/staff", req.url));
+      } else if (data?.role === "admin") {
+        return NextResponse.redirect(new URL("/dashboard/admin", req.url));
       }
     }
   }

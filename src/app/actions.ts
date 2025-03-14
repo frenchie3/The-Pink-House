@@ -77,7 +77,7 @@ export const signInAction = async (formData: FormData) => {
   const password = formData.get("password") as string;
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: authData, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -86,6 +86,31 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
+  // Get user role to redirect to the appropriate dashboard
+  if (authData.user) {
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", authData.user.id)
+      .single();
+
+    if (userData?.role) {
+      // Redirect based on role
+      switch (userData.role) {
+        case "admin":
+          return redirect("/dashboard/admin");
+        case "staff":
+          return redirect("/dashboard/staff");
+        case "seller":
+          return redirect("/dashboard/seller");
+        default:
+          // Fallback to general dashboard if role is unknown
+          return redirect("/dashboard");
+      }
+    }
+  }
+
+  // Fallback to general dashboard if we couldn't determine the role
   return redirect("/dashboard");
 };
 

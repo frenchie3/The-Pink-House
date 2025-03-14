@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useCubbyAvailability } from "@/hooks/use-cubby-availability";
 import SellerNavbar from "@/components/seller-navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,9 +114,24 @@ export default function RentCubbyPage() {
   // Get the calculated end date based on the selected start date and rental period
   const calculatedEndDate = calculateEndDateString(startDate, rentalPeriod);
 
+  // Use the cubby availability hook at the component level
+  const {
+    availableCubbies: fetchedCubbies,
+    loading: cubbiesLoading,
+    error: cubbiesError,
+  } = useCubbyAvailability(startDate, calculatedEndDate);
+
+  // Update local state when fetched cubbies change
+  useEffect(() => {
+    if (fetchedCubbies && fetchedCubbies.length > 0) {
+      setAvailableCubbies(fetchedCubbies);
+    }
+  }, [fetchedCubbies]);
+
   // Handle cubby selection from the AvailableCubbies component
   const handleCubbySelection = (cubbyId: string) => {
     setSelectedCubby(cubbyId);
+
     // Find the cubby object to display details
     const selectedCubbyObj = availableCubbies.find((c) => c.id === cubbyId);
     if (selectedCubbyObj) {
