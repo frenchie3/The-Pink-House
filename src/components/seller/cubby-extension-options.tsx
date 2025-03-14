@@ -113,18 +113,18 @@ export default function CubbyExtensionOptions({
           {canExtendCurrentCubby && currentCubby && (
             <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer bg-green-50 border-green-200">
               <RadioGroupItem
-                value={currentCubby.id}
-                id={`cubby-${currentCubby.id}`}
+                value={currentCubby.cubby_id}
+                id={`cubby-${currentCubby.cubby_id}`}
               />
               <Label
-                htmlFor={`cubby-${currentCubby.id}`}
+                htmlFor={`cubby-${currentCubby.cubby_id}`}
                 className="flex-1 cursor-pointer"
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium">Keep Current Cubby</p>
                     <p className="text-sm text-gray-700">
-                      Cubby #{currentCubby.cubby_number} -{" "}
+                      Cubby #{currentCubby.cubby?.cubby_number} -{" "}
                       {currentCubby.cubby?.location || "Main Floor"}
                     </p>
                     <p className="text-xs text-green-700 mt-1">
