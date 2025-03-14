@@ -1,65 +1,128 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import RoleGuard from "@/components/role-guard";
-import { createClient } from "../../../../../supabase/server";
-import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Save } from "lucide-react";
-import { revalidatePath } from "next/cache";
+import { Badge } from "@/components/ui/badge";
+import {
+  Settings,
+  Save,
+  Package,
+  DollarSign,
+  CreditCard,
+  Info,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { SettingsForm } from "@/components/admin/settings-form";
+import { createClient } from "../../../../../supabase/client";
 
-export default async function AdminSettingsPage({
-  searchParams,
-}: {
-  searchParams: { success?: string; error?: string };
-}) {
-  const supabase = await createClient();
+export default function AdminSettingsPage() {
+  const [loading, setLoading] = useState(true);
+  const [systemSettings, setSystemSettings] = useState<any[]>([]);
+  const [itemLimits, setItemLimits] = useState({ default: 10, premium: 20 });
+  const [commRates, setCommRates] = useState({ default: 0.15, staff: 0.25 });
+  const [rentalFees, setRentalFees] = useState({
+    weekly: 10,
+    monthly: 35,
+    quarterly: 90,
+  });
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  const supabase = createClient();
 
-  if (!user) {
-    return redirect("/sign-in");
-  }
-
-  // Fetch only needed system settings
-  const { data: systemSettings } = await supabase
-    .from("system_settings")
-    .select("id, setting_key, setting_value, description")
-    .order("setting_key", { ascending: true });
-
-  // Find specific settings
-  const cubbyItemLimits = systemSettings?.find(
-    (setting) => setting.setting_key === "cubby_item_limits",
-  );
-  const commissionRates = systemSettings?.find(
-    (setting) => setting.setting_key === "commission_rates",
-  );
-  const cubbyRentalFees = systemSettings?.find(
-    (setting) => setting.setting_key === "cubby_rental_fees",
-  );
-
-  // Handle form submission
-  async function updateSettings(formData: FormData) {
-    "use server";
-
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return redirect("/sign-in");
+  useEffect(() => {
+    // Check for success message in URL and set it to state
+    const success = searchParams.get("success");
+    if (success) {
+      setSuccessMessage(success);
+      // Clear success message after 5 seconds
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+        // Remove the success parameter from URL without full page reload
+        const url = new URL(window.location.href);
+        url.searchParams.delete("success");
+        router.replace(url.pathname + url.search, { scroll: false });
+      }, 5000);
+      return () => clearTimeout(timer);
     }
 
-    // Get form data
-    const settingKey = formData.get("setting_key") as string;
-    const settingValue = formData.get("setting_value") as string;
+    async function fetchSettings() {
+      try {
+        // Check authentication
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          router.push("/sign-in");
+          return;
+        }
 
+        // Fetch settings
+        const { data, error } = await supabase
+          .from("system_settings")
+          .select("id, setting_key, setting_value, description")
+          .order("setting_key", { ascending: true });
+
+        if (error) throw error;
+        setSystemSettings(data || []);
+
+        // Find specific settings
+        const cubbyItemLimits = data?.find(
+          (setting) => setting.setting_key === "cubby_item_limits",
+        );
+        const commissionRates = data?.find(
+          (setting) => setting.setting_key === "commission_rates",
+        );
+        const cubbyRentalFees = data?.find(
+          (setting) => setting.setting_key === "cubby_rental_fees",
+        );
+
+        // Parse settings for UI display
+        setItemLimits(
+          cubbyItemLimits?.setting_value || { default: 10, premium: 20 },
+        );
+        setCommRates(
+          commissionRates?.setting_value || { default: 0.15, staff: 0.25 },
+        );
+        setRentalFees(
+          cubbyRentalFees?.setting_value || {
+            weekly: 10,
+            monthly: 35,
+            quarterly: 90,
+          },
+        );
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchSettings();
+  }, [supabase, router, searchParams]);
+
+  // Client-side form submission handler
+  const handleUpdateSettings = async (formData: FormData) => {
     try {
+      const settingKey = formData.get("setting_key") as string;
+      const settingValue = formData.get("setting_value") as string;
+
       // Parse the JSON value
       const parsedValue = JSON.parse(settingValue);
 
@@ -68,28 +131,40 @@ export default async function AdminSettingsPage({
         .from("system_settings")
         .update({
           setting_value: parsedValue,
-          updated_by: user.id,
           updated_at: new Date().toISOString(),
         })
         .eq("setting_key", settingKey);
 
       if (error) {
-        console.error("Error updating setting:", error);
-        return redirect(
-          `/dashboard/admin/settings?error=${encodeURIComponent(error.message)}`,
-        );
+        throw new Error(error.message);
       }
 
-      revalidatePath("/dashboard/admin/settings");
-      return redirect(
+      // Refresh the page with success message
+      router.push(
         "/dashboard/admin/settings?success=Settings updated successfully",
       );
     } catch (error) {
-      console.error("Error parsing JSON:", error);
-      return redirect(
-        `/dashboard/admin/settings?error=${encodeURIComponent("Invalid JSON format")}`,
+      console.error("Error updating settings:", error);
+      router.push(
+        `/dashboard/admin/settings?error=${encodeURIComponent(error instanceof Error ? error.message : "Failed to update settings")}`,
       );
     }
+  };
+
+  if (loading) {
+    return (
+      <RoleGuard allowedRoles={["admin"]}>
+        <div className="flex flex-col h-screen">
+          <DashboardNavbar />
+          <main className="flex-1 bg-gray-50 overflow-auto flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading settings...</p>
+            </div>
+          </main>
+        </div>
+      </RoleGuard>
+    );
   }
 
   return (
@@ -105,199 +180,111 @@ export default async function AdminSettingsPage({
                   System Settings
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  Configure system parameters and limits
+                  Configure your shop's operational parameters and business
+                  rules
                 </p>
               </div>
+
+              {/* Header buttons removed */}
             </header>
 
-            {searchParams.success && (
-              <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md">
-                {searchParams.success}
+            {/* Notification Messages */}
+            {successMessage && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-md flex items-center gap-2">
+                <CheckCircle2 size={18} />
+                <span>{successMessage}</span>
               </div>
             )}
 
-            {searchParams.error && (
-              <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md">
-                {searchParams.error}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-center gap-2">
+                <AlertCircle size={18} />
+                <span>{error}</span>
               </div>
             )}
 
+            {/* Settings Overview Card */}
+            <Card className="mb-8 bg-gradient-to-r from-pink-50 to-white border-pink-100">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-pink-100 p-3 rounded-full">
+                      <Package className="h-6 w-6 text-pink-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">
+                        Item Limit (Default)
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {itemLimits.default} items
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="bg-pink-100 p-3 rounded-full">
+                      <DollarSign className="h-6 w-6 text-pink-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">
+                        Commission Rate
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {(commRates.default * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="bg-pink-100 p-3 rounded-full">
+                      <CreditCard className="h-6 w-6 text-pink-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">
+                        Monthly Rental Fee
+                      </p>
+                      <p className="text-2xl font-bold">
+                        ${rentalFees.monthly}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Main Settings Tabs */}
             <Tabs defaultValue="cubby_limits" className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-8">
-                <TabsTrigger value="cubby_limits">
-                  Cubby Item Limits
+                <TabsTrigger
+                  value="cubby_limits"
+                  className="flex items-center gap-2"
+                >
+                  <Package size={16} />
+                  <span>Inventory Limits</span>
                 </TabsTrigger>
-                <TabsTrigger value="commission_rates">
-                  Commission Rates
+                <TabsTrigger
+                  value="commission_rates"
+                  className="flex items-center gap-2"
+                >
+                  <DollarSign size={16} />
+                  <span>Commission Rates</span>
                 </TabsTrigger>
-                <TabsTrigger value="rental_fees">Rental Fees</TabsTrigger>
+                <TabsTrigger
+                  value="rental_fees"
+                  className="flex items-center gap-2"
+                >
+                  <CreditCard size={16} />
+                  <span>Rental Pricing</span>
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="cubby_limits" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Settings className="mr-2 h-5 w-5" />
-                      Cubby Item Limits
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form action={updateSettings} className="space-y-6">
-                      <input
-                        type="hidden"
-                        name="setting_key"
-                        value="cubby_item_limits"
-                      />
-                      <div className="space-y-2">
-                        <Label htmlFor="cubby_limits_value">
-                          Item Limits (JSON)
-                        </Label>
-                        <div className="text-sm text-gray-500 mb-2">
-                          Configure the maximum number of items a seller can add
-                          to their cubby based on their subscription plan.
-                        </div>
-                        <textarea
-                          id="cubby_limits_value"
-                          name="setting_value"
-                          className="w-full h-40 px-3 py-2 rounded-md border border-gray-300 font-mono text-sm"
-                          defaultValue={JSON.stringify(
-                            cubbyItemLimits?.setting_value || {},
-                            null,
-                            2,
-                          )}
-                        />
-                      </div>
-                      <div className="bg-amber-50 p-4 rounded-md text-sm text-amber-800 mb-4">
-                        <p className="font-medium">Example format:</p>
-                        <pre className="mt-1 text-xs">{`{
-  "default": 10,
-  "premium": 20
-}`}</pre>
-                      </div>
-                      <Button
-                        type="submit"
-                        className="bg-pink-600 hover:bg-pink-700"
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Changes
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="commission_rates" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Settings className="mr-2 h-5 w-5" />
-                      Commission Rates
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form action={updateSettings} className="space-y-6">
-                      <input
-                        type="hidden"
-                        name="setting_key"
-                        value="commission_rates"
-                      />
-                      <div className="space-y-2">
-                        <Label htmlFor="commission_rates_value">
-                          Commission Rates (JSON)
-                        </Label>
-                        <div className="text-sm text-gray-500 mb-2">
-                          Configure the commission rates for seller items based
-                          on their subscription plan.
-                        </div>
-                        <textarea
-                          id="commission_rates_value"
-                          name="setting_value"
-                          className="w-full h-40 px-3 py-2 rounded-md border border-gray-300 font-mono text-sm"
-                          defaultValue={JSON.stringify(
-                            commissionRates?.setting_value || {},
-                            null,
-                            2,
-                          )}
-                        />
-                      </div>
-                      <div className="bg-amber-50 p-4 rounded-md text-sm text-amber-800 mb-4">
-                        <p className="font-medium">Example format:</p>
-                        <pre className="mt-1 text-xs">{`{
-  "default": 0.15,
-  "premium": 0.10
-}`}</pre>
-                        <p className="mt-2">
-                          Values represent percentage as decimal (0.15 = 15%)
-                        </p>
-                      </div>
-                      <Button
-                        type="submit"
-                        className="bg-pink-600 hover:bg-pink-700"
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Changes
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="rental_fees" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Settings className="mr-2 h-5 w-5" />
-                      Cubby Rental Fees
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form action={updateSettings} className="space-y-6">
-                      <input
-                        type="hidden"
-                        name="setting_key"
-                        value="cubby_rental_fees"
-                      />
-                      <div className="space-y-2">
-                        <Label htmlFor="rental_fees_value">
-                          Rental Fees (JSON)
-                        </Label>
-                        <div className="text-sm text-gray-500 mb-2">
-                          Configure the rental fees for cubby spaces based on
-                          rental period.
-                        </div>
-                        <textarea
-                          id="rental_fees_value"
-                          name="setting_value"
-                          className="w-full h-40 px-3 py-2 rounded-md border border-gray-300 font-mono text-sm"
-                          defaultValue={JSON.stringify(
-                            cubbyRentalFees?.setting_value || {},
-                            null,
-                            2,
-                          )}
-                        />
-                      </div>
-                      <div className="bg-amber-50 p-4 rounded-md text-sm text-amber-800 mb-4">
-                        <p className="font-medium">Example format:</p>
-                        <pre className="mt-1 text-xs">{`{
-  "weekly": 10,
-  "monthly": 35,
-  "quarterly": 90
-}`}</pre>
-                        <p className="mt-2">
-                          Values represent currency amounts
-                        </p>
-                      </div>
-                      <Button
-                        type="submit"
-                        className="bg-pink-600 hover:bg-pink-700"
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Changes
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+              {/* Use the client component for all settings forms */}
+              <SettingsForm
+                updateSettings={handleUpdateSettings}
+                itemLimits={itemLimits}
+                commRates={commRates}
+                rentalFees={rentalFees}
+              />
             </Tabs>
           </div>
         </main>
