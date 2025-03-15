@@ -248,9 +248,9 @@ export default function RentCubbyPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Rental Options */}
             <div className="lg:col-span-2">
-              <Card className="border-t-2 border-t-pink-500 shadow-sm">
+              <Card className="shadow-sm bg-white">
                 <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-lg">
+                  <CardTitle className="flex items-center text-lg sr-only">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="18"
@@ -303,66 +303,61 @@ export default function RentCubbyPage() {
                           onValueChange={setRentalPeriod}
                           className="space-y-4"
                         >
-                          <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <RadioGroupItem value="weekly" id="weekly" />
-                            <Label
-                              htmlFor="weekly"
-                              className="flex-1 cursor-pointer"
-                            >
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <p className="font-medium">Weekly Rental</p>
-                                  <p className="text-sm text-gray-500">
-                                    7 days access to your cubby
-                                  </p>
-                                </div>
-                                <p className="font-medium">
-                                  {formatPrice(rentalFees.weekly)}
+                          <div
+                            className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "weekly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => setRentalPeriod("weekly")}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-medium">Weekly Rental</p>
+                                <p className="text-sm text-gray-500">
+                                  7 days access to your cubby
                                 </p>
                               </div>
-                            </Label>
+                              <p
+                                className={`font-medium ${rentalPeriod === "weekly" ? "text-pink-600" : ""}`}
+                              >
+                                {formatPrice(rentalFees.weekly)}
+                              </p>
+                            </div>
                           </div>
 
-                          <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <RadioGroupItem value="monthly" id="monthly" />
-                            <Label
-                              htmlFor="monthly"
-                              className="flex-1 cursor-pointer"
-                            >
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <p className="font-medium">Monthly Rental</p>
-                                  <p className="text-sm text-gray-500">
-                                    30 days access to your cubby
-                                  </p>
-                                </div>
-                                <p className="font-medium">
-                                  {formatPrice(rentalFees.monthly)}
+                          <div
+                            className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "monthly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => setRentalPeriod("monthly")}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-medium">Monthly Rental</p>
+                                <p className="text-sm text-gray-500">
+                                  30 days access to your cubby
                                 </p>
                               </div>
-                            </Label>
+                              <p
+                                className={`font-medium ${rentalPeriod === "monthly" ? "text-pink-600" : ""}`}
+                              >
+                                {formatPrice(rentalFees.monthly)}
+                              </p>
+                            </div>
                           </div>
 
-                          <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer bg-pink-50 border-pink-200">
-                            <RadioGroupItem value="quarterly" id="quarterly" />
-                            <Label
-                              htmlFor="quarterly"
-                              className="flex-1 cursor-pointer"
-                            >
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <p className="font-medium">
-                                    Quarterly Rental
-                                  </p>
-                                  <p className="text-sm text-gray-500">
-                                    90 days access to your cubby
-                                  </p>
-                                </div>
-                                <p className="font-medium">
-                                  {formatPrice(rentalFees.quarterly)}
+                          <div
+                            className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "quarterly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => setRentalPeriod("quarterly")}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-medium">Quarterly Rental</p>
+                                <p className="text-sm text-gray-500">
+                                  90 days access to your cubby
                                 </p>
                               </div>
-                            </Label>
+                              <p
+                                className={`font-medium ${rentalPeriod === "quarterly" ? "text-pink-600" : ""}`}
+                              >
+                                {formatPrice(rentalFees.quarterly)}
+                              </p>
+                            </div>
                           </div>
                         </RadioGroup>
                       </div>
@@ -372,7 +367,7 @@ export default function RentCubbyPage() {
                       <div className="space-y-4">
                         {startDate ? (
                           <>
-                            <div className="bg-blue-50 p-3 rounded-lg text-blue-800 mb-4">
+                            <div className="bg-pink-50 p-3 rounded-lg text-pink-800 mb-4">
                               <p className="text-sm">
                                 <strong>Rental:</strong>{" "}
                                 {new Date(startDate).toLocaleDateString()} to{" "}
@@ -408,12 +403,15 @@ export default function RentCubbyPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {/* Self-Listing Option */}
                           <div
-                            className={`relative overflow-hidden rounded-xl border-2 transition-all duration-200 cursor-pointer ${listingType === "self" ? "border-pink-500 bg-pink-50/30 shadow-md" : "border-gray-200 hover:border-gray-300 hover:shadow-sm"}`}
+                            className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${listingType === "self" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
                             onClick={() => setListingType("self")}
                           >
-                            <div className="p-6">
+                            <div
+                              className="p-6 flex flex-col"
+                              style={{ minHeight: "320px" }}
+                            >
                               <div className="flex items-start mb-4">
-                                <div className="mr-4 p-3 rounded-full bg-gray-100">
+                                <div className="mr-4 p-3 rounded-full bg-pink-100">
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     width="24"
@@ -424,7 +422,7 @@ export default function RentCubbyPage() {
                                     strokeWidth="2"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    className="text-gray-700"
+                                    className="text-pink-600"
                                   >
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -440,7 +438,7 @@ export default function RentCubbyPage() {
                                 </div>
                               </div>
 
-                              <div className="space-y-3">
+                              <div className="space-y-3 flex-grow">
                                 <div className="flex items-start">
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -452,13 +450,13 @@ export default function RentCubbyPage() {
                                     strokeWidth="2"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    className="text-gray-500 mr-2 mt-0.5"
+                                    className={`${listingType === "self" ? "text-pink-500" : "text-gray-500"} mr-2 mt-0.5`}
                                   >
                                     <polyline points="9 11 12 14 22 4" />
                                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                                   </svg>
                                   <p className="text-sm text-gray-600">
-                                    Full control over item descriptions
+                                    Set your own prices and descriptions
                                   </p>
                                 </div>
                                 <div className="flex items-start">
@@ -472,27 +470,7 @@ export default function RentCubbyPage() {
                                     strokeWidth="2"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    className="text-gray-500 mr-2 mt-0.5"
-                                  >
-                                    <polyline points="9 11 12 14 22 4" />
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                                  </svg>
-                                  <p className="text-sm text-gray-600">
-                                    Set your own prices and photos
-                                  </p>
-                                </div>
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-gray-500 mr-2 mt-0.5"
+                                    className={`${listingType === "self" ? "text-pink-500" : "text-gray-500"} mr-2 mt-0.5`}
                                   >
                                     <polyline points="9 11 12 14 22 4" />
                                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
@@ -508,19 +486,11 @@ export default function RentCubbyPage() {
                                   <span className="text-sm font-medium">
                                     Commission Rate:
                                   </span>
-                                  <span className="text-lg font-semibold text-pink-600">
+                                  <span
+                                    className={`text-lg font-semibold ${listingType === "self" ? "text-pink-600" : "text-gray-600"}`}
+                                  >
                                     {commissionRates.self * 100}%
                                   </span>
-                                </div>
-                              </div>
-
-                              <div className="absolute top-4 right-4">
-                                <div
-                                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${listingType === "self" ? "border-pink-500 bg-pink-100" : "border-gray-300"}`}
-                                >
-                                  {listingType === "self" && (
-                                    <div className="w-3 h-3 rounded-full bg-pink-500"></div>
-                                  )}
                                 </div>
                               </div>
                             </div>
@@ -528,15 +498,13 @@ export default function RentCubbyPage() {
 
                           {/* Staff-Managed Option */}
                           <div
-                            className={`relative overflow-hidden rounded-xl border-2 transition-all duration-200 cursor-pointer ${listingType === "staff" ? "border-pink-500 bg-pink-50/30 shadow-md" : "border-gray-200 hover:border-gray-300 hover:shadow-sm"}`}
+                            className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${listingType === "staff" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
                             onClick={() => setListingType("staff")}
                           >
-                            {/* Popular Badge */}
-                            <div className="absolute -right-12 top-7 bg-pink-600 text-white px-10 py-1 transform rotate-45 text-xs font-semibold">
-                              MOST POPULAR
-                            </div>
-
-                            <div className="p-6">
+                            <div
+                              className="p-6 flex flex-col"
+                              style={{ minHeight: "320px" }}
+                            >
                               <div className="flex items-start mb-4">
                                 <div className="mr-4 p-3 rounded-full bg-pink-100">
                                   <svg
@@ -562,12 +530,12 @@ export default function RentCubbyPage() {
                                     Staff-Managed
                                   </h4>
                                   <p className="text-pink-600 text-sm mt-1 font-medium">
-                                    Let our experts handle everything
+                                    Let us handle everything
                                   </p>
                                 </div>
                               </div>
 
-                              <div className="space-y-3">
+                              <div className="space-y-3 flex-grow">
                                 <div className="flex items-start">
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -585,7 +553,7 @@ export default function RentCubbyPage() {
                                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                                   </svg>
                                   <p className="text-sm text-gray-600">
-                                    Professional photography & descriptions
+                                    Save time and hassle—just drop off items
                                   </p>
                                 </div>
                                 <div className="flex items-start">
@@ -625,27 +593,7 @@ export default function RentCubbyPage() {
                                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                                   </svg>
                                   <p className="text-sm text-gray-600">
-                                    Save time & hassle - just drop off items
-                                  </p>
-                                </div>
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-pink-500 mr-2 mt-0.5"
-                                  >
-                                    <polyline points="9 11 12 14 22 4" />
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                                  </svg>
-                                  <p className="text-sm text-gray-600">
-                                    Premium display placement in shop
+                                    Professional descriptions
                                   </p>
                                 </div>
                               </div>
@@ -655,19 +603,11 @@ export default function RentCubbyPage() {
                                   <span className="text-sm font-medium">
                                     Commission Rate:
                                   </span>
-                                  <span className="text-lg font-semibold text-pink-600">
+                                  <span
+                                    className={`text-lg font-semibold ${listingType === "staff" ? "text-pink-600" : "text-gray-600"}`}
+                                  >
                                     {commissionRates.staff * 100}%
                                   </span>
-                                </div>
-                              </div>
-
-                              <div className="absolute top-4 right-4">
-                                <div
-                                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${listingType === "staff" ? "border-pink-500 bg-pink-100" : "border-gray-300"}`}
-                                >
-                                  {listingType === "staff" && (
-                                    <div className="w-3 h-3 rounded-full bg-pink-500"></div>
-                                  )}
                                 </div>
                               </div>
                             </div>
@@ -707,7 +647,7 @@ export default function RentCubbyPage() {
 
             {/* Summary */}
             <div>
-              <Card className="sticky top-4">
+              <Card className="sticky top-4 bg-white">
                 <CardHeader className="border-b pb-3">
                   <CardTitle className="flex items-center text-base">
                     <svg
@@ -729,7 +669,7 @@ export default function RentCubbyPage() {
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
                   <div className="space-y-4">
-                    <div className="p-4 rounded-lg border border-gray-200">
+                    <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
                       <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
                         <Calendar className="h-3 w-3 mr-1 text-pink-600" />
                         Rental Period
@@ -750,7 +690,7 @@ export default function RentCubbyPage() {
                       </div>
                     </div>
 
-                    <div className="p-4 rounded-lg border border-gray-200">
+                    <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
                       <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -762,7 +702,7 @@ export default function RentCubbyPage() {
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          className="mr-1 text-blue-600"
+                          className="mr-1 text-pink-600"
                         >
                           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                           <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
@@ -772,10 +712,10 @@ export default function RentCubbyPage() {
                       </h3>
                       {selectedCubby ? (
                         <div className="flex items-center gap-2">
-                          <div className="bg-blue-100 p-2 rounded-full">
-                            <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                          <div className="bg-pink-100 p-2 rounded-full">
+                            <CheckCircle2 className="h-4 w-4 text-pink-600" />
                           </div>
-                          <p className="text-lg font-semibold text-gray-900">
+                          <p className="text-sm font-medium text-gray-900">
                             Cubby #
                             {availableCubbies.find(
                               (c) => c.id === selectedCubby,
@@ -786,8 +726,8 @@ export default function RentCubbyPage() {
                         <div className="flex items-center gap-2 text-gray-500">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
+                            width="16"
+                            height="16"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -799,12 +739,14 @@ export default function RentCubbyPage() {
                             <line x1="12" y1="8" x2="12" y2="16" />
                             <line x1="8" y1="12" x2="16" y2="12" />
                           </svg>
-                          <p className="italic">Please select a cubby</p>
+                          <p className="text-sm italic">
+                            Please select a cubby
+                          </p>
                         </div>
                       )}
                     </div>
 
-                    <div className="p-4 rounded-lg border border-gray-200">
+                    <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
                       <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -816,7 +758,7 @@ export default function RentCubbyPage() {
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          className="mr-1 text-green-600"
+                          className="mr-1 text-pink-600"
                         >
                           <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                           <rect
@@ -831,12 +773,8 @@ export default function RentCubbyPage() {
                         Listing Preference
                       </h3>
                       <div className="flex items-center gap-2">
-                        <div
-                          className={`p-2 rounded-full ${listingType === "staff" ? "bg-pink-100" : "bg-gray-100"}`}
-                        >
-                          <CheckCircle2
-                            className={`h-5 w-5 ${listingType === "staff" ? "text-pink-600" : "text-gray-600"}`}
-                          />
+                        <div className="p-2 rounded-full bg-pink-100">
+                          <CheckCircle2 className="h-4 w-4 text-pink-600" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">
@@ -844,7 +782,7 @@ export default function RentCubbyPage() {
                               ? "Self-Listing"
                               : "Staff-Managed"}
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-gray-600 mt-0.5">
                             {listingType === "self"
                               ? "You manage listings"
                               : "Staff manages listings"}
@@ -855,11 +793,11 @@ export default function RentCubbyPage() {
 
                     <div className="border-t pt-6 mt-2">
                       <div className="flex justify-between items-center mb-3">
-                        <span className="text-gray-600 flex items-center">
+                        <span className="text-gray-600 flex items-center text-sm">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
+                            width="14"
+                            height="14"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -873,18 +811,18 @@ export default function RentCubbyPage() {
                           </svg>
                           Rental Fee:
                         </span>
-                        <span className="font-medium">
+                        <span className="font-medium text-sm">
                           {formatPrice(
                             rentalFees[rentalPeriod as keyof typeof rentalFees],
                           )}
                         </span>
                       </div>
                       <div className="flex justify-between items-center mb-3">
-                        <span className="text-gray-600 flex items-center">
+                        <span className="text-gray-600 flex items-center text-sm">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
+                            width="14"
+                            height="14"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -897,14 +835,14 @@ export default function RentCubbyPage() {
                           </svg>
                           Commission Rate:
                         </span>
-                        <span className="font-medium">
+                        <span className="font-medium text-sm">
                           {commissionRates[
                             listingType as keyof typeof commissionRates
                           ] * 100}
                           %
                         </span>
                       </div>
-                      <div className="flex justify-between items-center mt-4 pt-3 border-t bg-pink-50 p-3 rounded-lg">
+                      <div className="flex justify-between items-center mt-4 pt-3 border-t bg-pink-50 p-3 rounded-lg shadow-sm">
                         <span className="text-sm font-medium">
                           Total Due Now:
                         </span>
@@ -924,7 +862,7 @@ export default function RentCubbyPage() {
                   )}
 
                   <Button
-                    className="w-full bg-pink-600 hover:bg-pink-700 transition-all shadow-sm py-5"
+                    className="w-full bg-pink-600 hover:bg-pink-700 transition-all shadow-md py-5"
                     size="lg"
                     onClick={handleSubmit}
                     disabled={
