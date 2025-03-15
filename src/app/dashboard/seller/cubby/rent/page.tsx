@@ -29,6 +29,17 @@ export default function RentCubbyPage() {
   const [availableCubbies, setAvailableCubbies] = useState<any[]>([]);
   const [selectedCubby, setSelectedCubby] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // State for pickup preference - default to pickup option
+  const [pickupPreference, setPickupPreference] = useState("pickup");
+
+  // System settings for grace period - these would ideally be fetched from system_settings table
+  // Default values used here, to be replaced with actual settings when available
+  const [systemSettings, setSystemSettings] = useState({
+    gracePickupDays: 7, // Default: 7 days grace period for pickup after rental expires
+    lastChanceDays: 3, // Default: 3 days before expiration when seller can change preference
+  });
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -53,29 +64,48 @@ export default function RentCubbyPage() {
   }, []);
 
   useEffect(() => {
-    // Fetch commission rates from system settings
-    const fetchCommissionRates = async () => {
+    // Fetch commission rates and other system settings
+    const fetchSystemSettings = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch commission rates
+        const { data: commissionData, error: commissionError } = await supabase
           .from("system_settings")
           .select("setting_value")
           .eq("setting_key", "commission_rates")
           .single();
 
-        if (error) throw error;
-        if (data && data.setting_value) {
+        if (commissionError) throw commissionError;
+        if (commissionData && commissionData.setting_value) {
           setCommissionRates({
-            self: data.setting_value.default || 0.15,
-            staff: data.setting_value.staff || 0.25,
+            self: commissionData.setting_value.default || 0.15,
+            staff: commissionData.setting_value.staff || 0.25,
+          });
+        }
+
+        // Fetch pickup settings (if they exist)
+        // Note: This assumes these settings exist in the system_settings table
+        // If they don't exist yet, the default values set in state will be used
+        const { data: pickupSettingsData } = await supabase
+          .from("system_settings")
+          .select("setting_value")
+          .eq("setting_key", "pickup_settings")
+          .single();
+
+        if (pickupSettingsData?.setting_value) {
+          setSystemSettings({
+            gracePickupDays:
+              pickupSettingsData.setting_value.gracePickupDays || 7,
+            lastChanceDays:
+              pickupSettingsData.setting_value.lastChanceDays || 3,
           });
         }
       } catch (err) {
-        console.error("Error fetching commission rates:", err);
+        console.error("Error fetching system settings:", err);
         // Keep default values if there's an error
       }
     };
 
-    fetchCommissionRates();
+    fetchSystemSettings();
   }, [supabase]);
 
   // Calculate end date based on start date and rental period
@@ -188,6 +218,8 @@ export default function RentCubbyPage() {
           listing_type: listingType,
           commission_rate:
             commissionRates[listingType as keyof typeof commissionRates],
+          pickup_preference: pickupPreference, // Store the seller's pickup preference
+          grace_period_days: systemSettings.gracePickupDays, // Store the grace period days for tracking
         })
         .select();
 
@@ -272,10 +304,11 @@ export default function RentCubbyPage() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="period" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 mb-8">
+                    <TabsList className="grid w-full grid-cols-4 mb-8">
                       <TabsTrigger value="period">Rental Period</TabsTrigger>
                       <TabsTrigger value="cubby">Select Cubby</TabsTrigger>
                       <TabsTrigger value="listing">Listing Type</TabsTrigger>
+                      <TabsTrigger value="pickup">Pickup Options</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="period" className="space-y-6">
@@ -640,6 +673,195 @@ export default function RentCubbyPage() {
                         </div>
                       </div>
                     </TabsContent>
+
+                    {/* New Pickup Options Tab */}
+                    <TabsContent value="pickup" className="space-y-6">
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium mb-4">
+                          What should we do with any unsold items when your
+                          rental expires?
+                        </h3>
+
+                        <RadioGroup
+                          value={pickupPreference}
+                          onValueChange={setPickupPreference}
+                          className="space-y-4"
+                        >
+                          {/* Pickup Option */}
+                          <div
+                            className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${pickupPreference === "pickup" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
+                            onClick={() => setPickupPreference("pickup")}
+                          >
+                            <div className="p-6">
+                              <div className="flex items-start mb-4">
+                                <div className="mr-4 p-3 rounded-full bg-pink-100">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-pink-600"
+                                  >
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                    <polyline points="10 9 9 9 8 9" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h4 className="text-lg font-semibold">
+                                    I'll collect my unsold items
+                                  </h4>
+                                  <p className="text-pink-600 text-sm mt-1 font-medium">
+                                    within {systemSettings.gracePickupDays} days
+                                    after my rental expires
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="bg-blue-50 p-4 rounded-lg mt-4">
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-blue-500 mr-2 mt-0.5 flex-shrink-0"
+                                  >
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="16" x2="12" y2="12" />
+                                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                                  </svg>
+                                  <div>
+                                    <p className="text-sm text-blue-800">
+                                      <strong>Grace Period:</strong> You'll have{" "}
+                                      {systemSettings.gracePickupDays} days
+                                      after your rental expires to collect your
+                                      items.
+                                    </p>
+                                    <p className="text-xs text-blue-700 mt-2">
+                                      You can change this selection up to{" "}
+                                      {systemSettings.lastChanceDays} days
+                                      before your rental expires.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Donate Option */}
+                          <div
+                            className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${pickupPreference === "donate" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
+                            onClick={() => setPickupPreference("donate")}
+                          >
+                            <div className="p-6">
+                              <div className="flex items-start mb-4">
+                                <div className="mr-4 p-3 rounded-full bg-pink-100">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-pink-600"
+                                  >
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h4 className="text-lg font-semibold">
+                                    Donate my unsold items
+                                  </h4>
+                                  <p className="text-gray-500 text-sm mt-1">
+                                    Items will be donated to charity
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="bg-amber-50 p-4 rounded-lg mt-4">
+                                <div className="flex items-start">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-amber-500 mr-2 mt-0.5 flex-shrink-0"
+                                  >
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="16" x2="12" y2="12" />
+                                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                                  </svg>
+                                  <div>
+                                    <p className="text-sm text-amber-800">
+                                      <strong>Note:</strong> By selecting this
+                                      option, you agree to donate any unsold
+                                      items to our partner charities after your
+                                      rental expires.
+                                    </p>
+                                    <p className="text-xs text-amber-700 mt-2">
+                                      You can change this selection up to{" "}
+                                      {systemSettings.lastChanceDays} days
+                                      before your rental expires.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </RadioGroup>
+
+                        <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+                          <div className="flex items-start">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-gray-500 mr-2 mt-0.5 flex-shrink-0"
+                            >
+                              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                            </svg>
+                            <div>
+                              <p className="text-xs text-gray-600">
+                                <strong>Business Logic:</strong> When your
+                                rental expires, the system will track the status
+                                of your unsold items based on your selection. If
+                                you choose to collect your items, they'll be
+                                marked as "pending pickup" for the grace period.
+                                You'll receive notifications as the expiration
+                                date approaches.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
                   </Tabs>
                 </CardContent>
               </Card>
@@ -786,6 +1008,47 @@ export default function RentCubbyPage() {
                             {listingType === "self"
                               ? "You manage listings"
                               : "Staff manages listings"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
+                      <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-1 text-pink-600"
+                        >
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                          <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                        Pickup Preference
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-full bg-pink-100">
+                          <CheckCircle2 className="h-4 w-4 text-pink-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {pickupPreference === "pickup"
+                              ? "I'll collect my items"
+                              : "Donate unsold items"}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            {pickupPreference === "pickup"
+                              ? `${systemSettings.gracePickupDays} day grace period`
+                              : "Items will be donated"}
                           </p>
                         </div>
                       </div>
