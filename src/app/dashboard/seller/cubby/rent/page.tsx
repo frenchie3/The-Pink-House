@@ -308,7 +308,7 @@ export default function RentCubbyPage() {
                       <TabsTrigger value="period">Rental Period</TabsTrigger>
                       <TabsTrigger value="cubby">Select Cubby</TabsTrigger>
                       <TabsTrigger value="listing">Listing Type</TabsTrigger>
-                      <TabsTrigger value="pickup">Pickup Options</TabsTrigger>
+                      <TabsTrigger value="pickup">Unsold Options</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="period" className="space-y-6">
@@ -678,8 +678,8 @@ export default function RentCubbyPage() {
                     <TabsContent value="pickup" className="space-y-6">
                       <div className="space-y-4">
                         <h3 className="text-lg font-medium mb-4">
-                          What should we do with any unsold items when your
-                          rental expires?
+                          What would you like us to do with any unsold items
+                          after your rental expires?
                         </h3>
 
                         <RadioGroup
@@ -745,13 +745,14 @@ export default function RentCubbyPage() {
                                   </svg>
                                   <div>
                                     <p className="text-sm text-blue-800">
-                                      <strong>Grace Period:</strong> You'll have{" "}
+                                      <strong>Grace Period:</strong> Based on
+                                      our current policy, you'll have{" "}
                                       {systemSettings.gracePickupDays} days
                                       after your rental expires to collect your
                                       items.
                                     </p>
                                     <p className="text-xs text-blue-700 mt-2">
-                                      You can change this selection up to{" "}
+                                      You can modify this preference up to{" "}
                                       {systemSettings.lastChanceDays} days
                                       before your rental expires.
                                     </p>
@@ -820,7 +821,7 @@ export default function RentCubbyPage() {
                                       rental expires.
                                     </p>
                                     <p className="text-xs text-amber-700 mt-2">
-                                      You can change this selection up to{" "}
+                                      You can modify this preference up to{" "}
                                       {systemSettings.lastChanceDays} days
                                       before your rental expires.
                                     </p>

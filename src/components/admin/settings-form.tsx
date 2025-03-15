@@ -28,6 +28,7 @@ import {
   CreditCard,
   Info,
   RefreshCw,
+  Clock,
 } from "lucide-react";
 
 interface SettingsFormProps {
@@ -45,6 +46,10 @@ interface SettingsFormProps {
     monthly: number;
     quarterly: number;
   };
+  pickupSettings: {
+    gracePickupDays: number;
+    lastChanceDays: number;
+  };
 }
 
 export function SettingsForm({
@@ -52,11 +57,14 @@ export function SettingsForm({
   itemLimits,
   commRates,
   rentalFees,
+  pickupSettings = { gracePickupDays: 7, lastChanceDays: 3 },
 }: SettingsFormProps) {
   // State for each setting type
   const [currentItemLimits, setCurrentItemLimits] = useState(itemLimits);
   const [currentCommRates, setCurrentCommRates] = useState(commRates);
   const [currentRentalFees, setCurrentRentalFees] = useState(rentalFees);
+  const [currentPickupSettings, setCurrentPickupSettings] =
+    useState(pickupSettings);
 
   // Update item limits
   const updateItemLimit = (type: "default" | "premium", value: number) => {
@@ -616,6 +624,182 @@ export function SettingsForm({
                     variant="outline"
                     type="button"
                     onClick={() => setCurrentRentalFees(rentalFees)}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reset to Defaults
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-pink-600 hover:bg-pink-700"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Pickup Settings Tab */}
+      <TabsContent value="pickup_settings" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-pink-600" />
+              End of Rental Settings
+            </CardTitle>
+            <CardDescription>
+              Configure grace periods and notification settings for rental end
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={updateSettings} className="space-y-8">
+              <input type="hidden" name="setting_key" value="pickup_settings" />
+              <input
+                type="hidden"
+                name="setting_value"
+                id="pickup_settings_json"
+                value={JSON.stringify(currentPickupSettings)}
+              />
+
+              <div className="space-y-6">
+                <div className="p-6 bg-white rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-medium mb-4">
+                    Grace Period Settings
+                  </h3>
+
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <Label
+                          htmlFor="grace_period"
+                          className="text-sm font-medium flex items-center gap-1"
+                        >
+                          Pickup Grace Period
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3.5 w-3.5 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="w-[200px] text-xs">
+                                  Number of days sellers have to collect unsold
+                                  items after their rental expires
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </Label>
+                        <span className="text-sm font-medium">
+                          {currentPickupSettings.gracePickupDays} days
+                        </span>
+                      </div>
+                      <div className="pt-2">
+                        <Input
+                          id="grace_period"
+                          type="number"
+                          min="1"
+                          max="30"
+                          value={currentPickupSettings.gracePickupDays}
+                          className="w-full"
+                          onChange={(e) => {
+                            setCurrentPickupSettings((prev) => ({
+                              ...prev,
+                              gracePickupDays: parseInt(e.target.value),
+                            }));
+                          }}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Recommended: 7-14 days
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <Label
+                          htmlFor="last_chance"
+                          className="text-sm font-medium flex items-center gap-1"
+                        >
+                          Last Chance Period
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3.5 w-3.5 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="w-[200px] text-xs">
+                                  Days before expiration when sellers can still
+                                  modify their pickup preference
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </Label>
+                        <span className="text-sm font-medium">
+                          {currentPickupSettings.lastChanceDays} days
+                        </span>
+                      </div>
+                      <div className="pt-2">
+                        <Input
+                          id="last_chance"
+                          type="number"
+                          min="1"
+                          max="14"
+                          value={currentPickupSettings.lastChanceDays}
+                          className="w-full"
+                          onChange={(e) => {
+                            setCurrentPickupSettings((prev) => ({
+                              ...prev,
+                              lastChanceDays: parseInt(e.target.value),
+                            }));
+                          }}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Recommended: 3-7 days
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-amber-800">
+                        Important Notes
+                      </h4>
+                      <ul className="text-sm text-amber-700 mt-2 space-y-2">
+                        <li>
+                          • The grace period must be longer than the last chance
+                          period
+                        </li>
+                        <li>
+                          • Sellers will receive notifications when approaching
+                          these deadlines
+                        </li>
+                        <li>
+                          • Items not collected during the grace period may be
+                          donated
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t">
+                <div className="text-sm text-gray-500">
+                  Last updated: {new Date().toLocaleDateString()}
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setCurrentPickupSettings(pickupSettings)}
                   >
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reset to Defaults

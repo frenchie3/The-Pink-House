@@ -25,6 +25,7 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
+  Clock,
 } from "lucide-react";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { createClient } from "../../../../../supabase/client";
@@ -38,6 +39,10 @@ export default function AdminSettingsPage() {
     weekly: 10,
     monthly: 35,
     quarterly: 90,
+  });
+  const [pickupSettings, setPickupSettings] = useState({
+    gracePickupDays: 7,
+    lastChanceDays: 3,
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -254,7 +259,7 @@ export default function AdminSettingsPage() {
 
             {/* Main Settings Tabs */}
             <Tabs defaultValue="cubby_limits" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-8">
+              <TabsList className="grid w-full grid-cols-4 mb-8">
                 <TabsTrigger
                   value="cubby_limits"
                   className="flex items-center gap-2"
@@ -276,6 +281,13 @@ export default function AdminSettingsPage() {
                   <CreditCard size={16} />
                   <span>Rental Pricing</span>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="pickup_settings"
+                  className="flex items-center gap-2"
+                >
+                  <Clock size={16} />
+                  <span>End of Rental</span>
+                </TabsTrigger>
               </TabsList>
 
               {/* Use the client component for all settings forms */}
@@ -284,6 +296,7 @@ export default function AdminSettingsPage() {
                 itemLimits={itemLimits}
                 commRates={commRates}
                 rentalFees={rentalFees}
+                pickupSettings={pickupSettings}
               />
             </Tabs>
           </div>
