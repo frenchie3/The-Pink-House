@@ -30,25 +30,25 @@ export default function RentCubbyPage() {
   const [selectedCubby, setSelectedCubby] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // State for pickup preference - default to pickup option
+  // State for unsold items preference - default to pickup option
   const [pickupPreference, setPickupPreference] = useState("pickup");
 
-  // System settings for grace period - these would ideally be fetched from system_settings table
-  // Default values used here, to be replaced with actual settings when available
+  // System settings for grace period - fetched from system_settings table
+  // Default values used as fallback if settings are not found
   const [systemSettings, setSystemSettings] = useState({
     gracePickupDays: 7, // Default: 7 days grace period for pickup after rental expires
     lastChanceDays: 3, // Default: 3 days before expiration when seller can change preference
   });
 
-  const router = useRouter();
-  const supabase = createClient();
-
-  // Rental fee structure
-  const rentalFees = {
+  // Rental fee structure - will be dynamically updated from system settings
+  const [rentalFees, setRentalFees] = useState({
     weekly: 10,
     monthly: 35,
     quarterly: 90,
-  };
+  });
+
+  const router = useRouter();
+  const supabase = createClient();
 
   // Commission rates based on listing type - will be fetched from system settings
   const [commissionRates, setCommissionRates] = useState({
@@ -82,22 +82,61 @@ export default function RentCubbyPage() {
           });
         }
 
-        // Fetch pickup settings (if they exist)
-        // Note: This assumes these settings exist in the system_settings table
-        // If they don't exist yet, the default values set in state will be used
-        const { data: pickupSettingsData } = await supabase
-          .from("system_settings")
-          .select("setting_value")
-          .eq("setting_key", "pickup_settings")
-          .single();
+        // Fetch rental fees
+        try {
+          const { data: rentalFeesData, error: rentalFeesError } =
+            await supabase
+              .from("system_settings")
+              .select("setting_value")
+              .eq("setting_key", "cubby_rental_fees")
+              .single();
 
-        if (pickupSettingsData?.setting_value) {
-          setSystemSettings({
-            gracePickupDays:
-              pickupSettingsData.setting_value.gracePickupDays || 7,
-            lastChanceDays:
-              pickupSettingsData.setting_value.lastChanceDays || 3,
-          });
+          if (rentalFeesError) {
+            console.warn("Error fetching rental fees:", rentalFeesError);
+            // Continue with default values
+          } else if (rentalFeesData?.setting_value) {
+            console.log("Rental fees fetched:", rentalFeesData.setting_value);
+            setRentalFees({
+              weekly: rentalFeesData.setting_value.weekly || 10,
+              monthly: rentalFeesData.setting_value.monthly || 35,
+              quarterly: rentalFeesData.setting_value.quarterly || 90,
+            });
+          }
+        } catch (rentalFeesErr) {
+          console.error("Exception fetching rental fees:", rentalFeesErr);
+          // Continue with default values
+        }
+
+        // Fetch unsold settings (if they exist)
+        try {
+          const { data: unsoldSettingsData, error: unsoldSettingsError } =
+            await supabase
+              .from("system_settings")
+              .select("setting_value")
+              .eq("setting_key", "unsold_settings")
+              .single();
+
+          if (unsoldSettingsError) {
+            console.warn(
+              "Error fetching unsold settings:",
+              unsoldSettingsError,
+            );
+            // Continue with default values
+          } else if (unsoldSettingsData?.setting_value) {
+            console.log(
+              "Unsold settings fetched:",
+              unsoldSettingsData.setting_value,
+            );
+            setSystemSettings({
+              gracePickupDays:
+                unsoldSettingsData.setting_value.gracePickupDays || 7,
+              lastChanceDays:
+                unsoldSettingsData.setting_value.lastChanceDays || 3,
+            });
+          }
+        } catch (unsoldErr) {
+          console.error("Exception fetching unsold settings:", unsoldErr);
+          // Continue with default values
         }
       } catch (err) {
         console.error("Error fetching system settings:", err);
@@ -218,7 +257,7 @@ export default function RentCubbyPage() {
           listing_type: listingType,
           commission_rate:
             commissionRates[listingType as keyof typeof commissionRates],
-          pickup_preference: pickupPreference, // Store the seller's pickup preference
+          unsold_preference: pickupPreference, // Store the seller's unsold items preference
           grace_period_days: systemSettings.gracePickupDays, // Store the grace period days for tracking
         })
         .select();
@@ -674,7 +713,7 @@ export default function RentCubbyPage() {
                       </div>
                     </TabsContent>
 
-                    {/* New Pickup Options Tab */}
+                    {/* Unsold Options Tab */}
                     <TabsContent value="pickup" className="space-y-6">
                       <div className="space-y-4">
                         <h3 className="text-lg font-medium mb-4">
@@ -1034,7 +1073,7 @@ export default function RentCubbyPage() {
                           <line x1="16" y1="17" x2="8" y2="17" />
                           <polyline points="10 9 9 9 8 9" />
                         </svg>
-                        Pickup Preference
+                        Unsold Items Preference
                       </h3>
                       <div className="flex items-center gap-2">
                         <div className="p-2 rounded-full bg-pink-100">

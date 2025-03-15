@@ -40,7 +40,7 @@ export default function AdminSettingsPage() {
     monthly: 35,
     quarterly: 90,
   });
-  const [pickupSettings, setPickupSettings] = useState({
+  const [unsoldSettings, setUnsoldSettings] = useState({
     gracePickupDays: 7,
     lastChanceDays: 3,
   });
@@ -97,6 +97,9 @@ export default function AdminSettingsPage() {
         const cubbyRentalFees = data?.find(
           (setting) => setting.setting_key === "cubby_rental_fees",
         );
+        const unsoldSettingsData = data?.find(
+          (setting) => setting.setting_key === "unsold_settings",
+        );
 
         // Parse settings for UI display
         setItemLimits(
@@ -110,6 +113,12 @@ export default function AdminSettingsPage() {
             weekly: 10,
             monthly: 35,
             quarterly: 90,
+          },
+        );
+        setUnsoldSettings(
+          unsoldSettingsData?.setting_value || {
+            gracePickupDays: 7,
+            lastChanceDays: 3,
           },
         );
       } catch (err) {
@@ -296,7 +305,7 @@ export default function AdminSettingsPage() {
                 itemLimits={itemLimits}
                 commRates={commRates}
                 rentalFees={rentalFees}
-                pickupSettings={pickupSettings}
+                pickupSettings={unsoldSettings}
               />
             </Tabs>
           </div>

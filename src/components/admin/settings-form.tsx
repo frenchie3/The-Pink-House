@@ -642,8 +642,8 @@ export function SettingsForm({
         </Card>
       </TabsContent>
 
-      {/* Pickup Settings Tab */}
-      <TabsContent value="pickup_settings" className="space-y-6">
+      {/* Unsold Settings Tab */}
+      <TabsContent value="unsold_settings" className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -656,11 +656,11 @@ export function SettingsForm({
           </CardHeader>
           <CardContent>
             <form action={updateSettings} className="space-y-8">
-              <input type="hidden" name="setting_key" value="pickup_settings" />
+              <input type="hidden" name="setting_key" value="unsold_settings" />
               <input
                 type="hidden"
                 name="setting_value"
-                id="pickup_settings_json"
+                id="unsold_settings_json"
                 value={JSON.stringify(currentPickupSettings)}
               />
 
