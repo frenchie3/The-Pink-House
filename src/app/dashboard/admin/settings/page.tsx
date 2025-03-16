@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,6 +46,7 @@ export default function AdminSettingsPage() {
     lastChanceDays: 3,
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [rawSettingsData, setRawSettingsData] = useState<any[]>([]);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -121,6 +123,19 @@ export default function AdminSettingsPage() {
             lastChanceDays: 3,
           },
         );
+
+        // Also get the raw data for diagnostic purposes
+        const { data: rawSettingsData, error: rawError } = await supabase
+          .from("system_settings")
+          .select("*");
+        
+        if (rawError) {
+          console.error("Error fetching raw settings data:", rawError);
+        } else {
+          console.log("Raw settings data:", rawSettingsData);
+          // Set to state for diagnostic display
+          setRawSettingsData(rawSettingsData || []);
+        }
       } catch (err) {
         console.error("Error fetching settings:", err);
       } finally {
@@ -308,6 +323,86 @@ export default function AdminSettingsPage() {
                 pickupSettings={unsoldSettings}
               />
             </Tabs>
+
+            {/* Diagnostic Section - for admins to debug system settings */}
+            <div className="mt-8 border-t pt-8">
+              <h2 className="text-xl font-bold mb-4">System Settings Diagnostics</h2>
+              <p className="text-gray-600 mb-4">
+                This section shows the raw data from the system_settings table for debugging purposes.
+              </p>
+              
+              <div className="space-y-4">
+                {rawSettingsData.map((setting) => (
+                  <Card key={setting.id} className="overflow-hidden">
+                    <CardHeader className="bg-gray-50 py-3">
+                      <CardTitle className="text-base flex items-center justify-between">
+                        <span className="font-mono text-pink-600">{setting.setting_key}</span>
+                        <span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-700">
+                          ID: {setting.id.substring(0, 8)}...
+                        </span>
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        {setting.description || "No description provided"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="py-4">
+                      <div className="bg-gray-50 p-3 rounded overflow-auto max-h-48">
+                        <pre className="text-xs text-gray-800 whitespace-pre-wrap">
+                          {JSON.stringify(setting.setting_value, null, 2)}
+                        </pre>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="bg-gray-50 py-2 px-4 text-xs text-gray-500 flex justify-between">
+                      <span>Created: {new Date(setting.created_at).toLocaleString()}</span>
+                      <span>Updated: {new Date(setting.updated_at).toLocaleString()}</span>
+                    </CardFooter>
+                  </Card>
+                ))}
+
+                {rawSettingsData.length === 0 && (
+                  <div className="p-8 text-center border rounded-lg">
+                    <p className="text-gray-500">No system settings found in database!</p>
+                    <Button 
+                      className="mt-4 bg-pink-600 hover:bg-pink-700"
+                      onClick={async () => {
+                        try {
+                          // Insert default settings
+                          await supabase.from("system_settings").insert([
+                            {
+                              setting_key: "commission_rates",
+                              setting_value: { default: 0.15, staff: 0.25 },
+                              description: "Commission rates for seller items"
+                            },
+                            {
+                              setting_key: "cubby_rental_fees",
+                              setting_value: { weekly: 10, monthly: 35, quarterly: 90 },
+                              description: "Cubby rental fees for different time periods"
+                            },
+                            {
+                              setting_key: "unsold_settings",
+                              setting_value: { gracePickupDays: 7, lastChanceDays: 3 },
+                              description: "Settings for end of rental unsold item handling"
+                            },
+                            {
+                              setting_key: "cubby_item_limits",
+                              setting_value: { default: 10, premium: 20 },
+                              description: "Maximum number of items a seller can add to their cubby based on their plan"
+                            }
+                          ]);
+                          
+                          // Refresh the page
+                          router.push("/dashboard/admin/settings?success=Default settings created successfully");
+                        } catch (error) {
+                          console.error("Error creating default settings:", error);
+                        }
+                      }}
+                    >
+                      Create Default Settings
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </main>
       </div>

@@ -126,68 +126,115 @@ export default function ExtendCubbyPage() {
     // Fetch rental fees from system settings
     const fetchSystemSettings = async () => {
       try {
-        // First, fetch ALL system settings to debug what's actually in the database
-        const { data: allSettings, error: allSettingsError } = await supabase
+        console.log("Starting to fetch system settings for extend page...");
+        
+        // First, ensure we can connect to supabase properly
+        try {
+          const { data: testData, error: testError } = await supabase
+            .from("system_settings")
+            .select("count(*)")
+            .limit(1);
+            
+          if (testError) {
+            console.error("Initial test query failed:", testError);
+          } else {
+            console.log("Successfully connected to system_settings table, count:", testData);
+          }
+        } catch (testErr) {
+          console.error("Exception during test query:", testErr);
+        }
+        
+        // Check if rental fees exist, insert if not
+        const { data: feesCheck, error: feesCheckError } = await supabase
           .from("system_settings")
-          .select("*");
+          .select("id")
+          .eq("setting_key", "cubby_rental_fees")
+          .maybeSingle();
           
-        if (allSettingsError) {
-          console.error("Error fetching all settings:", allSettingsError);
-        } else {
-          console.log("All system settings in database (extend page):", allSettings);
+        if (feesCheckError) {
+          console.error("Error checking rental fees:", feesCheckError);
+        } else if (!feesCheck) {
+          // Fees don't exist, insert them
+          console.log("Rental fees don't exist, inserting default...");
+          
+          const { error: insertError } = await supabase
+            .from("system_settings")
+            .insert({
+              setting_key: "cubby_rental_fees",
+              setting_value: {
+                weekly: 10,
+                monthly: 35,
+                quarterly: 90
+              },
+              description: "Cubby rental fees for different time periods"
+            });
+            
+          if (insertError) {
+            console.error("Error inserting rental fees:", insertError);
+          }
         }
         
         // Fetch rental fees
+        console.log("Fetching rental fees...");
         const { data: rentalFeesData, error: rentalFeesError } =
           await supabase
             .from("system_settings")
-            .select("setting_value, setting_key")
+            .select("setting_value")
             .eq("setting_key", "cubby_rental_fees")
             .single();
 
         if (rentalFeesError) {
-          console.warn("Error fetching rental fees (extend page):", rentalFeesError);
+          console.error("Error fetching rental fees:", rentalFeesError);
           // Continue with default values
         } else if (rentalFeesData?.setting_value) {
-          console.log("Rental fees fetched (RAW) (extend page):", rentalFeesData);
+          console.log("Rental fees fetched:", rentalFeesData.setting_value);
+          // Ensure we have all required properties
+          const fees = {
+            weekly: rentalFeesData.setting_value.weekly || 10,
+            monthly: rentalFeesData.setting_value.monthly || 35,
+            quarterly: rentalFeesData.setting_value.quarterly || 90,
+          };
           
-          // Check if the data is a string that needs parsing
-          let rentalFeesValue = rentalFeesData.setting_value;
-          if (typeof rentalFeesValue === 'string') {
-            try {
-              rentalFeesValue = JSON.parse(rentalFeesValue);
-              console.log("Rental fees parsed from string (extend page):", rentalFeesValue);
-            } catch (e) {
-              console.error("Failed to parse rental fees string (extend page):", e);
+          console.log("Rental fees set to:", fees);
+          setRentalFees(fees);
+        }
+        
+        // Try an alternative approach if needed - fetch all settings at once
+        try {
+          console.log("Fetching all settings as backup...");
+          const { data: allSettings, error: allSettingsError } = await supabase
+            .from("system_settings")
+            .select("setting_key, setting_value");
+            
+          if (allSettingsError) {
+            console.error("Error fetching all settings:", allSettingsError);
+          } else if (allSettings && allSettings.length > 0) {
+            console.log("All settings fetched:", allSettings);
+            
+            // Look for rental fees in all settings
+            const rentalFeeSetting = allSettings.find(s => s.setting_key === "cubby_rental_fees");
+            if (rentalFeeSetting && rentalFeeSetting.setting_value) {
+              const fees = {
+                weekly: rentalFeeSetting.setting_value.weekly || 10,
+                monthly: rentalFeeSetting.setting_value.monthly || 35,
+                quarterly: rentalFeeSetting.setting_value.quarterly || 90,
+              };
+              console.log("Setting rental fees from backup:", fees);
+              setRentalFees(fees);
             }
           }
-          
-          // Ensure we have all required properties
-          setRentalFees({
-            weekly: rentalFeesValue.weekly || 10,
-            monthly: rentalFeesValue.monthly || 35,
-            quarterly: rentalFeesValue.quarterly || 90,
-          });
-          
-          console.log("Rental fees set to (extend page):", {
-            weekly: rentalFeesValue.weekly || 10,
-            monthly: rentalFeesValue.monthly || 35,
-            quarterly: rentalFeesValue.quarterly || 90,
-          });
+        } catch (allErr) {
+          console.error("Exception fetching all settings:", allErr);
         }
+        
       } catch (err) {
-        console.error("Error fetching system settings (extend page):", err);
+        console.error("Error fetching system settings:", err);
         // Keep default values if there's an error
       }
     };
 
     fetchSystemSettings();
   }, [supabase]);
-
-  // Debug useEffect to show current values
-  useEffect(() => {
-    console.log("Current rentalFees state (extend page):", rentalFees);
-  }, [rentalFees]);
 
   // Reset selected cubby when rental period changes
   useEffect(() => {
