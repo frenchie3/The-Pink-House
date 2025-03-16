@@ -126,40 +126,68 @@ export default function ExtendCubbyPage() {
     // Fetch rental fees from system settings
     const fetchSystemSettings = async () => {
       try {
+        // First, fetch ALL system settings to debug what's actually in the database
+        const { data: allSettings, error: allSettingsError } = await supabase
+          .from("system_settings")
+          .select("*");
+          
+        if (allSettingsError) {
+          console.error("Error fetching all settings:", allSettingsError);
+        } else {
+          console.log("All system settings in database (extend page):", allSettings);
+        }
+        
         // Fetch rental fees
         const { data: rentalFeesData, error: rentalFeesError } =
           await supabase
             .from("system_settings")
-            .select("setting_value")
+            .select("setting_value, setting_key")
             .eq("setting_key", "cubby_rental_fees")
             .single();
 
         if (rentalFeesError) {
-          console.warn("Error fetching rental fees:", rentalFeesError);
+          console.warn("Error fetching rental fees (extend page):", rentalFeesError);
           // Continue with default values
         } else if (rentalFeesData?.setting_value) {
-          console.log("Rental fees fetched:", rentalFeesData.setting_value);
+          console.log("Rental fees fetched (RAW) (extend page):", rentalFeesData);
+          
+          // Check if the data is a string that needs parsing
+          let rentalFeesValue = rentalFeesData.setting_value;
+          if (typeof rentalFeesValue === 'string') {
+            try {
+              rentalFeesValue = JSON.parse(rentalFeesValue);
+              console.log("Rental fees parsed from string (extend page):", rentalFeesValue);
+            } catch (e) {
+              console.error("Failed to parse rental fees string (extend page):", e);
+            }
+          }
+          
           // Ensure we have all required properties
           setRentalFees({
-            weekly: rentalFeesData.setting_value.weekly || 10,
-            monthly: rentalFeesData.setting_value.monthly || 35,
-            quarterly: rentalFeesData.setting_value.quarterly || 90,
+            weekly: rentalFeesValue.weekly || 10,
+            monthly: rentalFeesValue.monthly || 35,
+            quarterly: rentalFeesValue.quarterly || 90,
           });
           
-          console.log("Rental fees set to:", {
-            weekly: rentalFeesData.setting_value.weekly || 10,
-            monthly: rentalFeesData.setting_value.monthly || 35,
-            quarterly: rentalFeesData.setting_value.quarterly || 90,
+          console.log("Rental fees set to (extend page):", {
+            weekly: rentalFeesValue.weekly || 10,
+            monthly: rentalFeesValue.monthly || 35,
+            quarterly: rentalFeesValue.quarterly || 90,
           });
         }
       } catch (err) {
-        console.error("Error fetching system settings:", err);
+        console.error("Error fetching system settings (extend page):", err);
         // Keep default values if there's an error
       }
     };
 
     fetchSystemSettings();
   }, [supabase]);
+
+  // Debug useEffect to show current values
+  useEffect(() => {
+    console.log("Current rentalFees state (extend page):", rentalFees);
+  }, [rentalFees]);
 
   // Reset selected cubby when rental period changes
   useEffect(() => {

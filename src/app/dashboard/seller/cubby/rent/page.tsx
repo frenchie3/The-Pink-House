@@ -67,10 +67,21 @@ export default function RentCubbyPage() {
     // Fetch commission rates and other system settings
     const fetchSystemSettings = async () => {
       try {
+        // First, fetch ALL system settings to debug what's actually in the database
+        const { data: allSettings, error: allSettingsError } = await supabase
+          .from("system_settings")
+          .select("*");
+          
+        if (allSettingsError) {
+          console.error("Error fetching all settings:", allSettingsError);
+        } else {
+          console.log("All system settings in database:", allSettings);
+        }
+      
         // Fetch commission rates
         const { data: commissionData, error: commissionError } = await supabase
           .from("system_settings")
-          .select("setting_value")
+          .select("setting_value, setting_key")
           .eq("setting_key", "commission_rates")
           .single();
 
@@ -78,29 +89,40 @@ export default function RentCubbyPage() {
           console.warn("Error fetching commission rates:", commissionError);
           // Continue with default values
         } else if (commissionData && commissionData.setting_value) {
-          console.log("Commission rates fetched:", commissionData.setting_value);
+          console.log("Commission rates fetched (RAW):", commissionData);
+          
+          // Check if the data is a string that needs parsing
+          let commissionValue = commissionData.setting_value;
+          if (typeof commissionValue === 'string') {
+            try {
+              commissionValue = JSON.parse(commissionValue);
+              console.log("Commission rates parsed from string:", commissionValue);
+            } catch (e) {
+              console.error("Failed to parse commission rates string:", e);
+            }
+          }
           
           // Map database values to state
           // Handle different possible naming variations in the database
           setCommissionRates({
             // For "self", try these database keys in order: "self", "self_listed", "default" 
-            self: commissionData.setting_value.self || 
-                  commissionData.setting_value.self_listed || 
-                  commissionData.setting_value.default || 0.15,
+            self: commissionValue.self || 
+                  commissionValue.self_listed || 
+                  commissionValue.default || 0.15,
                   
             // For "staff", try these database keys in order: "staff", "staff_listed", "premium"
-            staff: commissionData.setting_value.staff || 
-                   commissionData.setting_value.staff_listed || 
-                   commissionData.setting_value.premium || 0.25,
+            staff: commissionValue.staff || 
+                   commissionValue.staff_listed || 
+                   commissionValue.premium || 0.25,
           });
           
           console.log("Commission rates set to:", {
-            self: commissionData.setting_value.self || 
-                  commissionData.setting_value.self_listed || 
-                  commissionData.setting_value.default || 0.15,
-            staff: commissionData.setting_value.staff || 
-                   commissionData.setting_value.staff_listed || 
-                   commissionData.setting_value.premium || 0.25,
+            self: commissionValue.self || 
+                  commissionValue.self_listed || 
+                  commissionValue.default || 0.15,
+            staff: commissionValue.staff || 
+                   commissionValue.staff_listed || 
+                   commissionValue.premium || 0.25,
           });
         }
 
@@ -109,7 +131,7 @@ export default function RentCubbyPage() {
           const { data: rentalFeesData, error: rentalFeesError } =
             await supabase
               .from("system_settings")
-              .select("setting_value")
+              .select("setting_value, setting_key")
               .eq("setting_key", "cubby_rental_fees")
               .single();
 
@@ -117,18 +139,30 @@ export default function RentCubbyPage() {
             console.warn("Error fetching rental fees:", rentalFeesError);
             // Continue with default values
           } else if (rentalFeesData?.setting_value) {
-            console.log("Rental fees fetched:", rentalFeesData.setting_value);
+            console.log("Rental fees fetched (RAW):", rentalFeesData);
+            
+            // Check if the data is a string that needs parsing
+            let rentalFeesValue = rentalFeesData.setting_value;
+            if (typeof rentalFeesValue === 'string') {
+              try {
+                rentalFeesValue = JSON.parse(rentalFeesValue);
+                console.log("Rental fees parsed from string:", rentalFeesValue);
+              } catch (e) {
+                console.error("Failed to parse rental fees string:", e);
+              }
+            }
+            
             // Ensure we have all required properties
             setRentalFees({
-              weekly: rentalFeesData.setting_value.weekly || 10,
-              monthly: rentalFeesData.setting_value.monthly || 35,
-              quarterly: rentalFeesData.setting_value.quarterly || 90,
+              weekly: rentalFeesValue.weekly || 10,
+              monthly: rentalFeesValue.monthly || 35,
+              quarterly: rentalFeesValue.quarterly || 90,
             });
             
             console.log("Rental fees set to:", {
-              weekly: rentalFeesData.setting_value.weekly || 10,
-              monthly: rentalFeesData.setting_value.monthly || 35,
-              quarterly: rentalFeesData.setting_value.quarterly || 90,
+              weekly: rentalFeesValue.weekly || 10,
+              monthly: rentalFeesValue.monthly || 35,
+              quarterly: rentalFeesValue.quarterly || 90,
             });
           }
         } catch (rentalFeesErr) {
@@ -141,7 +175,7 @@ export default function RentCubbyPage() {
           const { data: unsoldSettingsData, error: unsoldSettingsError } =
             await supabase
               .from("system_settings")
-              .select("setting_value")
+              .select("setting_value, setting_key")
               .eq("setting_key", "unsold_settings")
               .single();
 
@@ -152,22 +186,31 @@ export default function RentCubbyPage() {
             );
             // Continue with default values
           } else if (unsoldSettingsData?.setting_value) {
-            console.log(
-              "Unsold settings fetched:",
-              unsoldSettingsData.setting_value,
-            );
+            console.log("Unsold settings fetched (RAW):", unsoldSettingsData);
+            
+            // Check if the data is a string that needs parsing
+            let unsoldSettingsValue = unsoldSettingsData.setting_value;
+            if (typeof unsoldSettingsValue === 'string') {
+              try {
+                unsoldSettingsValue = JSON.parse(unsoldSettingsValue);
+                console.log("Unsold settings parsed from string:", unsoldSettingsValue);
+              } catch (e) {
+                console.error("Failed to parse unsold settings string:", e);
+              }
+            }
+            
             setSystemSettings({
               gracePickupDays:
-                unsoldSettingsData.setting_value.gracePickupDays || 7,
+                unsoldSettingsValue.gracePickupDays || 7,
               lastChanceDays:
-                unsoldSettingsData.setting_value.lastChanceDays || 3,
+                unsoldSettingsValue.lastChanceDays || 3,
             });
             
             console.log("Unsold settings set to:", {
               gracePickupDays:
-                unsoldSettingsData.setting_value.gracePickupDays || 7,
+                unsoldSettingsValue.gracePickupDays || 7,
               lastChanceDays:
-                unsoldSettingsData.setting_value.lastChanceDays || 3,
+                unsoldSettingsValue.lastChanceDays || 3,
             });
           }
         } catch (unsoldErr) {
@@ -182,6 +225,13 @@ export default function RentCubbyPage() {
 
     fetchSystemSettings();
   }, [supabase]);
+
+  // Debug useEffect to show current values of system settings
+  useEffect(() => {
+    console.log("Current systemSettings state:", systemSettings);
+    console.log("Current rentalFees state:", rentalFees);
+    console.log("Current commissionRates state:", commissionRates);
+  }, [systemSettings, rentalFees, commissionRates]);
 
   // Calculate end date based on start date and rental period
   const calculateEndDate = (start: string, period: string) => {
@@ -597,7 +647,7 @@ export default function RentCubbyPage() {
                                   <span
                                     className={`text-lg font-semibold ${listingType === "self" ? "text-pink-600" : "text-gray-600"}`}
                                   >
-                                    {commissionRates.self * 100}%
+                                    {(commissionRates.self * 100).toFixed(0)}%
                                   </span>
                                 </div>
                               </div>
@@ -714,7 +764,7 @@ export default function RentCubbyPage() {
                                   <span
                                     className={`text-lg font-semibold ${listingType === "staff" ? "text-pink-600" : "text-gray-600"}`}
                                   >
-                                    {commissionRates.staff * 100}%
+                                    {(commissionRates.staff * 100).toFixed(0)}%
                                   </span>
                                 </div>
                               </div>
