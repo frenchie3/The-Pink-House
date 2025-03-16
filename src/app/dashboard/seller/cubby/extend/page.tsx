@@ -66,22 +66,18 @@ export default function ExtendCubbyPage() {
   const formattedCurrentEndDate = currentRental?.end_date || "";
   const formattedNewEndDate = calculatedNewEndDate?.toISOString() || "";
 
-  // Only run hook when explicitly checking availability
+  // Always call the hook but with empty strings when not checking availability
+  // This follows React's rules about hooks being called in same order
   const {
     canExtendCurrentCubby,
     alternativeCubbies,
     loading: extensionLoading,
     error: extensionError,
-  } = checkingAvailability ? useCubbyExtension(
-    currentRental?.cubby_id || "",
-    formattedCurrentEndDate,
-    formattedNewEndDate
-  ) : {
-    canExtendCurrentCubby: false,
-    alternativeCubbies: [],
-    loading: false,
-    error: null
-  };
+  } = useCubbyExtension(
+    checkingAvailability ? (currentRental?.cubby_id || "") : "",
+    checkingAvailability ? formattedCurrentEndDate : "",
+    checkingAvailability ? formattedNewEndDate : ""
+  );
 
   useEffect(() => {
     const fetchCurrentRental = async () => {
@@ -310,10 +306,8 @@ export default function ExtendCubbyPage() {
       setSelectedCubbyId(currentRental.cubby_id);
     }
     
-    // Then activate the hook after UI is updated to prevent render loops
-    setTimeout(() => {
-      setCheckingAvailability(true);
-    }, 0);
+    // Set checking availability flag to true without setTimeout
+    setCheckingAvailability(true);
     
     setError(null);
   };
