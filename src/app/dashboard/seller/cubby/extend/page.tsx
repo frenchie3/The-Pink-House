@@ -106,8 +106,10 @@ export default function ExtendCubbyPage() {
         if (fetchError) throw fetchError;
         if (!data) throw new Error("No active rental found");
 
+        // First set current rental
         setCurrentRental(data);
-        // Initially select the current cubby ID
+        
+        // Then set the selected cubby ID after we know we have valid data
         setSelectedCubbyId(data.cubby_id);
       } catch (err) {
         console.error("Error fetching rental:", err);
@@ -271,19 +273,28 @@ export default function ExtendCubbyPage() {
 
   // Reset selected cubby when rental period changes
   useEffect(() => {
-    if (currentRental) {
-      setSelectedCubbyId(null);
+    if (currentRental && showCubbyOptions) {
+      // Only reset if we've already shown options and user is changing their mind
+      setSelectedCubbyId(currentRental.cubby_id); // Reset to current cubby instead of null
       setShowCubbyOptions(false);
       setSuccessMessage(null);
     }
-  }, [rentalPeriod]);
+  }, [rentalPeriod, currentRental]);
 
   const handleCheckAvailability = () => {
     if (!rentalPeriod) {
       setError("Please select a rental period first");
       return;
     }
+    
+    // Only show cubby options if we have a rental period
     setShowCubbyOptions(true);
+    
+    // Make sure we have a valid cubby ID selected for extension
+    if (!selectedCubbyId && currentRental) {
+      setSelectedCubbyId(currentRental.cubby_id);
+    }
+    
     setError(null);
   };
 
