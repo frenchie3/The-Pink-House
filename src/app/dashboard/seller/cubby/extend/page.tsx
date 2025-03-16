@@ -506,9 +506,6 @@ export default function ExtendCubbyPage() {
                         >
                           <div 
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "weekly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => {
-                              handleRentalPeriodChange("weekly");
-                            }}
                           >
                             <RadioGroupItem value="weekly" id="weekly" className="sr-only" />
                             <Label
@@ -533,9 +530,6 @@ export default function ExtendCubbyPage() {
 
                           <div 
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "monthly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => {
-                              handleRentalPeriodChange("monthly");
-                            }}
                           >
                             <RadioGroupItem value="monthly" id="monthly" className="sr-only" />
                             <Label
@@ -560,9 +554,6 @@ export default function ExtendCubbyPage() {
 
                           <div 
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "quarterly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => {
-                              handleRentalPeriodChange("quarterly");
-                            }}
                           >
                             <RadioGroupItem value="quarterly" id="quarterly" className="sr-only" />
                             <Label
