@@ -612,12 +612,18 @@ export default function ExtendCubbyPage() {
                           <h3 className="text-sm font-medium text-gray-500 mb-2">
                             New End Date
                           </h3>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5 text-pink-600" />
-                            <p className="text-lg font-medium">
-                              {calculatedNewEndDate?.toLocaleDateString() || ""}
-                            </p>
-                          </div>
+                          {rentalPeriod ? (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-5 w-5 text-pink-600" />
+                              <p className="text-lg font-medium">
+                                {calculatedNewEndDate?.toLocaleDateString() || ""}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <p className="text-sm italic">Please select a rental period</p>
+                            </div>
+                          )}
                         </div>
 
                         {showCubbyOptions && selectedCubbyId && (
@@ -648,11 +654,11 @@ export default function ExtendCubbyPage() {
                               Extension Fee:
                             </span>
                             <span className="text-lg font-bold text-pink-600">
-                              {formatPrice(
+                              {rentalPeriod ? formatPrice(
                                 rentalFees[
                                   rentalPeriod as keyof typeof rentalFees
                                 ],
-                              )}
+                              ) : "--"}
                             </span>
                           </div>
                         </div>

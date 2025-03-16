@@ -1295,23 +1295,40 @@ export default function RentCubbyPage() {
                         </svg>
                         Listing Preference
                       </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-full bg-pink-100">
-                          <CheckCircle2 className="h-4 w-4 text-pink-600" />
+                      {listingType ? (
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-full bg-pink-100">
+                            <CheckCircle2 className="h-4 w-4 text-pink-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {listingType === "self" ? "Self-Listing" : "Staff-Managed"}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              {listingType === "self" ? "You manage listings" : "Staff manages listings"}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {listingType === "self"
-                              ? "Self-Listing"
-                              : "Staff-Managed"}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            {listingType === "self"
-                              ? "You manage listings"
-                              : "Staff manages listings"}
-                          </p>
+                      ) : (
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                          </svg>
+                          <p className="text-sm italic">Please select a listing type</p>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -1336,23 +1353,40 @@ export default function RentCubbyPage() {
                         </svg>
                         Unsold Items Preference
                       </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-full bg-pink-100">
-                          <CheckCircle2 className="h-4 w-4 text-pink-600" />
+                      {pickupPreference ? (
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-full bg-pink-100">
+                            <CheckCircle2 className="h-4 w-4 text-pink-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {pickupPreference === "pickup" ? "I'll collect my items" : "Donate unsold items"}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              {pickupPreference === "pickup" ? `${systemSettings.gracePickupDays} day grace period` : "Items will be donated"}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {pickupPreference === "pickup"
-                              ? "I'll collect my items"
-                              : "Donate unsold items"}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            {pickupPreference === "pickup"
-                              ? `${systemSettings.gracePickupDays} day grace period`
-                              : "Items will be donated"}
-                          </p>
+                      ) : (
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                          </svg>
+                          <p className="text-sm italic">Please select a preference</p>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     <div className="border-t pt-6 mt-2">
@@ -1376,9 +1410,9 @@ export default function RentCubbyPage() {
                           Rental Fee:
                         </span>
                         <span className="font-medium text-sm">
-                          {formatPrice(
-                            rentalFees[rentalPeriod as keyof typeof rentalFees] || 0,
-                          )}
+                          {rentalPeriod ? formatPrice(
+                            rentalFees[rentalPeriod as keyof typeof rentalFees],
+                          ) : "--"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center mb-3">
@@ -1400,10 +1434,9 @@ export default function RentCubbyPage() {
                           Commission Rate:
                         </span>
                         <span className="font-medium text-sm">
-                          {(commissionRates[
+                          {listingType ? `${(commissionRates[
                             listingType as keyof typeof commissionRates
-                          ] * 100).toFixed(0)}
-                          %
+                          ] * 100).toFixed(0)}%` : "--"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center mt-4 pt-3 border-t bg-pink-50 p-3 rounded-lg shadow-sm">
@@ -1411,9 +1444,9 @@ export default function RentCubbyPage() {
                           Total Due Now:
                         </span>
                         <span className="text-lg font-bold text-pink-600">
-                          {formatPrice(
-                            rentalFees[rentalPeriod as keyof typeof rentalFees] || 0,
-                          )}
+                          {rentalPeriod ? formatPrice(
+                            rentalFees[rentalPeriod as keyof typeof rentalFees],
+                          ) : "--"}
                         </span>
                       </div>
                     </div>
