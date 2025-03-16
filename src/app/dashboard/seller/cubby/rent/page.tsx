@@ -22,16 +22,16 @@ import { Input } from "@/components/ui/input";
 import AvailableCubbies from "@/components/seller/available-cubbies";
 
 export default function RentCubbyPage() {
-  const [rentalPeriod, setRentalPeriod] = useState("monthly");
-  const [listingType, setListingType] = useState("self");
+  const [rentalPeriod, setRentalPeriod] = useState<string | null>(null);
+  const [listingType, setListingType] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [availableCubbies, setAvailableCubbies] = useState<any[]>([]);
   const [selectedCubby, setSelectedCubby] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // State for unsold items preference - default to pickup option
-  const [pickupPreference, setPickupPreference] = useState("pickup");
+  // State for unsold items preference - no default selection
+  const [pickupPreference, setPickupPreference] = useState<string | null>(null);
 
   // System settings for grace period - fetched from system_settings table
   // Default values used as fallback if settings are not found
@@ -400,7 +400,7 @@ export default function RentCubbyPage() {
   };
 
   // Get the calculated end date based on the selected start date and rental period
-  const calculatedEndDate = calculateEndDateString(startDate, rentalPeriod);
+  const calculatedEndDate = calculateEndDateString(startDate, rentalPeriod || "");
 
   // Use the cubby availability hook at the component level
   const {
@@ -439,6 +439,18 @@ export default function RentCubbyPage() {
 
       if (!selectedCubby) {
         throw new Error("Please select an available cubby");
+      }
+
+      if (!rentalPeriod) {
+        throw new Error("Please select a rental period");
+      }
+
+      if (!listingType) {
+        throw new Error("Please select a listing type");
+      }
+
+      if (!pickupPreference) {
+        throw new Error("Please select an unsold items preference");
       }
 
       // Get the current user
@@ -590,13 +602,19 @@ export default function RentCubbyPage() {
                           Rental Period
                         </h3>
                         <RadioGroup
-                          value={rentalPeriod}
-                          onValueChange={setRentalPeriod}
+                          value={rentalPeriod || ""}
+                          onValueChange={(value) => {
+                            // If the same value is clicked again, unselect it
+                            if (value === rentalPeriod) {
+                              setRentalPeriod(null);
+                            } else {
+                              setRentalPeriod(value);
+                            }
+                          }}
                           className="space-y-4"
                         >
                           <div
                             className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "weekly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => setRentalPeriod("weekly")}
                           >
                             <div className="flex justify-between items-center">
                               <div>
@@ -615,7 +633,6 @@ export default function RentCubbyPage() {
 
                           <div
                             className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "monthly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => setRentalPeriod("monthly")}
                           >
                             <div className="flex justify-between items-center">
                               <div>
@@ -634,7 +651,6 @@ export default function RentCubbyPage() {
 
                           <div
                             className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "quarterly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => setRentalPeriod("quarterly")}
                           >
                             <div className="flex justify-between items-center">
                               <div>
@@ -695,7 +711,13 @@ export default function RentCubbyPage() {
                           {/* Self-Listing Option */}
                           <div
                             className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${listingType === "self" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
-                            onClick={() => setListingType("self")}
+                            onClick={() => {
+                              if (listingType === "self") {
+                                setListingType(null);
+                              } else {
+                                setListingType("self");
+                              }
+                            }}
                           >
                             <div
                               className="p-6 flex flex-col"
@@ -790,7 +812,13 @@ export default function RentCubbyPage() {
                           {/* Staff-Managed Option */}
                           <div
                             className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${listingType === "staff" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
-                            onClick={() => setListingType("staff")}
+                            onClick={() => {
+                              if (listingType === "staff") {
+                                setListingType(null);
+                              } else {
+                                setListingType("staff");
+                              }
+                            }}
                           >
                             <div
                               className="p-6 flex flex-col"
@@ -941,14 +969,27 @@ export default function RentCubbyPage() {
                         </h3>
 
                         <RadioGroup
-                          value={pickupPreference}
-                          onValueChange={setPickupPreference}
+                          value={pickupPreference || ""}
+                          onValueChange={(value) => {
+                            // If the same value is clicked again, unselect it
+                            if (value === pickupPreference) {
+                              setPickupPreference(null);
+                            } else {
+                              setPickupPreference(value);
+                            }
+                          }}
                           className="space-y-4"
                         >
                           {/* Pickup Option */}
                           <div
                             className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${pickupPreference === "pickup" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
-                            onClick={() => setPickupPreference("pickup")}
+                            onClick={() => {
+                              if (pickupPreference === "pickup") {
+                                setPickupPreference(null);
+                              } else {
+                                setPickupPreference("pickup");
+                              }
+                            }}
                           >
                             <div className="p-6">
                               <div className="flex items-start mb-4">
@@ -1023,7 +1064,13 @@ export default function RentCubbyPage() {
                           {/* Donate Option */}
                           <div
                             className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${pickupPreference === "donate" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
-                            onClick={() => setPickupPreference("donate")}
+                            onClick={() => {
+                              if (pickupPreference === "donate") {
+                                setPickupPreference(null);
+                              } else {
+                                setPickupPreference("donate");
+                              }
+                            }}
                           >
                             <div className="p-6">
                               <div className="flex items-start mb-4">
@@ -1157,14 +1204,13 @@ export default function RentCubbyPage() {
                       </h3>
                       <div>
                         <p className="text-sm font-medium text-gray-900">
-                          {rentalPeriod.charAt(0).toUpperCase() +
-                            rentalPeriod.slice(1)}
+                          {rentalPeriod ? (rentalPeriod.charAt(0).toUpperCase() + rentalPeriod.slice(1)) : "Select a rental period"}
                         </p>
                         {startDate && (
                           <p className="text-xs text-gray-600 mt-0.5">
                             {new Date(startDate).toLocaleDateString()} to{" "}
                             {new Date(
-                              calculateEndDate(startDate, rentalPeriod),
+                              calculateEndDate(startDate, rentalPeriod || ""),
                             ).toLocaleDateString()}
                           </p>
                         )}
@@ -1331,7 +1377,7 @@ export default function RentCubbyPage() {
                         </span>
                         <span className="font-medium text-sm">
                           {formatPrice(
-                            rentalFees[rentalPeriod as keyof typeof rentalFees],
+                            rentalFees[rentalPeriod as keyof typeof rentalFees] || 0,
                           )}
                         </span>
                       </div>
@@ -1366,7 +1412,7 @@ export default function RentCubbyPage() {
                         </span>
                         <span className="text-lg font-bold text-pink-600">
                           {formatPrice(
-                            rentalFees[rentalPeriod as keyof typeof rentalFees],
+                            rentalFees[rentalPeriod as keyof typeof rentalFees] || 0,
                           )}
                         </span>
                       </div>
@@ -1385,9 +1431,11 @@ export default function RentCubbyPage() {
                     onClick={handleSubmit}
                     disabled={
                       isSubmitting ||
-                      !selectedCubby ||
+                      !rentalPeriod ||
                       !startDate ||
-                      availableCubbies.length === 0
+                      !selectedCubby ||
+                      !listingType ||
+                      !pickupPreference
                     }
                   >
                     {isSubmitting ? (

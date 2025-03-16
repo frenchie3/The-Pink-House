@@ -22,7 +22,7 @@ import { useCubbyExtension } from "@/hooks/use-cubby-extension";
 import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 
 export default function ExtendCubbyPage() {
-  const [rentalPeriod, setRentalPeriod] = useState("monthly");
+  const [rentalPeriod, setRentalPeriod] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentRental, setCurrentRental] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -279,11 +279,16 @@ export default function ExtendCubbyPage() {
   }, [rentalPeriod]);
 
   const handleCheckAvailability = () => {
+    if (!rentalPeriod) {
+      setError("Please select a rental period first");
+      return;
+    }
     setShowCubbyOptions(true);
+    setError(null);
   };
 
   const handleExtendRental = async () => {
-    if (!currentRental || !selectedCubbyId || !calculatedNewEndDate) return;
+    if (!currentRental || !selectedCubbyId || !calculatedNewEndDate || !rentalPeriod) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -472,8 +477,15 @@ export default function ExtendCubbyPage() {
                           Select Extension Period
                         </h3>
                         <RadioGroup
-                          value={rentalPeriod}
-                          onValueChange={setRentalPeriod}
+                          value={rentalPeriod || ""}
+                          onValueChange={(value) => {
+                            // If the same value is clicked again, unselect it
+                            if (value === rentalPeriod) {
+                              setRentalPeriod(null);
+                            } else {
+                              setRentalPeriod(value);
+                            }
+                          }}
                           className="space-y-4"
                         >
                           <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -655,6 +667,7 @@ export default function ExtendCubbyPage() {
                         isSubmitting ||
                         !showCubbyOptions ||
                         !selectedCubbyId ||
+                        !rentalPeriod ||
                         !!successMessage
                       }
                     >
