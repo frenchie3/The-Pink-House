@@ -65,17 +65,23 @@ export default function ExtendCubbyPage() {
   const formattedCurrentEndDate = currentRental?.end_date || "";
   const formattedNewEndDate = calculatedNewEndDate?.toISOString() || "";
 
-  // Use the cubby extension hook to check availability
+  // Add a stable reference to the parameters needed for the hook
+  const [extensionParameters, setExtensionParameters] = useState({
+    cubbyId: "",
+    currentEndDate: "",
+    newEndDate: ""
+  });
+
+  // Use the cubby extension hook to check availability with stable parameters
   const {
     canExtendCurrentCubby,
     alternativeCubbies,
     loading: extensionLoading,
     error: extensionError,
   } = useCubbyExtension(
-    // Only pass valid values when we need to check availability
-    showCubbyOptions && currentRental?.cubby_id ? currentRental.cubby_id : "",
-    showCubbyOptions && formattedCurrentEndDate ? formattedCurrentEndDate : "",
-    showCubbyOptions && formattedNewEndDate ? formattedNewEndDate : ""
+    extensionParameters.cubbyId,
+    extensionParameters.currentEndDate, 
+    extensionParameters.newEndDate
   );
 
   useEffect(() => {
@@ -296,6 +302,13 @@ export default function ExtendCubbyPage() {
       setError("Please select a rental period first");
       return;
     }
+    
+    // Update the parameters once, with stable values
+    setExtensionParameters({
+      cubbyId: currentRental?.cubby_id || "",
+      currentEndDate: formattedCurrentEndDate,
+      newEndDate: formattedNewEndDate
+    });
     
     // Only show cubby options if we have a rental period
     setShowCubbyOptions(true);
