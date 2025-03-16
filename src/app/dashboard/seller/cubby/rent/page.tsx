@@ -478,9 +478,9 @@ export default function RentCubbyPage() {
       const gracePeriodDateObj = new Date(endDateObj);
       gracePeriodDateObj.setDate(gracePeriodDateObj.getDate() + systemSettings.gracePickupDays);
       
-      // Calculate editable until date (days before rental expires)
+      // Calculate editable until date (days AFTER rental expires, not before)
       const editableUntilDateObj = new Date(endDateObj);
-      editableUntilDateObj.setDate(editableUntilDateObj.getDate() - systemSettings.lastChanceDays);
+      editableUntilDateObj.setDate(editableUntilDateObj.getDate() + systemSettings.lastChanceDays);
       
       console.log("Rental period:", {
         start: startDateObj.toISOString(),
@@ -1170,7 +1170,7 @@ export default function RentCubbyPage() {
                         </RadioGroup>
 
                         <div className="mt-4 text-center text-xs text-gray-500 italic">
-                          *You can modify this preference up to {systemSettings.lastChanceDays} days before your rental expires.
+                          *You can modify this preference up to {systemSettings.lastChanceDays} days after your rental expires.
                         </div>
                       </div>
                     </TabsContent>
