@@ -504,8 +504,10 @@ export default function RentCubbyPage() {
           commission_rate:
             commissionRates[listingType as keyof typeof commissionRates],
           unsold_preference: pickupPreference, // Store the seller's unsold items preference
-          grace_period_days: systemSettings.gracePickupDays, // Store the grace period days for tracking
-          // Add the new timestamp fields
+          // Remove the grace_period_days field as it doesn't exist in the database
+          // grace_period_days: systemSettings.gracePickupDays, // This field doesn't exist
+          
+          // Keep the timestamp fields that do exist in the database
           grace_period_date: gracePeriodDateObj.toISOString(),
           editable_until_date: editableUntilDateObj.toISOString()
         })
