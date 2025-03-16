@@ -38,8 +38,8 @@ interface SettingsFormProps {
     premium: number;
   };
   commRates: {
-    default: number;
-    staff: number;
+    self_listed: number;
+    staff_listed: number;
   };
   rentalFees: {
     weekly: number;
@@ -75,7 +75,7 @@ export function SettingsForm({
   };
 
   // Update commission rates
-  const updateCommRate = (type: "default" | "staff", value: number) => {
+  const updateCommRate = (type: "self_listed" | "staff_listed", value: number) => {
     setCurrentCommRates((prev) => ({
       ...prev,
       [type]: value,
@@ -352,17 +352,17 @@ export function SettingsForm({
                           </TooltipProvider>
                         </Label>
                         <span className="text-sm font-medium">
-                          {(currentCommRates.default * 100).toFixed(0)}%
+                          {currentCommRates.self_listed}%
                         </span>
                       </div>
                       <div className="pt-2">
                         <Slider
-                          value={[currentCommRates.default * 100]}
+                          value={[currentCommRates.self_listed]}
                           max={50}
                           step={1}
                           className="w-full"
                           onValueChange={(value) => {
-                            updateCommRate("default", value[0] / 100);
+                            updateCommRate("self_listed", value[0]);
                           }}
                         />
                         <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -407,17 +407,17 @@ export function SettingsForm({
                           </TooltipProvider>
                         </Label>
                         <span className="text-sm font-medium">
-                          {(currentCommRates.staff * 100).toFixed(0)}%
+                          {currentCommRates.staff_listed}%
                         </span>
                       </div>
                       <div className="pt-2">
                         <Slider
-                          value={[currentCommRates.staff * 100]}
+                          value={[currentCommRates.staff_listed]}
                           max={50}
                           step={1}
                           className="w-full"
                           onValueChange={(value) => {
-                            updateCommRate("staff", value[0] / 100);
+                            updateCommRate("staff_listed", value[0]);
                           }}
                         />
                         <div className="flex justify-between text-xs text-gray-500 mt-1">

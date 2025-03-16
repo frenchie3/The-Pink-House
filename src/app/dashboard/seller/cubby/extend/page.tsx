@@ -171,6 +171,39 @@ export default function ExtendCubbyPage() {
             
           if (insertError) {
             console.error("Error inserting rental fees:", insertError);
+          } else {
+            console.log("Successfully inserted rental fees");
+          }
+        }
+        
+        // Also check if commission rates exist and insert if not - for consistency
+        const { data: commCheck, error: commCheckError } = await supabase
+          .from("system_settings")
+          .select("id")
+          .eq("setting_key", "commission_rates")
+          .maybeSingle();
+          
+        if (commCheckError) {
+          console.error("Error checking commission rates:", commCheckError);
+        } else if (!commCheck) {
+          // Commission rates don't exist, insert them
+          console.log("Commission rates don't exist, inserting default...");
+          
+          const { error: insertError } = await supabase
+            .from("system_settings")
+            .insert({
+              setting_key: "commission_rates",
+              setting_value: {
+                self_listed: 15,
+                staff_listed: 25
+              },
+              description: "Commission rates for seller items"
+            });
+            
+          if (insertError) {
+            console.error("Error inserting commission rates:", insertError);
+          } else {
+            console.log("Successfully inserted commission rates");
           }
         }
         

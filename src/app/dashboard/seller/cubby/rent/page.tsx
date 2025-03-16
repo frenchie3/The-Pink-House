@@ -150,8 +150,8 @@ export default function RentCubbyPage() {
             .insert({
               setting_key: "commission_rates",
               setting_value: {
-                default: 0.15,
-                staff: 0.25
+                self_listed: 15,
+                staff_listed: 25
               },
               description: "Commission rates for seller items"
             });
@@ -211,15 +211,15 @@ export default function RentCubbyPage() {
             console.log("Commission rates fetched:", commissionData.setting_value);
             
             // Map database values to state
-            // Handle different possible naming variations in the database
+            // Handle different possible naming variations for backward compatibility
             // Also handle percentages stored as whole numbers (e.g., 15 instead of 0.15)
-            const selfRate = commissionData.setting_value.self || 
-                  commissionData.setting_value.self_listed || 
-                  commissionData.setting_value.default || 0.15;
+            const selfRate = commissionData.setting_value.self_listed || 
+                  commissionData.setting_value.self || 
+                  commissionData.setting_value.default || 15;
                   
-            const staffRate = commissionData.setting_value.staff || 
-                   commissionData.setting_value.staff_listed || 
-                   commissionData.setting_value.premium || 0.25;
+            const staffRate = commissionData.setting_value.staff_listed || 
+                   commissionData.setting_value.staff || 
+                   commissionData.setting_value.premium || 25;
             
             // Convert percentages if needed (if > 1, assume it's a percentage like 15 instead of 0.15)
             const normalizedSelfRate = selfRate > 1 ? selfRate / 100 : selfRate;
@@ -322,12 +322,12 @@ export default function RentCubbyPage() {
               
               if (setting.setting_key === "commission_rates" && !commissionRates.self) {
                 const commRates = {
-                  self: setting.setting_value.self || 
-                        setting.setting_value.self_listed || 
-                        setting.setting_value.default || 0.15,
-                  staff: setting.setting_value.staff || 
-                        setting.setting_value.staff_listed || 
-                        setting.setting_value.premium || 0.25,
+                  self: setting.setting_value.self_listed || 
+                        setting.setting_value.self || 
+                        setting.setting_value.default || 15,
+                  staff: setting.setting_value.staff_listed || 
+                        setting.setting_value.staff || 
+                        setting.setting_value.premium || 25,
                 };
                 console.log("Setting commission rates from backup:", commRates);
                 setCommissionRates(commRates);

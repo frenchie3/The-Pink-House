@@ -35,7 +35,7 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [systemSettings, setSystemSettings] = useState<any[]>([]);
   const [itemLimits, setItemLimits] = useState({ default: 10, premium: 20 });
-  const [commRates, setCommRates] = useState({ default: 0.15, staff: 0.25 });
+  const [commRates, setCommRates] = useState({ self_listed: 15, staff_listed: 25 });
   const [rentalFees, setRentalFees] = useState({
     weekly: 10,
     monthly: 35,
@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
           cubbyItemLimits?.setting_value || { default: 10, premium: 20 },
         );
         setCommRates(
-          commissionRates?.setting_value || { default: 0.15, staff: 0.25 },
+          commissionRates?.setting_value || { self_listed: 15, staff_listed: 25 },
         );
         setRentalFees(
           cubbyRentalFees?.setting_value || {
@@ -259,7 +259,7 @@ export default function AdminSettingsPage() {
                         Commission Rate
                       </p>
                       <p className="text-2xl font-bold">
-                        {(commRates.default * 100).toFixed(0)}%
+                        {(commRates.self_listed * 100).toFixed(0)}%
                       </p>
                     </div>
                   </div>
@@ -370,7 +370,7 @@ export default function AdminSettingsPage() {
                           await supabase.from("system_settings").insert([
                             {
                               setting_key: "commission_rates",
-                              setting_value: { default: 0.15, staff: 0.25 },
+                              setting_value: { self_listed: 15, staff_listed: 25 },
                               description: "Commission rates for seller items"
                             },
                             {
