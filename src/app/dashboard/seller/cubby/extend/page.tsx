@@ -72,9 +72,10 @@ export default function ExtendCubbyPage() {
     loading: extensionLoading,
     error: extensionError,
   } = useCubbyExtension(
-    currentRental?.cubby_id || "",
-    formattedCurrentEndDate,
-    formattedNewEndDate,
+    // Only pass valid values when we need to check availability
+    showCubbyOptions && currentRental?.cubby_id ? currentRental.cubby_id : "",
+    showCubbyOptions && formattedCurrentEndDate ? formattedCurrentEndDate : "",
+    showCubbyOptions && formattedNewEndDate ? formattedNewEndDate : ""
   );
 
   useEffect(() => {
@@ -271,15 +272,24 @@ export default function ExtendCubbyPage() {
     fetchSystemSettings();
   }, [supabase]);
 
-  // Reset selected cubby when rental period changes
-  useEffect(() => {
-    if (currentRental && showCubbyOptions) {
-      // Only reset if we've already shown options and user is changing their mind
-      setSelectedCubbyId(currentRental.cubby_id); // Reset to current cubby instead of null
+  // Instead, modify the rental period setter to handle this logic directly
+  const handleRentalPeriodChange = (value: string) => {
+    // Reset UI state when changing rental period
+    if (showCubbyOptions) {
       setShowCubbyOptions(false);
+      if (currentRental) {
+        setSelectedCubbyId(currentRental.cubby_id);
+      }
       setSuccessMessage(null);
     }
-  }, [rentalPeriod, currentRental]);
+    
+    // Then update rental period
+    if (value === rentalPeriod) {
+      setRentalPeriod(null);
+    } else if (value) {
+      setRentalPeriod(value);
+    }
+  };
 
   const handleCheckAvailability = () => {
     if (!rentalPeriod) {
@@ -490,23 +500,14 @@ export default function ExtendCubbyPage() {
                         <RadioGroup
                           value={rentalPeriod === null ? "" : rentalPeriod}
                           onValueChange={(value: string) => {
-                            // Only update state if the value has changed to avoid re-renders
-                            if (value === rentalPeriod) {
-                              setRentalPeriod(null);
-                            } else if (value) {  // Only set non-empty values
-                              setRentalPeriod(value);
-                            }
+                            handleRentalPeriodChange(value);
                           }}
                           className="space-y-4"
                         >
                           <div 
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "weekly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
                             onClick={() => {
-                              if (rentalPeriod === "weekly") {
-                                setRentalPeriod(null);
-                              } else {
-                                setRentalPeriod("weekly");
-                              }
+                              handleRentalPeriodChange("weekly");
                             }}
                           >
                             <RadioGroupItem value="weekly" id="weekly" className="sr-only" />
@@ -533,11 +534,7 @@ export default function ExtendCubbyPage() {
                           <div 
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "monthly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
                             onClick={() => {
-                              if (rentalPeriod === "monthly") {
-                                setRentalPeriod(null);
-                              } else {
-                                setRentalPeriod("monthly");
-                              }
+                              handleRentalPeriodChange("monthly");
                             }}
                           >
                             <RadioGroupItem value="monthly" id="monthly" className="sr-only" />
@@ -564,11 +561,7 @@ export default function ExtendCubbyPage() {
                           <div 
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "quarterly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
                             onClick={() => {
-                              if (rentalPeriod === "quarterly") {
-                                setRentalPeriod(null);
-                              } else {
-                                setRentalPeriod("quarterly");
-                              }
+                              handleRentalPeriodChange("quarterly");
                             }}
                           >
                             <RadioGroupItem value="quarterly" id="quarterly" className="sr-only" />
