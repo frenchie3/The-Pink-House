@@ -1039,7 +1039,7 @@ export default function RentCubbyPage() {
                                 </div>
                                 <div>
                                   <h4 className="text-lg font-semibold">
-                                    I'll collect my unsold items
+                                    I'll collect my unsold items*
                                   </h4>
                                   <p className="text-pink-600 text-sm mt-1 font-medium">
                                     within {systemSettings.gracePickupDays} days
@@ -1073,11 +1073,6 @@ export default function RentCubbyPage() {
                                       {systemSettings.gracePickupDays} days
                                       after your rental expires to collect your
                                       items.
-                                    </p>
-                                    <p className="text-xs text-blue-700 mt-2">
-                                      You can modify this preference up to{" "}
-                                      {systemSettings.lastChanceDays} days
-                                      before your rental expires.
                                     </p>
                                   </div>
                                 </div>
@@ -1116,7 +1111,7 @@ export default function RentCubbyPage() {
                                 </div>
                                 <div>
                                   <h4 className="text-lg font-semibold">
-                                    Donate my unsold items
+                                    Donate my unsold items*
                                   </h4>
                                   <p className="text-gray-500 text-sm mt-1">
                                     Items will be donated to charity
@@ -1149,11 +1144,6 @@ export default function RentCubbyPage() {
                                       items to our partner charities after your
                                       rental expires.
                                     </p>
-                                    <p className="text-xs text-amber-700 mt-2">
-                                      You can modify this preference up to{" "}
-                                      {systemSettings.lastChanceDays} days
-                                      before your rental expires.
-                                    </p>
                                   </div>
                                 </div>
                               </div>
@@ -1161,34 +1151,8 @@ export default function RentCubbyPage() {
                           </div>
                         </RadioGroup>
 
-                        <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-                          <div className="flex items-start">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="text-gray-500 mr-2 mt-0.5 flex-shrink-0"
-                            >
-                              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                            </svg>
-                            <div>
-                              <p className="text-xs text-gray-600">
-                                <strong>Business Logic:</strong> When your
-                                rental expires, the system will track the status
-                                of your unsold items based on your selection. If
-                                you choose to collect your items, they'll be
-                                marked as "pending pickup" for the grace period.
-                                You'll receive notifications as the expiration
-                                date approaches.
-                              </p>
-                            </div>
-                          </div>
+                        <div className="mt-4 text-center text-xs text-gray-500 italic">
+                          *You can modify this preference up to {systemSettings.lastChanceDays} days before your rental expires.
                         </div>
                       </div>
                     </TabsContent>
