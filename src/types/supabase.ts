@@ -583,24 +583,16 @@ export type Database = {
         }
         Returns: boolean
       }
-      extend_cubby_rental:
-        | {
-            Args: {
-              p_rental_id: string
-              p_new_end_date: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              p_rental_id: string
-              p_new_end_date: string
-              p_new_cubby_id: string
-              p_additional_fee: number
-              p_is_reassignment?: boolean
-            }
-            Returns: undefined
-          }
+      extend_cubby_rental: {
+        Args: {
+          p_rental_id: string
+          p_new_end_date: string
+          p_new_cubby_id: string
+          p_additional_fee: number
+          p_is_reassignment?: boolean
+        }
+        Returns: undefined
+      }
       mark_item_reviewed: {
         Args: {
           item_id: string
