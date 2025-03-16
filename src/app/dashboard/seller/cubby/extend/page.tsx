@@ -30,6 +30,7 @@ export default function ExtendCubbyPage() {
   const [selectedCubbyId, setSelectedCubbyId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCubbyOptions, setShowCubbyOptions] = useState(false);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -65,24 +66,22 @@ export default function ExtendCubbyPage() {
   const formattedCurrentEndDate = currentRental?.end_date || "";
   const formattedNewEndDate = calculatedNewEndDate?.toISOString() || "";
 
-  // Add a stable reference to the parameters needed for the hook
-  const [extensionParameters, setExtensionParameters] = useState({
-    cubbyId: "",
-    currentEndDate: "",
-    newEndDate: ""
-  });
-
-  // Use the cubby extension hook to check availability with stable parameters
+  // Only run hook when explicitly checking availability
   const {
     canExtendCurrentCubby,
     alternativeCubbies,
     loading: extensionLoading,
     error: extensionError,
-  } = useCubbyExtension(
-    extensionParameters.cubbyId,
-    extensionParameters.currentEndDate, 
-    extensionParameters.newEndDate
-  );
+  } = checkingAvailability ? useCubbyExtension(
+    currentRental?.cubby_id || "",
+    formattedCurrentEndDate,
+    formattedNewEndDate
+  ) : {
+    canExtendCurrentCubby: false,
+    alternativeCubbies: [],
+    loading: false,
+    error: null
+  };
 
   useEffect(() => {
     const fetchCurrentRental = async () => {
@@ -278,11 +277,11 @@ export default function ExtendCubbyPage() {
     fetchSystemSettings();
   }, [supabase]);
 
-  // Instead, modify the rental period setter to handle this logic directly
   const handleRentalPeriodChange = (value: string) => {
     // Reset UI state when changing rental period
     if (showCubbyOptions) {
       setShowCubbyOptions(false);
+      setCheckingAvailability(false); // Reset the hook trigger as well
       if (currentRental) {
         setSelectedCubbyId(currentRental.cubby_id);
       }
@@ -303,20 +302,18 @@ export default function ExtendCubbyPage() {
       return;
     }
     
-    // Update the parameters once, with stable values
-    setExtensionParameters({
-      cubbyId: currentRental?.cubby_id || "",
-      currentEndDate: formattedCurrentEndDate,
-      newEndDate: formattedNewEndDate
-    });
-    
-    // Only show cubby options if we have a rental period
+    // First set cubby options to show
     setShowCubbyOptions(true);
     
     // Make sure we have a valid cubby ID selected for extension
     if (!selectedCubbyId && currentRental) {
       setSelectedCubbyId(currentRental.cubby_id);
     }
+    
+    // Then activate the hook after UI is updated to prevent render loops
+    setTimeout(() => {
+      setCheckingAvailability(true);
+    }, 0);
     
     setError(null);
   };
