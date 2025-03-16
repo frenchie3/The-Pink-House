@@ -473,6 +473,21 @@ export default function RentCubbyPage() {
       // Calculate rental dates
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(calculateEndDate(startDate, rentalPeriod));
+      
+      // Calculate grace period date (days after rental expires)
+      const gracePeriodDateObj = new Date(endDateObj);
+      gracePeriodDateObj.setDate(gracePeriodDateObj.getDate() + systemSettings.gracePickupDays);
+      
+      // Calculate editable until date (days before rental expires)
+      const editableUntilDateObj = new Date(endDateObj);
+      editableUntilDateObj.setDate(editableUntilDateObj.getDate() - systemSettings.lastChanceDays);
+      
+      console.log("Rental period:", {
+        start: startDateObj.toISOString(),
+        end: endDateObj.toISOString(),
+        gracePeriodEnd: gracePeriodDateObj.toISOString(),
+        editableUntil: editableUntilDateObj.toISOString()
+      });
 
       // Create cubby rental record
       const { data: rental, error: rentalError } = await supabase
@@ -490,6 +505,9 @@ export default function RentCubbyPage() {
             commissionRates[listingType as keyof typeof commissionRates],
           unsold_preference: pickupPreference, // Store the seller's unsold items preference
           grace_period_days: systemSettings.gracePickupDays, // Store the grace period days for tracking
+          // Add the new timestamp fields
+          grace_period_date: gracePeriodDateObj.toISOString(),
+          editable_until_date: editableUntilDateObj.toISOString()
         })
         .select();
 
