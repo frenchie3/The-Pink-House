@@ -93,6 +93,17 @@ export function SettingsForm({
     }));
   };
 
+  // Update pickup settings
+  const updatePickupSetting = (
+    type: "gracePickupDays" | "lastChanceDays",
+    value: number,
+  ) => {
+    setCurrentPickupSettings((prev) => ({
+      ...prev,
+      [type]: value,
+    }));
+  };
+
   return (
     <>
       {/* Inventory Limits Tab */}
@@ -705,10 +716,10 @@ export function SettingsForm({
                           value={currentPickupSettings.gracePickupDays}
                           className="w-full"
                           onChange={(e) => {
-                            setCurrentPickupSettings((prev) => ({
-                              ...prev,
-                              gracePickupDays: parseInt(e.target.value),
-                            }));
+                            updatePickupSetting(
+                              "gracePickupDays",
+                              parseInt(e.target.value),
+                            );
                           }}
                         />
                         <p className="text-xs text-gray-500 mt-1">
@@ -751,10 +762,10 @@ export function SettingsForm({
                           value={currentPickupSettings.lastChanceDays}
                           className="w-full"
                           onChange={(e) => {
-                            setCurrentPickupSettings((prev) => ({
-                              ...prev,
-                              lastChanceDays: parseInt(e.target.value),
-                            }));
+                            updatePickupSetting(
+                              "lastChanceDays",
+                              parseInt(e.target.value),
+                            );
                           }}
                         />
                         <p className="text-xs text-gray-500 mt-1">

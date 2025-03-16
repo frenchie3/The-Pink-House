@@ -291,7 +291,7 @@ export default function AdminSettingsPage() {
                   <span>Rental Pricing</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="pickup_settings"
+                  value="unsold_settings"
                   className="flex items-center gap-2"
                 >
                   <Clock size={16} />
