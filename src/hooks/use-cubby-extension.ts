@@ -111,9 +111,38 @@ export function useCubbyExtension(
         console.log("All cubby rentals for this cubby:", allCubbyRentals);
 
         // Check for any rentals that would conflict with our extension period
-        // We're looking for rentals that START after the current end date (extensionStartDate)
-        // but BEFORE our new end date
+        // We need to exclude the current rental from this check to avoid self-conflict
+        // First, get the current rental ID from the cubby rentals
+        const currentRentalIds = allCubbyRentals
+          .filter((rental) => {
+            // Find rentals that end exactly at our extension start date
+            // These are likely our current rental
+            const rentalEnd = new Date(rental.end_date);
+            // Only apply this logic if the cubby_id matches the current cubby ID
+            return (
+              rental.cubby_id === currentCubbyId &&
+              Math.abs(rentalEnd.getTime() - extensionStartDate.getTime()) <
+                86400000
+            ); // Within 24 hours
+          })
+          .map((rental) => rental.id);
+
+        console.log(
+          "Current rental IDs to exclude from conflict check:",
+          currentRentalIds,
+        );
+
+        // Now filter for conflicting rentals, excluding our current rental
         const conflictingRentals = allCubbyRentals.filter((rental) => {
+          // Skip our current rental to avoid self-conflict
+          if (currentRentalIds.includes(rental.id)) {
+            console.log(
+              "Skipping current rental in conflict check:",
+              rental.id,
+            );
+            return false;
+          }
+
           // We only care about future rentals that would overlap with our extension
           const rentalStart = new Date(rental.start_date);
           const rentalEnd = new Date(rental.end_date);
