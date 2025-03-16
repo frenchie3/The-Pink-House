@@ -74,10 +74,35 @@ export default function ExtendCubbyPage() {
     loading: extensionLoading,
     error: extensionError,
   } = useCubbyExtension(
-    checkingAvailability ? (currentRental?.cubby_id || "") : "",
-    checkingAvailability ? formattedCurrentEndDate : "",
-    checkingAvailability ? formattedNewEndDate : ""
+    // Pass the cubby ID directly - no need to search by rental ID
+    checkingAvailability && currentRental ? currentRental.cubby_id : "",
+    // Still need the current end date for calculating the extension period
+    checkingAvailability && formattedCurrentEndDate
+      ? formattedCurrentEndDate
+      : "",
+    // And the new end date to check availability until
+    checkingAvailability && formattedNewEndDate ? formattedNewEndDate : "",
   );
+
+  // Log key values for debugging
+  useEffect(() => {
+    if (checkingAvailability) {
+      console.log("Cubby extension check triggered with:", {
+        "currentRental?.cubby_id": currentRental?.cubby_id,
+        formattedCurrentEndDate,
+        formattedNewEndDate,
+        extensionLoading,
+        extensionError,
+      });
+    }
+  }, [
+    checkingAvailability,
+    currentRental,
+    formattedCurrentEndDate,
+    formattedNewEndDate,
+    extensionLoading,
+    extensionError,
+  ]);
 
   useEffect(() => {
     const fetchCurrentRental = async () => {
@@ -110,7 +135,7 @@ export default function ExtendCubbyPage() {
 
         // First set current rental
         setCurrentRental(data);
-        
+
         // Then set the selected cubby ID after we know we have valid data
         setSelectedCubbyId(data.cubby_id);
       } catch (err) {
@@ -131,36 +156,39 @@ export default function ExtendCubbyPage() {
     const fetchSystemSettings = async () => {
       try {
         console.log("Starting to fetch system settings for extend page...");
-        
+
         // First, ensure we can connect to supabase properly
         try {
           const { data: testData, error: testError } = await supabase
             .from("system_settings")
             .select("count(*)")
             .limit(1);
-            
+
           if (testError) {
             console.error("Initial test query failed:", testError);
           } else {
-            console.log("Successfully connected to system_settings table, count:", testData);
+            console.log(
+              "Successfully connected to system_settings table, count:",
+              testData,
+            );
           }
         } catch (testErr) {
           console.error("Exception during test query:", testErr);
         }
-        
+
         // Check if rental fees exist, insert if not
         const { data: feesCheck, error: feesCheckError } = await supabase
           .from("system_settings")
           .select("id")
           .eq("setting_key", "cubby_rental_fees")
           .maybeSingle();
-          
+
         if (feesCheckError) {
           console.error("Error checking rental fees:", feesCheckError);
         } else if (!feesCheck) {
           // Fees don't exist, insert them
           console.log("Rental fees don't exist, inserting default...");
-          
+
           const { error: insertError } = await supabase
             .from("system_settings")
             .insert({
@@ -168,57 +196,56 @@ export default function ExtendCubbyPage() {
               setting_value: {
                 weekly: 10,
                 monthly: 35,
-                quarterly: 90
+                quarterly: 90,
               },
-              description: "Cubby rental fees for different time periods"
+              description: "Cubby rental fees for different time periods",
             });
-            
+
           if (insertError) {
             console.error("Error inserting rental fees:", insertError);
           } else {
             console.log("Successfully inserted rental fees");
           }
         }
-        
+
         // Also check if commission rates exist and insert if not - for consistency
         const { data: commCheck, error: commCheckError } = await supabase
           .from("system_settings")
           .select("id")
           .eq("setting_key", "commission_rates")
           .maybeSingle();
-          
+
         if (commCheckError) {
           console.error("Error checking commission rates:", commCheckError);
         } else if (!commCheck) {
           // Commission rates don't exist, insert them
           console.log("Commission rates don't exist, inserting default...");
-          
+
           const { error: insertError } = await supabase
             .from("system_settings")
             .insert({
               setting_key: "commission_rates",
               setting_value: {
                 self_listed: 15,
-                staff_listed: 25
+                staff_listed: 25,
               },
-              description: "Commission rates for seller items"
+              description: "Commission rates for seller items",
             });
-            
+
           if (insertError) {
             console.error("Error inserting commission rates:", insertError);
           } else {
             console.log("Successfully inserted commission rates");
           }
         }
-        
+
         // Fetch rental fees
         console.log("Fetching rental fees...");
-        const { data: rentalFeesData, error: rentalFeesError } =
-          await supabase
-            .from("system_settings")
-            .select("setting_value")
-            .eq("setting_key", "cubby_rental_fees")
-            .single();
+        const { data: rentalFeesData, error: rentalFeesError } = await supabase
+          .from("system_settings")
+          .select("setting_value")
+          .eq("setting_key", "cubby_rental_fees")
+          .single();
 
         if (rentalFeesError) {
           console.error("Error fetching rental fees:", rentalFeesError);
@@ -231,25 +258,27 @@ export default function ExtendCubbyPage() {
             monthly: rentalFeesData.setting_value.monthly || 35,
             quarterly: rentalFeesData.setting_value.quarterly || 90,
           };
-          
+
           console.log("Rental fees set to:", fees);
           setRentalFees(fees);
         }
-        
+
         // Try an alternative approach if needed - fetch all settings at once
         try {
           console.log("Fetching all settings as backup...");
           const { data: allSettings, error: allSettingsError } = await supabase
             .from("system_settings")
             .select("setting_key, setting_value");
-            
+
           if (allSettingsError) {
             console.error("Error fetching all settings:", allSettingsError);
           } else if (allSettings && allSettings.length > 0) {
             console.log("All settings fetched:", allSettings);
-            
+
             // Look for rental fees in all settings
-            const rentalFeeSetting = allSettings.find(s => s.setting_key === "cubby_rental_fees");
+            const rentalFeeSetting = allSettings.find(
+              (s) => s.setting_key === "cubby_rental_fees",
+            );
             if (rentalFeeSetting && rentalFeeSetting.setting_value) {
               const fees = {
                 weekly: rentalFeeSetting.setting_value.weekly || 10,
@@ -263,7 +292,6 @@ export default function ExtendCubbyPage() {
         } catch (allErr) {
           console.error("Exception fetching all settings:", allErr);
         }
-        
       } catch (err) {
         console.error("Error fetching system settings:", err);
         // Keep default values if there's an error
@@ -283,7 +311,7 @@ export default function ExtendCubbyPage() {
       }
       setSuccessMessage(null);
     }
-    
+
     // Then update rental period
     if (value === rentalPeriod) {
       setRentalPeriod(null);
@@ -297,23 +325,55 @@ export default function ExtendCubbyPage() {
       setError("Please select a rental period first");
       return;
     }
-    
-    // First set cubby options to show
-    setShowCubbyOptions(true);
-    
-    // Make sure we have a valid cubby ID selected for extension
+
+    // Clear any previous errors
+    setError(null);
+
+    // First make sure we have a valid cubby ID selected for extension
     if (!selectedCubbyId && currentRental) {
       setSelectedCubbyId(currentRental.cubby_id);
     }
-    
-    // Set checking availability flag to true without setTimeout
-    setCheckingAvailability(true);
-    
-    setError(null);
+
+    // Validate that we have all required data before proceeding
+    if (
+      !currentRental ||
+      !currentRental.cubby_id ||
+      !formattedCurrentEndDate ||
+      !formattedNewEndDate
+    ) {
+      console.error("Missing required data for availability check:", {
+        "currentRental?.cubby_id": currentRental?.cubby_id,
+        formattedCurrentEndDate,
+        formattedNewEndDate,
+      });
+      setError("Unable to check availability: missing rental data");
+      return;
+    }
+
+    console.log("Starting availability check with:", {
+      cubbyId: currentRental.cubby_id,
+      currentEndDate: formattedCurrentEndDate,
+      newEndDate: formattedNewEndDate,
+    });
+
+    // Then set UI state
+    setShowCubbyOptions(true);
+
+    // Use setTimeout with a small delay to ensure state updates are processed
+    // before triggering the availability check
+    setTimeout(() => {
+      setCheckingAvailability(true);
+    }, 50);
   };
 
   const handleExtendRental = async () => {
-    if (!currentRental || !selectedCubbyId || !calculatedNewEndDate || !rentalPeriod) return;
+    if (
+      !currentRental ||
+      !selectedCubbyId ||
+      !calculatedNewEndDate ||
+      !rentalPeriod
+    )
+      return;
 
     setIsSubmitting(true);
     setError(null);
@@ -508,10 +568,14 @@ export default function ExtendCubbyPage() {
                           }}
                           className="space-y-4"
                         >
-                          <div 
+                          <div
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "weekly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
                           >
-                            <RadioGroupItem value="weekly" id="weekly" className="sr-only" />
+                            <RadioGroupItem
+                              value="weekly"
+                              id="weekly"
+                              className="sr-only"
+                            />
                             <Label
                               htmlFor="weekly"
                               className="flex-1 cursor-pointer"
@@ -525,17 +589,23 @@ export default function ExtendCubbyPage() {
                                     Add 7 more days
                                   </p>
                                 </div>
-                                <p className={`font-medium ${rentalPeriod === "weekly" ? "text-pink-600" : ""}`}>
+                                <p
+                                  className={`font-medium ${rentalPeriod === "weekly" ? "text-pink-600" : ""}`}
+                                >
                                   {formatPrice(rentalFees.weekly)}
                                 </p>
                               </div>
                             </Label>
                           </div>
 
-                          <div 
+                          <div
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "monthly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
                           >
-                            <RadioGroupItem value="monthly" id="monthly" className="sr-only" />
+                            <RadioGroupItem
+                              value="monthly"
+                              id="monthly"
+                              className="sr-only"
+                            />
                             <Label
                               htmlFor="monthly"
                               className="flex-1 cursor-pointer"
@@ -549,17 +619,23 @@ export default function ExtendCubbyPage() {
                                     Add 30 more days
                                   </p>
                                 </div>
-                                <p className={`font-medium ${rentalPeriod === "monthly" ? "text-pink-600" : ""}`}>
+                                <p
+                                  className={`font-medium ${rentalPeriod === "monthly" ? "text-pink-600" : ""}`}
+                                >
                                   {formatPrice(rentalFees.monthly)}
                                 </p>
                               </div>
                             </Label>
                           </div>
 
-                          <div 
+                          <div
                             className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "quarterly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
                           >
-                            <RadioGroupItem value="quarterly" id="quarterly" className="sr-only" />
+                            <RadioGroupItem
+                              value="quarterly"
+                              id="quarterly"
+                              className="sr-only"
+                            />
                             <Label
                               htmlFor="quarterly"
                               className="flex-1 cursor-pointer"
@@ -573,7 +649,9 @@ export default function ExtendCubbyPage() {
                                     Add 90 more days
                                   </p>
                                 </div>
-                                <p className={`font-medium ${rentalPeriod === "quarterly" ? "text-pink-600" : ""}`}>
+                                <p
+                                  className={`font-medium ${rentalPeriod === "quarterly" ? "text-pink-600" : ""}`}
+                                >
                                   {formatPrice(rentalFees.quarterly)}
                                 </p>
                               </div>
@@ -642,12 +720,15 @@ export default function ExtendCubbyPage() {
                             <div className="flex items-center gap-2">
                               <Calendar className="h-5 w-5 text-pink-600" />
                               <p className="text-lg font-medium">
-                                {calculatedNewEndDate?.toLocaleDateString() || ""}
+                                {calculatedNewEndDate?.toLocaleDateString() ||
+                                  ""}
                               </p>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 text-gray-500">
-                              <p className="text-sm italic">Please select a rental period</p>
+                              <p className="text-sm italic">
+                                Please select a rental period
+                              </p>
                             </div>
                           )}
                         </div>
@@ -680,11 +761,13 @@ export default function ExtendCubbyPage() {
                               Extension Fee:
                             </span>
                             <span className="text-lg font-bold text-pink-600">
-                              {rentalPeriod ? formatPrice(
-                                rentalFees[
-                                  rentalPeriod as keyof typeof rentalFees
-                                ],
-                              ) : "--"}
+                              {rentalPeriod
+                                ? formatPrice(
+                                    rentalFees[
+                                      rentalPeriod as keyof typeof rentalFees
+                                    ],
+                                  )
+                                : "--"}
                             </span>
                           </div>
                         </div>
