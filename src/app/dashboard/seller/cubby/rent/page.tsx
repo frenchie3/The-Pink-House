@@ -615,7 +615,15 @@ export default function RentCubbyPage() {
                         >
                           <div
                             className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "weekly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => {
+                              if (rentalPeriod === "weekly") {
+                                setRentalPeriod(null);
+                              } else {
+                                setRentalPeriod("weekly");
+                              }
+                            }}
                           >
+                            <RadioGroupItem value="weekly" id="weekly" className="sr-only" />
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-medium">Weekly Rental</p>
@@ -633,7 +641,15 @@ export default function RentCubbyPage() {
 
                           <div
                             className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "monthly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => {
+                              if (rentalPeriod === "monthly") {
+                                setRentalPeriod(null);
+                              } else {
+                                setRentalPeriod("monthly");
+                              }
+                            }}
                           >
+                            <RadioGroupItem value="monthly" id="monthly" className="sr-only" />
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-medium">Monthly Rental</p>
@@ -651,7 +667,15 @@ export default function RentCubbyPage() {
 
                           <div
                             className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "quarterly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => {
+                              if (rentalPeriod === "quarterly") {
+                                setRentalPeriod(null);
+                              } else {
+                                setRentalPeriod("quarterly");
+                              }
+                            }}
                           >
+                            <RadioGroupItem value="quarterly" id="quarterly" className="sr-only" />
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-medium">Quarterly Rental</p>
