@@ -477,19 +477,28 @@ export default function ExtendCubbyPage() {
                           Select Extension Period
                         </h3>
                         <RadioGroup
-                          value={rentalPeriod || ""}
-                          onValueChange={(value) => {
-                            // If the same value is clicked again, unselect it
+                          value={rentalPeriod === null ? "" : rentalPeriod}
+                          onValueChange={(value: string) => {
+                            // Only update state if the value has changed to avoid re-renders
                             if (value === rentalPeriod) {
                               setRentalPeriod(null);
-                            } else {
+                            } else if (value) {  // Only set non-empty values
                               setRentalPeriod(value);
                             }
                           }}
                           className="space-y-4"
                         >
-                          <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <RadioGroupItem value="weekly" id="weekly" />
+                          <div 
+                            className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "weekly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => {
+                              if (rentalPeriod === "weekly") {
+                                setRentalPeriod(null);
+                              } else {
+                                setRentalPeriod("weekly");
+                              }
+                            }}
+                          >
+                            <RadioGroupItem value="weekly" id="weekly" className="sr-only" />
                             <Label
                               htmlFor="weekly"
                               className="flex-1 cursor-pointer"
@@ -503,15 +512,24 @@ export default function ExtendCubbyPage() {
                                     Add 7 more days
                                   </p>
                                 </div>
-                                <p className="font-medium">
+                                <p className={`font-medium ${rentalPeriod === "weekly" ? "text-pink-600" : ""}`}>
                                   {formatPrice(rentalFees.weekly)}
                                 </p>
                               </div>
                             </Label>
                           </div>
 
-                          <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <RadioGroupItem value="monthly" id="monthly" />
+                          <div 
+                            className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "monthly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => {
+                              if (rentalPeriod === "monthly") {
+                                setRentalPeriod(null);
+                              } else {
+                                setRentalPeriod("monthly");
+                              }
+                            }}
+                          >
+                            <RadioGroupItem value="monthly" id="monthly" className="sr-only" />
                             <Label
                               htmlFor="monthly"
                               className="flex-1 cursor-pointer"
@@ -525,15 +543,24 @@ export default function ExtendCubbyPage() {
                                     Add 30 more days
                                   </p>
                                 </div>
-                                <p className="font-medium">
+                                <p className={`font-medium ${rentalPeriod === "monthly" ? "text-pink-600" : ""}`}>
                                   {formatPrice(rentalFees.monthly)}
                                 </p>
                               </div>
                             </Label>
                           </div>
 
-                          <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer bg-pink-50 border-pink-200">
-                            <RadioGroupItem value="quarterly" id="quarterly" />
+                          <div 
+                            className={`flex items-center space-x-2 border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "quarterly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
+                            onClick={() => {
+                              if (rentalPeriod === "quarterly") {
+                                setRentalPeriod(null);
+                              } else {
+                                setRentalPeriod("quarterly");
+                              }
+                            }}
+                          >
+                            <RadioGroupItem value="quarterly" id="quarterly" className="sr-only" />
                             <Label
                               htmlFor="quarterly"
                               className="flex-1 cursor-pointer"
@@ -547,7 +574,7 @@ export default function ExtendCubbyPage() {
                                     Add 90 more days
                                   </p>
                                 </div>
-                                <p className="font-medium">
+                                <p className={`font-medium ${rentalPeriod === "quarterly" ? "text-pink-600" : ""}`}>
                                   {formatPrice(rentalFees.quarterly)}
                                 </p>
                               </div>
@@ -667,7 +694,6 @@ export default function ExtendCubbyPage() {
 
                     <Button
                       className="w-full bg-pink-600 hover:bg-pink-700"
-                      size="lg"
                       onClick={handleExtendRental}
                       disabled={
                         isSubmitting ||
