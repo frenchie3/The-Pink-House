@@ -55,9 +55,10 @@ export function useCubbyExtension(
         throw new Error("New end date must be after current end date");
       }
 
-      // The extension period starts exactly at the current end date
-      // No need to add a day as we want to extend from the current end date
+      // The extension period starts immediately after the current end date
+      // Add a small time offset (1 millisecond) to avoid exact boundary collision
       const extensionStartDate = new Date(currentEndDateObj);
+      extensionStartDate.setMilliseconds(extensionStartDate.getMilliseconds() + 1);
 
       // Format dates for Supabase queries - use full ISO string for precise comparison
       const formattedExtensionStart = extensionStartDate.toISOString();
@@ -90,7 +91,7 @@ export function useCubbyExtension(
 
       // Then manually filter out the current rental and check for overlaps
       // This avoids potential issues with the .neq() filter in Supabase
-      const conflictingRentals = allCubbyRentals.filter((rental) => {
+      const conflictingRentals = allCubbyRentals.filter((rental: any) => {
         // Skip the current rental we're trying to extend
         if (rental.id === currentRentalId) return false;
 
@@ -108,7 +109,7 @@ export function useCubbyExtension(
         supabase.from("cubbies").select("id, cubby_number, location, status"),
         supabase
           .from("cubby_rentals")
-          .select("cubby_id, start_date, end_date")
+          .select("id, cubby_id, start_date, end_date") // Explicitly include id for filtering
           .eq("status", "active")
           .or(
             `start_date.lte.${formattedNewEndDate},end_date.gte.${formattedExtensionStart}`,
@@ -124,13 +125,10 @@ export function useCubbyExtension(
       // Create a set of occupied cubby IDs during the extension period
       const occupiedCubbyIds = new Set();
 
-      // We already have currentRentalId from above, so we can use it directly
-
-      rentals.forEach((rental) => {
-        // We need to check if this rental's cubby_id matches our current cubby_id AND
-        // if the rental ID matches our current rental ID - if so, skip it
-        if (rental.cubby_id === currentCubbyId && rental.id === currentRentalId)
-          return;
+      // Add current rental ID to the loop consideration
+      rentals.forEach((rental: any) => {
+        // Check if this rental is our current rental - if so, skip it
+        if (rental.id === currentRentalId) return;
 
         const rentalStart = new Date(rental.start_date);
         const rentalEnd = new Date(rental.end_date);
@@ -143,7 +141,7 @@ export function useCubbyExtension(
 
       // Filter available cubbies - exclude maintenance cubbies and occupied ones
       const availableCubbies = cubbies.filter(
-        (cubby) =>
+        (cubby: any) =>
           cubby.status !== "maintenance" &&
           !occupiedCubbyIds.has(cubby.id) &&
           cubby.id !== currentCubbyId, // Exclude current cubby as we already checked it
