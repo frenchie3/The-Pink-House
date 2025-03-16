@@ -36,12 +36,12 @@ export default function ExtendCubbyPage() {
   const rentalId = searchParams.get("rental_id");
   const supabase = createClient();
 
-  // Rental fee structure
-  const rentalFees = {
+  // Rental fee structure - will be dynamically updated from system settings
+  const [rentalFees, setRentalFees] = useState({
     weekly: 10,
     monthly: 35,
     quarterly: 90,
-  };
+  });
 
   // Calculate new end date based on current end date and rental period
   const calculatedNewEndDate = useMemo(() => {
@@ -121,6 +121,45 @@ export default function ExtendCubbyPage() {
 
     fetchCurrentRental();
   }, [supabase, rentalId]);
+
+  useEffect(() => {
+    // Fetch rental fees from system settings
+    const fetchSystemSettings = async () => {
+      try {
+        // Fetch rental fees
+        const { data: rentalFeesData, error: rentalFeesError } =
+          await supabase
+            .from("system_settings")
+            .select("setting_value")
+            .eq("setting_key", "cubby_rental_fees")
+            .single();
+
+        if (rentalFeesError) {
+          console.warn("Error fetching rental fees:", rentalFeesError);
+          // Continue with default values
+        } else if (rentalFeesData?.setting_value) {
+          console.log("Rental fees fetched:", rentalFeesData.setting_value);
+          // Ensure we have all required properties
+          setRentalFees({
+            weekly: rentalFeesData.setting_value.weekly || 10,
+            monthly: rentalFeesData.setting_value.monthly || 35,
+            quarterly: rentalFeesData.setting_value.quarterly || 90,
+          });
+          
+          console.log("Rental fees set to:", {
+            weekly: rentalFeesData.setting_value.weekly || 10,
+            monthly: rentalFeesData.setting_value.monthly || 35,
+            quarterly: rentalFeesData.setting_value.quarterly || 90,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching system settings:", err);
+        // Keep default values if there's an error
+      }
+    };
+
+    fetchSystemSettings();
+  }, [supabase]);
 
   // Reset selected cubby when rental period changes
   useEffect(() => {

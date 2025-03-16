@@ -74,11 +74,33 @@ export default function RentCubbyPage() {
           .eq("setting_key", "commission_rates")
           .single();
 
-        if (commissionError) throw commissionError;
-        if (commissionData && commissionData.setting_value) {
+        if (commissionError) {
+          console.warn("Error fetching commission rates:", commissionError);
+          // Continue with default values
+        } else if (commissionData && commissionData.setting_value) {
+          console.log("Commission rates fetched:", commissionData.setting_value);
+          
+          // Map database values to state
+          // Handle different possible naming variations in the database
           setCommissionRates({
-            self: commissionData.setting_value.default || 0.15,
-            staff: commissionData.setting_value.staff || 0.25,
+            // For "self", try these database keys in order: "self", "self_listed", "default" 
+            self: commissionData.setting_value.self || 
+                  commissionData.setting_value.self_listed || 
+                  commissionData.setting_value.default || 0.15,
+                  
+            // For "staff", try these database keys in order: "staff", "staff_listed", "premium"
+            staff: commissionData.setting_value.staff || 
+                   commissionData.setting_value.staff_listed || 
+                   commissionData.setting_value.premium || 0.25,
+          });
+          
+          console.log("Commission rates set to:", {
+            self: commissionData.setting_value.self || 
+                  commissionData.setting_value.self_listed || 
+                  commissionData.setting_value.default || 0.15,
+            staff: commissionData.setting_value.staff || 
+                   commissionData.setting_value.staff_listed || 
+                   commissionData.setting_value.premium || 0.25,
           });
         }
 
@@ -96,7 +118,14 @@ export default function RentCubbyPage() {
             // Continue with default values
           } else if (rentalFeesData?.setting_value) {
             console.log("Rental fees fetched:", rentalFeesData.setting_value);
+            // Ensure we have all required properties
             setRentalFees({
+              weekly: rentalFeesData.setting_value.weekly || 10,
+              monthly: rentalFeesData.setting_value.monthly || 35,
+              quarterly: rentalFeesData.setting_value.quarterly || 90,
+            });
+            
+            console.log("Rental fees set to:", {
               weekly: rentalFeesData.setting_value.weekly || 10,
               monthly: rentalFeesData.setting_value.monthly || 35,
               quarterly: rentalFeesData.setting_value.quarterly || 90,
@@ -128,6 +157,13 @@ export default function RentCubbyPage() {
               unsoldSettingsData.setting_value,
             );
             setSystemSettings({
+              gracePickupDays:
+                unsoldSettingsData.setting_value.gracePickupDays || 7,
+              lastChanceDays:
+                unsoldSettingsData.setting_value.lastChanceDays || 3,
+            });
+            
+            console.log("Unsold settings set to:", {
               gracePickupDays:
                 unsoldSettingsData.setting_value.gracePickupDays || 7,
               lastChanceDays:
@@ -1139,9 +1175,9 @@ export default function RentCubbyPage() {
                           Commission Rate:
                         </span>
                         <span className="font-medium text-sm">
-                          {commissionRates[
+                          {(commissionRates[
                             listingType as keyof typeof commissionRates
-                          ] * 100}
+                          ] * 100).toFixed(0)}
                           %
                         </span>
                       </div>
