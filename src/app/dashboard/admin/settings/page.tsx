@@ -107,9 +107,21 @@ export default function AdminSettingsPage() {
         setItemLimits(
           cubbyItemLimits?.setting_value || { default: 10, premium: 20 },
         );
-        setCommRates(
-          commissionRates?.setting_value || { self_listed: 15, staff_listed: 25 },
-        );
+        
+        // For commission rates, make sure we handle both percentage and decimal formats consistently
+        if (commissionRates?.setting_value) {
+          const selfRate = commissionRates.setting_value.self_listed || 15;
+          const staffRate = commissionRates.setting_value.staff_listed || 25;
+          
+          // No need to normalize for display in admin - we want to show the actual percentage values
+          setCommRates({
+            self_listed: selfRate,
+            staff_listed: staffRate
+          });
+        } else {
+          setCommRates({ self_listed: 15, staff_listed: 25 });
+        }
+        
         setRentalFees(
           cubbyRentalFees?.setting_value || {
             weekly: 10,
@@ -259,7 +271,7 @@ export default function AdminSettingsPage() {
                         Commission Rate
                       </p>
                       <p className="text-2xl font-bold">
-                        {(commRates.self_listed * 100).toFixed(0)}%
+                        {commRates.self_listed}%
                       </p>
                     </div>
                   </div>
