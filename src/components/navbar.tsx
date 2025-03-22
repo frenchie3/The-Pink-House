@@ -4,11 +4,14 @@ import { Button } from './ui/button'
 import { User, UserCircle } from 'lucide-react'
 import UserProfile from './user-profile'
 
-export default async function Navbar() {
+interface NavbarProps {
+  showDashboard?: boolean;
+}
+
+export default async function Navbar({ showDashboard = true }: NavbarProps) {
   const supabase = createClient()
 
   const { data: { user } } = await (await supabase).auth.getUser()
-
 
   return (
     <nav className="w-full border-b border-gray-200 bg-white py-2">
@@ -17,7 +20,7 @@ export default async function Navbar() {
           Logo
         </Link>
         <div className="flex gap-4 items-center">
-          {user ? (
+          {user && showDashboard ? (
             <>
               <Link
                 href="/dashboard"
@@ -27,8 +30,10 @@ export default async function Navbar() {
                   Dashboard
                 </Button>
               </Link>
-              <UserProfile  />
+              <UserProfile />
             </>
+          ) : user ? (
+            <UserProfile />
           ) : (
             <>
               <Link
