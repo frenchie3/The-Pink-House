@@ -2,6 +2,7 @@ import DashboardNavbar from "@/components/dashboard-navbar";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../../supabase/server";
 import POSClientInterface from "@/components/pos/pos-client-interface";
+import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 
 export default async function POSPage() {
   const supabase = await createClient();
@@ -21,11 +22,11 @@ export default async function POSPage() {
     .order("name", { ascending: true });
 
   return (
-    <>
+    <LayoutWrapper>
       <DashboardNavbar />
-      <main className="w-full bg-gray-50 min-h-screen">
+      <MainContent>
         <POSClientInterface categories={categories || []} userId={user.id} />
-      </main>
-    </>
+      </MainContent>
+    </LayoutWrapper>
   );
 }

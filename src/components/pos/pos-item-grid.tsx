@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Tag, BoxIcon } from "lucide-react";
 import Image from "next/image";
 import { memo } from "react";
+import { formatPrice } from "@/lib/utils";
 
 interface InventoryItem {
   id: string;
@@ -37,13 +38,7 @@ const POSItemGrid = memo(function POSItemGrid({
   onUpdateQuantity = () => {},
   activeTab,
 }: POSItemGridProps) {
-  // Format price with NZD currency symbol
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-NZ", {
-      style: "currency",
-      currency: "NZD",
-    }).format(price);
-  };
+  // Use the centralized formatPrice utility function
 
   // Function to determine stock status and badge color
   const getStockStatus = (quantity: number) => {

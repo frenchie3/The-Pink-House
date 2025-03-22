@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { createClient } from "../../../../../../../supabase/client";
 import { ArrowLeft, Loader2, Clock, LockIcon } from "lucide-react";
+import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
+import { formatPrice } from "@/lib/utils";
 
 export default function EditListingPage() {
   const [item, setItem] = useState<any>(null);
@@ -122,25 +124,23 @@ export default function EditListingPage() {
 
   if (loading) {
     return (
-      <>
+      <LayoutWrapper>
         <SellerNavbar />
-        <main className="w-full bg-gray-50 h-screen overflow-auto">
-          <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-pink-600" />
-              <p className="text-gray-600">Loading item details...</p>
-            </div>
+        <MainContent className="flex justify-center items-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-pink-600" />
+            <p className="text-gray-600">Loading item details...</p>
           </div>
-        </main>
-      </>
+        </MainContent>
+      </LayoutWrapper>
     );
   }
 
   if (error) {
     return (
-      <>
+      <LayoutWrapper>
         <SellerNavbar />
-        <main className="w-full bg-gray-50 h-screen overflow-auto">
+        <MainContent>
           <div className="container mx-auto px-4 py-8">
             <Card className="max-w-md mx-auto">
               <CardContent className="pt-6 text-center">
@@ -154,16 +154,16 @@ export default function EditListingPage() {
               </CardContent>
             </Card>
           </div>
-        </main>
-      </>
+        </MainContent>
+      </LayoutWrapper>
     );
   }
 
   if (success) {
     return (
-      <>
+      <LayoutWrapper>
         <SellerNavbar />
-        <main className="w-full bg-gray-50 h-screen overflow-auto">
+        <MainContent>
           <div className="container mx-auto px-4 py-8">
             <Card className="max-w-md mx-auto">
               <CardContent className="pt-6 text-center">
@@ -193,15 +193,15 @@ export default function EditListingPage() {
               </CardContent>
             </Card>
           </div>
-        </main>
-      </>
+        </MainContent>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <>
+    <LayoutWrapper>
       <SellerNavbar />
-      <main className="w-full bg-gray-50 h-screen overflow-auto">
+      <MainContent>
         <div className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
@@ -250,7 +250,7 @@ export default function EditListingPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="price">Price (£) *</Label>
+                    <Label htmlFor="price">Price ($) *</Label>
                     <Input
                       id="price"
                       name="price"
@@ -382,7 +382,7 @@ export default function EditListingPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </>
+      </MainContent>
+    </LayoutWrapper>
   );
 }

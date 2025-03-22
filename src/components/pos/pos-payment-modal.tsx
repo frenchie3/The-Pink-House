@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Banknote, Smartphone, X } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
 
 interface POSPaymentModalProps {
   isOpen: boolean;
@@ -30,14 +31,6 @@ export default function POSPaymentModal({
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [cashReceived, setCashReceived] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Format price with NZD currency symbol
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-NZ", {
-      style: "currency",
-      currency: "NZD",
-    }).format(price);
-  };
 
   // Calculate change if cash payment
   const calculateChange = () => {

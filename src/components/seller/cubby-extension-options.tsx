@@ -37,23 +37,50 @@ export default function CubbyExtensionOptions({
 }: CubbyExtensionOptionsProps) {
   // If we can extend the current cubby, select it by default
   useEffect(() => {
-    if (
-      canExtendCurrentCubby &&
-      currentCubby &&
-      currentCubby.cubby_id &&
-      !selectedCubbyId
-    ) {
-      onSelectCubby(currentCubby.cubby_id);
-    } else if (
-      canExtendCurrentCubby &&
-      currentCubby &&
-      currentCubby.id &&
-      !selectedCubbyId
-    ) {
-      // Fallback to using id if cubby_id is not available
-      onSelectCubby(currentCubby.id);
+    // Only run this effect if we have loaded the data and confirmed availability
+    if (loading || error) return;
+
+    console.log("CubbyExtensionOptions effect running with:", {
+      canExtendCurrentCubby,
+      "currentCubby?.cubby_id": currentCubby?.cubby_id,
+      "currentCubby?.id": currentCubby?.id,
+      selectedCubbyId,
+      loading,
+      error,
+    });
+
+    // Determine which ID to use for the current cubby
+    let cubbyIdToUse = null;
+
+    // First try to use cubby_id directly from the currentCubby object
+    if (currentCubby?.cubby_id) {
+      console.log("Using cubby_id from currentCubby:", currentCubby.cubby_id);
+      cubbyIdToUse = currentCubby.cubby_id;
     }
-  }, [canExtendCurrentCubby, currentCubby, onSelectCubby, selectedCubbyId]);
+    // If that's not available, try the id property
+    else if (currentCubby?.id) {
+      console.log("Using id from currentCubby as fallback:", currentCubby.id);
+      cubbyIdToUse = currentCubby.id;
+    }
+    // If neither is available but we have a cubby object nested inside currentCubby
+    else if (currentCubby?.cubby?.id) {
+      console.log("Using id from nested cubby object:", currentCubby.cubby.id);
+      cubbyIdToUse = currentCubby.cubby.id;
+    }
+
+    // Only update the selected cubby if we found a valid ID and we can extend it
+    if (canExtendCurrentCubby && cubbyIdToUse && !selectedCubbyId) {
+      console.log("Setting selected cubby ID to:", cubbyIdToUse);
+      onSelectCubby(cubbyIdToUse);
+    }
+  }, [
+    canExtendCurrentCubby,
+    currentCubby,
+    onSelectCubby,
+    selectedCubbyId,
+    loading,
+    error,
+  ]);
 
   if (loading) {
     return (
@@ -113,18 +140,22 @@ export default function CubbyExtensionOptions({
           {canExtendCurrentCubby && currentCubby && (
             <div className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-gray-50 cursor-pointer bg-green-50 border-green-200">
               <RadioGroupItem
-                value={currentCubby.id}
-                id={`cubby-${currentCubby.id}`}
+                value={
+                  currentCubby.cubby_id ||
+                  currentCubby.id ||
+                  (currentCubby.cubby && currentCubby.cubby.id)
+                }
+                id={`cubby-${currentCubby.cubby_id || currentCubby.id || (currentCubby.cubby && currentCubby.cubby.id)}`}
               />
               <Label
-                htmlFor={`cubby-${currentCubby.id}`}
+                htmlFor={`cubby-${currentCubby.cubby_id || currentCubby.id || (currentCubby.cubby && currentCubby.cubby.id)}`}
                 className="flex-1 cursor-pointer"
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium">Keep Current Cubby</p>
                     <p className="text-sm text-gray-700">
-                      Cubby #{currentCubby.cubby_number} -{" "}
+                      Cubby #{currentCubby.cubby?.cubby_number} -{" "}
                       {currentCubby.cubby?.location || "Main Floor"}
                     </p>
                     <p className="text-xs text-green-700 mt-1">

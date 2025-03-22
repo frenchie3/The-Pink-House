@@ -87,7 +87,7 @@ export default async function Signup(props: {
               </div>
             </div>
 
-            <SubmitButton loadingText="Signing up..." className="w-full">
+            <SubmitButton pendingText="Signing up..." className="w-full">
               Sign up
             </SubmitButton>
 

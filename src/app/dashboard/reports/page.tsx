@@ -2,6 +2,7 @@ import DashboardNavbar from "@/components/dashboard-navbar";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../../supabase/server";
 import { BarChart3, LineChart, PieChart, TrendingUp } from "lucide-react";
+import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 
 export default async function ReportsPage() {
   const supabase = await createClient();
@@ -15,9 +16,9 @@ export default async function ReportsPage() {
   }
 
   return (
-    <>
+    <LayoutWrapper>
       <DashboardNavbar />
-      <main className="w-full bg-gray-50 h-screen overflow-auto">
+      <MainContent>
         <div className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <header className="mb-8">
@@ -129,7 +130,7 @@ export default async function ReportsPage() {
             </div>
           </div>
         </div>
-      </main>
-    </>
+      </MainContent>
+    </LayoutWrapper>
   );
 }

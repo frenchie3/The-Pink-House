@@ -1,0 +1,3 @@
+ALTER TABLE cubby_rentals ADD COLUMN IF NOT EXISTS grace_period_date TIMESTAMP WITH TIME ZONE;
+ALTER TABLE cubby_rentals ADD COLUMN IF NOT EXISTS editable_until_date TIMESTAMP WITH TIME ZONE;
+ALTER TABLE cubby_rentals ADD COLUMN IF NOT EXISTS unsold_option VARCHAR DEFAULT 'pickup';

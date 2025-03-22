@@ -26,9 +26,14 @@ const AvailableCubbies = memo(function AvailableCubbies({
   );
 
   // Memoize the selection handler to prevent recreation on each render
-  const handleCubbySelect = useCallback((cubbyId: string) => {
-    setSelectedCubby(cubbyId);
-  }, []);
+  const handleCubbySelect = useCallback(
+    (cubbyId: string) => {
+      setSelectedCubby(cubbyId);
+      // Immediately notify parent component of selection
+      onSelectCubby(cubbyId);
+    },
+    [onSelectCubby],
+  );
 
   if (loading) {
     return (
@@ -113,7 +118,7 @@ const AvailableCubbies = memo(function AvailableCubbies({
           disabled={!selectedCubby}
           className="bg-pink-600 hover:bg-pink-700"
         >
-          Select Cubby
+          Confirm Selection
         </Button>
       </div>
     </div>

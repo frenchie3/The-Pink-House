@@ -1,390 +1,380 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import SellerNavbar from "@/components/seller-navbar";
 import SellerGuard from "@/components/seller-guard";
-import { createClient } from "../../../../../../supabase/server";
-import { redirect } from "next/navigation";
+import { createClient } from "../../../../../../supabase/client";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { encodedRedirect } from "@/utils/utils";
-import { revalidatePath } from "next/cache";
+import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
-export default async function AddListingPage({
+// Server action wrapper
+import { addItemAction } from "./actions";
+
+export default function AddListingPage({
   searchParams,
 }: {
   searchParams: { error?: string; success?: string };
 }) {
-  const supabase = await createClient();
+  const router = useRouter();
+  const supabase = createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // State variables
+  const [loading, setLoading] = useState(true);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [activeCubby, setActiveCubby] = useState<any>(null);
+  const [remainingItems, setRemainingItems] = useState<number>(0);
+  const [itemLimit, setItemLimit] = useState<number>(10);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!user) {
-    return redirect("/sign-in");
-  }
+  // Load essential data first
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // Get current user
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          router.push("/sign-in");
+          return;
+        }
+        setUser(user);
 
-  // Fetch seller's active cubby rental
-  const { data: activeCubby } = await supabase
-    .from("cubby_rentals")
-    .select("*, cubby:cubbies(*)")
-    .eq("seller_id", user.id)
-    .eq("status", "active")
-    .single();
+        // Fetch active cubby - this is essential
+        const { data: activeCubby } = await supabase
+          .from("cubby_rentals")
+          .select(
+            "id, cubby_id, listing_type, commission_rate, cubby:cubbies(cubby_number)",
+          )
+          .eq("seller_id", user.id)
+          .eq("status", "active")
+          .single();
+        setActiveCubby(activeCubby);
 
-  // Fetch seller's current inventory count
-  const { count: currentItemCount } = await supabase
-    .from("inventory_items")
-    .select("*", { count: "exact", head: true })
-    .eq("seller_id", user.id);
+        // Set initial data as loaded
+        setInitialDataLoaded(true);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+        setLoading(false);
+      }
+    };
 
-  // Fetch system settings for item limits
-  const { data: itemLimitSetting } = await supabase
-    .from("system_settings")
-    .select("setting_value")
-    .eq("setting_key", "cubby_item_limits")
-    .single();
+    loadInitialData();
+  }, [supabase, router]);
 
-  // Get user's plan (default to 'default' if not set)
-  const { data: userData } = await supabase
-    .from("users")
-    .select("subscription")
-    .eq("id", user.id)
-    .single();
+  // Load secondary data after initial render
+  useEffect(() => {
+    if (!initialDataLoaded || !user) return;
 
-  const userPlan = userData?.subscription || "default";
-  const itemLimit = itemLimitSetting?.setting_value?.[userPlan] || 10; // Default to 10 if setting not found
-  const remainingItems = itemLimit - (currentItemCount || 0);
+    const loadSecondaryData = async () => {
+      try {
+        // Load these in parallel
+        const [
+          categoriesResponse,
+          itemCountResponse,
+          itemLimitResponse,
+          userDataResponse,
+        ] = await Promise.all([
+          // Categories for dropdown
+          supabase.from("categories").select("id, name").order("name"),
 
-  // Fetch categories for dropdown
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("*")
-    .order("name", { ascending: true });
+          // Current item count
+          supabase
+            .from("inventory_items")
+            .select("id", { count: "exact", head: true })
+            .eq("seller_id", user.id),
+
+          // Item limit settings
+          supabase
+            .from("system_settings")
+            .select("setting_value")
+            .eq("setting_key", "cubby_item_limits")
+            .single(),
+
+          // User subscription plan
+          supabase
+            .from("users")
+            .select("subscription")
+            .eq("id", user.id)
+            .single(),
+        ]);
+
+        // Set categories
+        setCategories(categoriesResponse.data || []);
+
+        // Calculate remaining items
+        const currentItemCount = itemCountResponse.count || 0;
+        const userPlan = userDataResponse.data?.subscription || "default";
+        const limit = itemLimitResponse.data?.setting_value?.[userPlan] || 10;
+
+        setItemLimit(limit);
+        setRemainingItems(limit - currentItemCount);
+      } catch (error) {
+        console.error("Error loading secondary data:", error);
+      }
+    };
+
+    loadSecondaryData();
+  }, [initialDataLoaded, user, supabase]);
 
   // Handle form submission
-  async function addItem(formData: FormData) {
-    "use server";
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const formData = new FormData(e.currentTarget);
 
-    if (!user) {
-      return encodedRedirect(
-        "error",
-        "/dashboard/seller/listings/add",
-        "You must be logged in",
-      );
+      // Basic client-side validation
+      const name = formData.get("name") as string;
+      const price = formData.get("price") as string;
+      const category = formData.get("category") as string;
+
+      if (!name || !price || !category) {
+        alert("Please fill in all required fields");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Immediately redirect to success page for better UX
+      const successUrl = `/dashboard/seller/listings/add/success?name=${encodeURIComponent(name)}&type=${activeCubby?.listing_type || "self"}`;
+
+      // Submit the form data to the server action in the background
+      addItemAction(formData);
+
+      // Redirect immediately without waiting for the server action to complete
+      router.push(successUrl);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setIsSubmitting(false);
     }
+  };
 
-    // Check if user has an active cubby
-    const { data: activeCubby } = await supabase
-      .from("cubby_rentals")
-      .select("*, cubby:cubbies(*)")
-      .eq("seller_id", user.id)
-      .eq("status", "active")
-      .single();
-
-    if (!activeCubby) {
-      return encodedRedirect(
-        "error",
-        "/dashboard/seller/listings/add",
-        "You need an active cubby to add items",
-      );
-    }
-
-    // Check item limit
-    const { count: currentItemCount } = await supabase
-      .from("inventory_items")
-      .select("*", { count: "exact", head: true })
-      .eq("seller_id", user.id);
-
-    const { data: itemLimitSetting } = await supabase
-      .from("system_settings")
-      .select("setting_value")
-      .eq("setting_key", "cubby_item_limits")
-      .single();
-
-    const { data: userData } = await supabase
-      .from("users")
-      .select("subscription")
-      .eq("id", user.id)
-      .single();
-
-    const userPlan = userData?.subscription || "default";
-    const itemLimit = itemLimitSetting?.setting_value?.[userPlan] || 10;
-
-    if ((currentItemCount || 0) >= itemLimit) {
-      return encodedRedirect(
-        "error",
-        "/dashboard/seller/listings/add",
-        `You've reached your limit of ${itemLimit} items`,
-      );
-    }
-
-    // Get form data
-    const name = formData.get("name") as string;
-    const price = parseFloat(formData.get("price") as string);
-    const category = formData.get("category") as string;
-    const description = formData.get("description") as string;
-    const quantity = parseInt(formData.get("quantity") as string);
-    const condition = formData.get("condition") as string;
-
-    // Validate required fields
-    if (!name || !price || !category || !quantity) {
-      return encodedRedirect(
-        "error",
-        "/dashboard/seller/listings/add",
-        "Please fill in all required fields",
-      );
-    }
-
-    // Generate a SKU
-    const sku = `${user.id.substring(0, 4)}-${Date.now().toString().substring(9)}-${Math.floor(
-      Math.random() * 1000,
-    )
-      .toString()
-      .padStart(3, "0")}`;
-
-    // Get the listing type from the active cubby rental
-    const { data: cubbyRental, error: cubbyError } = await supabase
-      .from("cubby_rentals")
-      .select("listing_type, commission_rate")
-      .eq("id", activeCubby.id)
-      .single();
-
-    if (cubbyError) {
-      console.error("Error fetching cubby rental details:", cubbyError);
-      return encodedRedirect(
-        "error",
-        "/dashboard/seller/listings/add",
-        `Error fetching cubby details: ${cubbyError.message}`,
-      );
-    }
-
-    // Insert the item with the listing type and commission rate from the cubby rental
-    const { error } = await supabase.from("inventory_items").insert({
-      name,
-      price,
-      category,
-      description,
-      quantity,
-      condition,
-      sku,
-      seller_id: user.id,
-      cubby_id: activeCubby.cubby_id,
-      cubby_location: activeCubby.cubby?.cubby_number,
-      date_added: new Date().toISOString(),
-      is_active: true,
-      listing_type: cubbyRental.listing_type || "self",
-      commission_rate: cubbyRental.commission_rate || 0.15,
-      staff_reviewed: false, // New field to track if staff has reviewed the item
-    });
-
-    if (error) {
-      console.error("Error adding item:", error);
-      return encodedRedirect(
-        "error",
-        "/dashboard/seller/listings/add",
-        `Error adding item: ${error.message}`,
-      );
-    }
-
-    revalidatePath("/dashboard/seller/listings");
-    // Get the newly created item
-    const { data: newItem } = await supabase
-      .from("inventory_items")
-      .select("id")
-      .eq("sku", sku)
-      .single();
-
-    // Redirect to success page with item details
-    return redirect(
-      `/dashboard/seller/listings/add/success?item_id=${newItem?.id || ""}&name=${encodeURIComponent(name)}&type=${formData.get("listing_type") || "self"}`,
+  // Show loading state
+  if (loading) {
+    return (
+      <SellerGuard>
+        <LayoutWrapper>
+          <SellerNavbar />
+          <MainContent>
+            <div className="flex justify-center items-center min-h-[60vh]">
+              <div className="text-center">
+                <LoadingSpinner size="lg" />
+                <p className="mt-4 text-gray-600">Loading form...</p>
+              </div>
+            </div>
+          </MainContent>
+        </LayoutWrapper>
+      </SellerGuard>
     );
   }
 
   return (
     <SellerGuard>
-      <SellerNavbar />
-      <main className="w-full bg-gray-50 h-screen overflow-auto">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header Section */}
-          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Add New Item</h1>
-              <p className="text-gray-600 mt-1">Add a new item to your cubby</p>
-            </div>
-          </header>
-
-          {!activeCubby ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <p className="text-gray-500 mb-4">
-                  You need an active cubby rental to add items
+      <LayoutWrapper>
+        <SellerNavbar />
+        <MainContent>
+          <div className="container mx-auto px-4 py-8">
+            {/* Header Section */}
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Add New Item
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Add a new item to your cubby
                 </p>
-                <Button className="bg-pink-600 hover:bg-pink-700" asChild>
-                  <a href="/dashboard/seller/cubby">Rent a Cubby</a>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : remainingItems <= 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <p className="text-gray-500 mb-4">
-                  You've reached your limit of {itemLimit} items
-                </p>
-                <Button className="bg-pink-600 hover:bg-pink-700" asChild>
-                  <a href="/dashboard/seller/listings">View Your Listings</a>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Item Details</CardTitle>
-                <p className="text-sm text-gray-500">
-                  You can add {remainingItems} more item
-                  {remainingItems !== 1 ? "s" : ""} to your cubby
-                </p>
-              </CardHeader>
-              <CardContent>
-                {searchParams.error && (
-                  <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md">
-                    {searchParams.error}
-                  </div>
-                )}
-                {searchParams.success && (
-                  <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-md">
-                    {searchParams.success}
-                  </div>
-                )}
+              </div>
+            </header>
 
-                <form action={addItem} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Item Name *</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        placeholder="Vintage Teacup Set"
-                        required
-                      />
+            {!activeCubby ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <p className="text-gray-500 mb-4">
+                    You need an active cubby rental to add items
+                  </p>
+                  <Button className="bg-pink-600 hover:bg-pink-700" asChild>
+                    <a href="/dashboard/seller/cubby">Rent a Cubby</a>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : remainingItems <= 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <p className="text-gray-500 mb-4">
+                    You've reached your limit of {itemLimit} items
+                  </p>
+                  <Button className="bg-pink-600 hover:bg-pink-700" asChild>
+                    <a href="/dashboard/seller/listings">View Your Listings</a>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Item Details</CardTitle>
+                  <p className="text-sm text-gray-500">
+                    You can add {remainingItems} more item
+                    {remainingItems !== 1 ? "s" : ""} to your cubby
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {searchParams.error && (
+                    <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md">
+                      {searchParams.error}
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Price (£) *</Label>
-                      <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        placeholder="15.99"
-                        required
-                      />
+                  )}
+                  {searchParams.success && (
+                    <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-md">
+                      {searchParams.success}
                     </div>
+                  )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category *</Label>
-                      <select
-                        id="category"
-                        name="category"
-                        className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                        required
-                      >
-                        <option value="">Select a category</option>
-                        {categories?.map((category) => (
-                          <option key={category.id} value={category.name}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Item Name *</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="Vintage Teacup Set"
+                          required
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantity *</Label>
-                      <Input
-                        id="quantity"
-                        name="quantity"
-                        type="number"
-                        min="1"
-                        defaultValue="1"
-                        required
-                      />
-                    </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="price">Price ($) *</Label>
+                        <Input
+                          id="price"
+                          name="price"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          placeholder="15.99"
+                          required
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="condition">Condition</Label>
-                      <select
-                        id="condition"
-                        name="condition"
-                        className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                      >
-                        <option value="New">New</option>
-                        <option value="Like New">Like New</option>
-                        <option value="Good">Good</option>
-                        <option value="Fair">Fair</option>
-                        <option value="Poor">Poor</option>
-                      </select>
-                    </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="category">Category *</Label>
+                        <select
+                          id="category"
+                          name="category"
+                          className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                          required
+                        >
+                          <option value="">Select a category</option>
+                          {categories?.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="listing_info">Listing Type</Label>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium">
-                          {activeCubby.listing_type === "self"
-                            ? "Self-Listing"
-                            : "Staff-Managed"}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Commission Rate:{" "}
-                          {(activeCubby.commission_rate * 100).toFixed(0)}%
-                        </p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          {activeCubby.listing_type === "self"
-                            ? "You are responsible for managing all item details and photos. You can edit items until they are reviewed by staff."
-                            : "Our staff will handle the listing process for you."}
-                        </p>
-                        <input
-                          type="hidden"
-                          name="listing_type"
-                          value={activeCubby.listing_type}
+                      <div className="space-y-2">
+                        <Label htmlFor="quantity">Quantity *</Label>
+                        <Input
+                          id="quantity"
+                          name="quantity"
+                          type="number"
+                          min="1"
+                          defaultValue="1"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="condition">Condition</Label>
+                        <select
+                          id="condition"
+                          name="condition"
+                          className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                        >
+                          <option value="New">New</option>
+                          <option value="Like New">Like New</option>
+                          <option value="Good">Good</option>
+                          <option value="Fair">Fair</option>
+                          <option value="Poor">Poor</option>
+                        </select>
+                      </div>
+
+                      {activeCubby && (
+                        <div className="space-y-2">
+                          <Label htmlFor="listing_info">Listing Type</Label>
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="font-medium">
+                              {activeCubby.listing_type === "self"
+                                ? "Self-Listing"
+                                : "Staff-Managed"}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Commission Rate:{" "}
+                              {(activeCubby.commission_rate * 100).toFixed(0)}%
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              {activeCubby.listing_type === "self"
+                                ? "You are responsible for managing all item details and photos. You can edit items until they are reviewed by staff."
+                                : "Our staff will handle the listing process for you."}
+                            </p>
+                            <input
+                              type="hidden"
+                              name="listing_type"
+                              value={activeCubby.listing_type}
+                            />
+                            <input
+                              type="hidden"
+                              name="cubby_id"
+                              value={activeCubby.cubby_id}
+                            />
+                            <input
+                              type="hidden"
+                              name="cubby_number"
+                              value={activeCubby.cubby?.cubby_number}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          name="description"
+                          placeholder="Describe your item..."
+                          rows={4}
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        placeholder="Describe your item..."
-                        rows={4}
-                      />
+                    <div className="flex justify-end gap-4">
+                      <Button type="button" variant="outline" asChild>
+                        <a href="/dashboard/seller/listings">Cancel</a>
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="bg-pink-600 hover:bg-pink-700"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "Adding Item..." : "Add Item"}
+                      </Button>
                     </div>
-                  </div>
-
-                  <div className="flex justify-end gap-4">
-                    <Button type="button" variant="outline" asChild>
-                      <a href="/dashboard/seller/listings">Cancel</a>
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="bg-pink-600 hover:bg-pink-700"
-                    >
-                      Add Item
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </main>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </MainContent>
+      </LayoutWrapper>
     </SellerGuard>
   );
 }

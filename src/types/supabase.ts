@@ -65,7 +65,9 @@ export type Database = {
           commission_rate: string | null
           created_at: string | null
           cubby_id: string
+          editable_until_date: string | null
           end_date: string
+          grace_period_date: string | null
           id: string
           listing_type: string | null
           payment_date: string | null
@@ -75,13 +77,16 @@ export type Database = {
           start_date: string
           status: string
           stripe_payment_intent_id: string | null
+          unsold_option: string | null
           updated_at: string | null
         }
         Insert: {
           commission_rate?: string | null
           created_at?: string | null
           cubby_id: string
+          editable_until_date?: string | null
           end_date: string
+          grace_period_date?: string | null
           id?: string
           listing_type?: string | null
           payment_date?: string | null
@@ -91,13 +96,16 @@ export type Database = {
           start_date?: string
           status?: string
           stripe_payment_intent_id?: string | null
+          unsold_option?: string | null
           updated_at?: string | null
         }
         Update: {
           commission_rate?: string | null
           created_at?: string | null
           cubby_id?: string
+          editable_until_date?: string | null
           end_date?: string
+          grace_period_date?: string | null
           id?: string
           listing_type?: string | null
           payment_date?: string | null
@@ -107,6 +115,7 @@ export type Database = {
           start_date?: string
           status?: string
           stripe_payment_intent_id?: string | null
+          unsold_option?: string | null
           updated_at?: string | null
         }
         Relationships: [

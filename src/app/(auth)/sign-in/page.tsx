@@ -82,7 +82,7 @@ export default async function SignInPage({ searchParams }: LoginProps) {
               </div>
             </div>
 
-            <SubmitButton className="w-full" loadingText="Signing in...">
+            <SubmitButton className="w-full" pendingText="Signing in...">
               Sign in
             </SubmitButton>
 
