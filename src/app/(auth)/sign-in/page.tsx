@@ -1,7 +1,8 @@
-import { signInAction } from "@/app/actions";
+import { signInAction, resendVerificationEmail } from "@/app/actions";
 import { FormMessage, Message } from "@/components/form-message";
 import Navbar from "@/components/navbar";
 import { SubmitButton } from "@/components/submit-button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
@@ -12,8 +13,9 @@ interface LoginProps {
 
 export default async function SignInPage({ searchParams }: LoginProps) {
   const message = await searchParams;
+  const isUnverified = message?.type === "warning" && message.message.includes("verify your email");
 
-  if ("message" in message) {
+  if ("message" in message && !isUnverified) {
     return (
       <div className="flex h-screen w-full flex-1 items-center justify-center p-4 sm:max-w-md">
         <FormMessage message={message} />
@@ -85,6 +87,24 @@ export default async function SignInPage({ searchParams }: LoginProps) {
             <SubmitButton className="w-full" pendingText="Signing in...">
               Sign in
             </SubmitButton>
+
+            {isUnverified && (
+              <div className="space-y-4">
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded">
+                  <p className="text-sm">Please verify your email before signing in.</p>
+                </div>
+                <form action={resendVerificationEmail} className="flex flex-col space-y-2">
+                  <input type="hidden" name="email" value={message.message.split(" ")[0]} />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    className="w-full text-sm"
+                  >
+                    Resend Verification Email
+                  </Button>
+                </form>
+              </div>
+            )}
 
             <FormMessage message={message} />
           </form>

@@ -86,17 +86,34 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  // Get user role to redirect to the appropriate dashboard
+  // Check if email is verified
   if (authData.user) {
     const { data: userData } = await supabase
+      .from("users")
+      .select("email_verified")
+      .eq("id", authData.user.id)
+      .single();
+
+    if (!userData?.email_verified) {
+      // Sign out the user since they're not verified
+      await supabase.auth.signOut();
+      return encodedRedirect(
+        "warning",
+        "/sign-in",
+        "Please verify your email before signing in. Need a new verification email?"
+      );
+    }
+
+    // Get user role to redirect to the appropriate dashboard
+    const { data: roleData } = await supabase
       .from("users")
       .select("role")
       .eq("id", authData.user.id)
       .single();
 
-    if (userData?.role) {
+    if (roleData?.role) {
       // Redirect based on role
-      switch (userData.role) {
+      switch (roleData.role) {
         case "admin":
           return redirect("/dashboard/admin");
         case "staff":
@@ -112,6 +129,39 @@ export const signInAction = async (formData: FormData) => {
 
   // Fallback to general dashboard if we couldn't determine the role
   return redirect("/dashboard");
+};
+
+export const resendVerificationEmail = async (formData: FormData) => {
+  const email = formData.get("email") as string;
+  const supabase = await createClient();
+  const origin = headers().get("origin");
+
+  if (!email) {
+    return encodedRedirect("error", "/sign-in", "Email is required");
+  }
+
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: `${origin}/auth/callback`,
+    }
+  });
+
+  if (error) {
+    console.error("Error resending verification email:", error);
+    return encodedRedirect(
+      "error",
+      "/sign-in",
+      "Failed to resend verification email. Please try again."
+    );
+  }
+
+  return encodedRedirect(
+    "success",
+    "/sign-in",
+    "Verification email has been resent. Please check your inbox."
+  );
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {
