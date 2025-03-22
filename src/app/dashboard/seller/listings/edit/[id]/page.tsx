@@ -13,8 +13,25 @@ import { ArrowLeft, Loader2, Clock, LockIcon } from "lucide-react";
 import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 import { formatPrice } from "@/lib/utils";
 
+// Define the interface for inventory items
+interface InventoryItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  sku: string;
+  category_id?: string;
+  seller_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  editing_locked?: boolean;
+  labels_printed?: boolean;
+  [key: string]: any; // For any additional properties
+}
+
 export default function EditListingPage() {
-  const [item, setItem] = useState<any>(null);
+  const [item, setItem] = useState<InventoryItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,11 +85,14 @@ export default function EditListingPage() {
     >,
   ) => {
     const { name, value } = e.target;
-    setItem((prev) => ({
-      ...prev,
-      [name]:
-        name === "price" || name === "quantity" ? parseFloat(value) : value,
-    }));
+    setItem((prev: InventoryItem | null) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        [name]:
+          name === "price" || name === "quantity" ? parseFloat(value) : value,
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
