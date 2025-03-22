@@ -6,9 +6,10 @@ import UserProfile from './user-profile'
 
 interface NavbarProps {
   showDashboard?: boolean;
+  showAuth?: boolean;
 }
 
-export default async function Navbar({ showDashboard = true }: NavbarProps) {
+export default async function Navbar({ showDashboard = true, showAuth = true }: NavbarProps) {
   const supabase = createClient()
 
   const { data: { user } } = await (await supabase).auth.getUser()
@@ -19,38 +20,40 @@ export default async function Navbar({ showDashboard = true }: NavbarProps) {
         <Link href="/" prefetch className="text-xl font-bold">
           Logo
         </Link>
-        <div className="flex gap-4 items-center">
-          {user && showDashboard ? (
-            <>
-              <Link
-                href="/dashboard"
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-              >
-                <Button>
-                  Dashboard
-                </Button>
-              </Link>
+        {showAuth && (
+          <div className="flex gap-4 items-center">
+            {user && showDashboard ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  <Button>
+                    Dashboard
+                  </Button>
+                </Link>
+                <UserProfile />
+              </>
+            ) : user ? (
               <UserProfile />
-            </>
-          ) : user ? (
-            <UserProfile />
-          ) : (
-            <>
-              <Link
-                href="/sign-in"
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/sign-up"
-                className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800"
-              >
-                Sign Up
-              </Link>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                <Link
+                  href="/sign-in"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </nav>
   )
