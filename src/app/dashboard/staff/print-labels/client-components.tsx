@@ -151,12 +151,16 @@ export function SelectAllCheckbox({ cubbyId }: SelectAllCheckboxProps) {
       id={`select-all-${cubbyId}`}
       checked={checked}
       data-indeterminate={indeterminate}
-      ref={(ref) => {
-        if (ref) {
-          ref.indeterminate = indeterminate;
+      // Use HTMLInputElement type for checkbox ref to handle indeterminate state
+      // The indeterminate property is only available on checkbox input elements
+      ref={(ref: HTMLDivElement | null) => {
+        // The underlying checkbox element is an HTMLInputElement
+        const inputRef = ref?.querySelector('input') as HTMLInputElement | null;
+        if (inputRef) {
+          inputRef.indeterminate = indeterminate;
         }
       }}
-      onCheckedChange={handleChange}
+      onCheckedChange={(isChecked: boolean) => handleChange(isChecked)}
     />
   );
 }
