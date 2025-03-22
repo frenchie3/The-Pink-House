@@ -27,27 +27,25 @@ export async function middleware(req: NextRequest) {
   );
 
   // Refresh session if expired - required for Server Components
-  const {
-    data: { session, user },
-    error,
-  } = await supabase.auth.getSession();
+  const { data } = await supabase.auth.getSession();
+  const { session } = data;
 
   // Protected routes
-  if (req.nextUrl.pathname.startsWith("/dashboard") && error) {
+  if (req.nextUrl.pathname.startsWith("/dashboard") && !session) {
     return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
   // Role-based access control
-  if (!error && user && req.nextUrl.pathname.startsWith("/dashboard")) {
+  if (session?.user && req.nextUrl.pathname.startsWith("/dashboard")) {
     // Cache user role to avoid multiple DB calls
-    const { data } = await supabase
+    const { data: userData } = await supabase
       .from("users")
       .select("role")
-      .eq("id", user.id)
+      .eq("id", session.user.id)
       .single();
 
     // Handle role-specific access restrictions
-    if (data?.role === "seller") {
+    if (userData?.role === "seller") {
       // Prevent sellers from accessing admin/staff routes
       if (
         req.nextUrl.pathname.match(
@@ -56,7 +54,7 @@ export async function middleware(req: NextRequest) {
       ) {
         return NextResponse.redirect(new URL("/dashboard/seller", req.url));
       }
-    } else if (data?.role === "staff") {
+    } else if (userData?.role === "staff") {
       // Prevent staff from accessing admin routes
       if (req.nextUrl.pathname.match(/^\/dashboard\/admin/)) {
         return NextResponse.redirect(new URL("/dashboard/staff", req.url));
@@ -65,18 +63,14 @@ export async function middleware(req: NextRequest) {
 
     // Handle the generic /dashboard route - redirect to role-specific dashboard
     if (req.nextUrl.pathname === "/dashboard") {
-      if (data?.role === "seller") {
+      if (userData?.role === "seller") {
         return NextResponse.redirect(new URL("/dashboard/seller", req.url));
-      } else if (data?.role === "staff") {
+      } else if (userData?.role === "staff") {
         return NextResponse.redirect(new URL("/dashboard/staff", req.url));
-      } else if (data?.role === "admin") {
+      } else if (userData?.role === "admin") {
         return NextResponse.redirect(new URL("/dashboard/admin", req.url));
       }
     }
-  }
-
-  if (error) {
-    console.error("Auth session error:", error);
   }
 
   return res;

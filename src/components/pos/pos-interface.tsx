@@ -30,6 +30,7 @@ interface InventoryItem {
   image_url?: string;
   barcode?: string;
   description?: string;
+  cartQuantity?: number;
 }
 
 interface Category {
@@ -49,12 +50,9 @@ interface POSInterfaceProps {
 }
 
 // Simple helper function
-function removeCartQuantity(item: any) {
-  if (item && item.cartQuantity !== undefined) {
-    const { cartQuantity, ...rest } = item;
-    return rest;
-  }
-  return item;
+function removeCartQuantity(item: InventoryItem): Omit<InventoryItem, 'cartQuantity'> {
+  const { cartQuantity, ...rest } = item;
+  return rest;
 }
 
 export default function POSInterface({
@@ -82,16 +80,11 @@ export default function POSInterface({
 
   // Simplified synchronization effect
   useEffect(() => {
-    // Only update filtered items when cart changes
     if (cart.length === 0) {
-      // If cart is empty, reset all cartQuantity values
-      setFilteredItems((prevItems) =>
+      setFilteredItems((prevItems: InventoryItem[]) =>
         prevItems.map((item) => {
-          if (item.cartQuantity !== undefined) {
-            const { cartQuantity, ...rest } = item;
-            return rest;
-          }
-          return item;
+          const { cartQuantity, ...rest } = item;
+          return rest;
         }),
       );
     }

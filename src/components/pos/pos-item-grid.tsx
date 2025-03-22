@@ -122,10 +122,10 @@ const POSItemGrid = memo(function POSItemGrid({
                         size="icon"
                         className="h-8 w-8 rounded-none p-0"
                         onClick={() => {
-                          if (item.cartQuantity === 1) {
+                          if (item.cartQuantity && item.cartQuantity === 1) {
                             // If this is the last item, set to 0 to remove it
                             onUpdateQuantity(item.id, 0);
-                          } else {
+                          } else if (item.cartQuantity) {
                             // Otherwise just decrease by 1
                             onUpdateQuantity(item.id, item.cartQuantity - 1);
                           }
@@ -134,14 +134,14 @@ const POSItemGrid = memo(function POSItemGrid({
                         <span className="text-lg font-medium">-</span>
                       </Button>
                       <span className="w-8 text-center text-sm font-medium">
-                        {item.cartQuantity}
+                        {item.cartQuantity || 0}
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 rounded-none p-0"
                         onClick={() => onAddToCart(item)}
-                        disabled={item.cartQuantity >= item.quantity}
+                        disabled={item.cartQuantity ? item.cartQuantity >= item.quantity : false}
                       >
                         <span className="text-lg font-medium">+</span>
                       </Button>
@@ -280,10 +280,10 @@ const POSItemGrid = memo(function POSItemGrid({
                           size="icon"
                           className="h-8 w-8 rounded-none p-0"
                           onClick={() => {
-                            if (item.cartQuantity === 1) {
+                            if (item.cartQuantity && item.cartQuantity === 1) {
                               // If this is the last item, set to 0 to remove it
                               onUpdateQuantity(item.id, 0);
-                            } else {
+                            } else if (item.cartQuantity) {
                               // Otherwise just decrease by 1
                               onUpdateQuantity(item.id, item.cartQuantity - 1);
                             }
@@ -292,14 +292,14 @@ const POSItemGrid = memo(function POSItemGrid({
                           <span className="text-lg font-medium">-</span>
                         </Button>
                         <span className="w-8 text-center text-sm font-medium">
-                          {item.cartQuantity}
+                          {item.cartQuantity || 0}
                         </span>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 rounded-none p-0"
                           onClick={() => onAddToCart(item)}
-                          disabled={item.cartQuantity >= item.quantity}
+                          disabled={item.cartQuantity ? item.cartQuantity >= item.quantity : false}
                         >
                           <span className="text-lg font-medium">+</span>
                         </Button>

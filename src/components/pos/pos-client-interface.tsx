@@ -12,6 +12,22 @@ interface Category {
   description?: string;
 }
 
+interface InventoryItem {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  quantity: number;
+  category: string;
+  description?: string;
+  cubby_location?: string;
+  barcode?: string;
+  image_url?: string;
+  seller_id: string;
+  commission_rate: number;
+  date_added: string;
+}
+
 interface POSClientInterfaceProps {
   categories: Category[];
   userId: string;
@@ -29,13 +45,13 @@ export default function POSClientInterface({
     isLoading,
     isError,
     error,
-  } = useQuery({
+  } = useQuery<InventoryItem[]>({
     queryKey: ["posInventory"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_items")
         .select(
-          "id, name, sku, price, quantity, category, description, cubby_location, barcode, image_url, seller_id, commission_rate",
+          "id, name, sku, price, quantity, category, description, cubby_location, barcode, image_url, seller_id, commission_rate, date_added",
         )
         .gt("quantity", 0)
         .order("date_added", { ascending: false });
