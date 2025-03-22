@@ -4,7 +4,7 @@ import { createClient } from "../../../supabase/server";
 import { revalidatePath } from "next/cache";
 
 // Server action to toggle cubby status
-export async function toggleCubbyStatus(formData: FormData) {
+export async function toggleCubbyStatus(formData: FormData): Promise<void> {
   const cubbyId = formData.get("cubby_id") as string;
   const currentStatus = formData.get("current_status") as string;
   const newStatus = currentStatus === "available" ? "maintenance" : "available";
@@ -24,22 +24,14 @@ export async function toggleCubbyStatus(formData: FormData) {
 
     // Revalidate relevant paths
     revalidatePath("/dashboard/admin/cubbies");
-
-    return { success: true };
   } catch (error) {
     console.error("Error updating cubby status:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to update cubby status",
-    };
+    // We're not returning any values now, just logging the error
   }
 }
 
 // Server action to delete cubby
-export async function deleteCubby(formData: FormData) {
+export async function deleteCubby(formData: FormData): Promise<void> {
   const cubbyId = formData.get("cubby_id") as string;
 
   const supabase = await createClient();
@@ -54,7 +46,8 @@ export async function deleteCubby(formData: FormData) {
       .single();
 
     if (rental) {
-      return { success: false, error: "Cannot delete a rented cubby" };
+      console.error("Cannot delete a rented cubby");
+      return;
     }
 
     const { error } = await supabase.from("cubbies").delete().eq("id", cubbyId);
@@ -63,19 +56,14 @@ export async function deleteCubby(formData: FormData) {
 
     // Revalidate relevant paths
     revalidatePath("/dashboard/admin/cubbies");
-
-    return { success: true };
   } catch (error) {
     console.error("Error deleting cubby:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete cubby",
-    };
+    // We're not returning any values now, just logging the error
   }
 }
 
 // Server action to add new cubby
-export async function addCubby(formData: FormData) {
+export async function addCubby(formData: FormData): Promise<void> {
   const cubbyNumber = formData.get("cubby_number") as string;
   const location = formData.get("location") as string;
   const notes = formData.get("notes") as string;
@@ -91,10 +79,8 @@ export async function addCubby(formData: FormData) {
       .single();
 
     if (existingCubby) {
-      return {
-        success: false,
-        error: "A cubby with this number already exists",
-      };
+      console.error("A cubby with this number already exists");
+      return;
     }
 
     const { data, error } = await supabase
@@ -113,13 +99,8 @@ export async function addCubby(formData: FormData) {
 
     // Revalidate relevant paths
     revalidatePath("/dashboard/admin/cubbies");
-
-    return { success: true, data: data[0] };
   } catch (error) {
     console.error("Error adding cubby:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to add cubby",
-    };
+    // We're not returning any values now, just logging the error
   }
 }
