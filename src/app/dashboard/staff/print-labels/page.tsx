@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,8 @@ const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): an
   return obj[property] ?? null;
 };
 
-export default function PrintLabelsPage() {
+// Inner component that uses useSearchParams
+function PrintLabelsInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeRentals, setActiveRentals] = useState<any[]>([]);
@@ -517,5 +518,14 @@ export default function PrintLabelsPage() {
         </div>
       </main>
     </>
+  );
+}
+
+// Main component wrapped in Suspense
+export default function PrintLabelsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PrintLabelsInner />
+    </Suspense>
   );
 }

@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SellerNavbar from "@/components/seller-navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, PlusCircle, ArrowLeft } from "lucide-react";
 
-export default function AddItemSuccessPage() {
+// Inner component that uses useSearchParams
+function AddItemSuccessInner() {
   const [itemDetails, setItemDetails] = useState<any>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,17 +36,17 @@ export default function AddItemSuccessPage() {
   return (
     <>
       <SellerNavbar />
-      <main className="w-full bg-gray-50 h-screen overflow-auto">
-        <div className="container mx-auto px-4 py-8">
-          <Card className="max-w-md mx-auto">
-            <CardContent className="pt-6 text-center">
-              <div className="bg-green-100 text-green-800 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="h-8 w-8" />
+      <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
+        <Card className="w-full max-w-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 rounded-full bg-green-100 p-3">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">
+              <h1 className="mb-2 text-2xl font-bold text-gray-900">
                 Item Added Successfully!
-              </h2>
-              <p className="text-gray-600 mb-6">
+              </h1>
+              <p className="mb-6 text-gray-600">
                 {itemDetails?.name ? (
                   <>
                     Your item <strong>"{itemDetails.name}"</strong> has been
@@ -66,28 +67,37 @@ export default function AddItemSuccessPage() {
                 )}
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex w-full flex-col gap-3">
                 <Button
-                  className="bg-pink-600 hover:bg-pink-700"
                   onClick={handleAddAnother}
+                  className="w-full"
                   disabled={isAddingAnother}
                 >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  {isAddingAnother ? "Redirecting..." : "Add Another Item"}
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Add Another Item
                 </Button>
-
                 <Button
                   variant="outline"
                   onClick={() => router.push("/dashboard/seller/listings")}
+                  className="w-full"
                 >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  View My Listings
+                  <ArrowLeft className="mr-2 h-5 w-5" />
+                  Return to Listings
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </>
+  );
+}
+
+// Main component wrapped in Suspense
+export default function AddItemSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <AddItemSuccessInner />
+    </Suspense>
   );
 }

@@ -13,3 +13,14 @@ export function formatPrice(price?: number | null): string {
     currency: "NZD",
   }).format(safePrice);
 }
+
+// Helper function to get property from potentially array fields
+export function getProperty<T>(obj: T | T[] | null | undefined, property: keyof T): any {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+}
