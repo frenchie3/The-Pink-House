@@ -20,7 +20,6 @@ import {
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 
 interface Cubby {
   id: string;
@@ -63,7 +62,6 @@ const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): an
 
 export default async function StaffDashboard() {
   const supabase = await createClient();
-  const router = useRouter();
 
   const {
     data: { user },
