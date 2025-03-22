@@ -216,14 +216,16 @@ export default async function SellerDashboard() {
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
                             Expires:{" "}
-                            {new Date(activeCubby.end_date).toLocaleDateString(
-                              "en-NZ",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              },
-                            )}
+                            {typedActiveCubby?.end_date 
+                              ? new Date(typedActiveCubby.end_date).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  }
+                                )
+                              : "N/A"}
                           </div>
                         </>
                       ) : (
@@ -371,21 +373,25 @@ export default async function SellerDashboard() {
                                 Rental Period
                               </h3>
                               <p className="text-lg">
-                                {new Date(
-                                  activeCubby.start_date,
-                                ).toLocaleDateString("en-NZ", {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                })}{" "}
+                                {typedActiveCubby?.start_date
+                                  ? new Date(
+                                      typedActiveCubby.start_date,
+                                    ).toLocaleDateString("en-NZ", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })
+                                  : "N/A"}{" "}
                                 -{" "}
-                                {new Date(
-                                  activeCubby.end_date,
-                                ).toLocaleDateString("en-NZ", {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                })}
+                                {typedActiveCubby?.end_date
+                                  ? new Date(
+                                      typedActiveCubby.end_date,
+                                    ).toLocaleDateString("en-NZ", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })
+                                  : "N/A"}
                               </p>
                             </div>
                             <div>
@@ -393,7 +399,7 @@ export default async function SellerDashboard() {
                                 Rental Fee
                               </h3>
                               <p className="text-lg">
-                                {formatPrice(activeCubby.rental_fee)}
+                                {formatPrice(typedActiveCubby?.rental_fee)}
                               </p>
                             </div>
                             <div>
@@ -401,7 +407,7 @@ export default async function SellerDashboard() {
                                 Payment Status
                               </h3>
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                {activeCubby.payment_status}
+                                {typedActiveCubby?.payment_status}
                               </span>
                             </div>
                           </div>
