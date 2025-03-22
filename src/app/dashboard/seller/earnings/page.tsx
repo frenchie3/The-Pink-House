@@ -7,6 +7,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Download, ArrowUpRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
+
+// Helper to get nested properties safely
+const getNestedProperty = (obj: any, path: string[]): any => {
+  if (!obj) return null;
+  
+  let current = obj;
+  for (const prop of path) {
+    current = getProperty(current, prop);
+    if (current === null || current === undefined) return null;
+  }
+  
+  return current;
+};
+
 export default async function SellerEarningsPage() {
   const supabase = await createClient();
 
@@ -180,7 +204,7 @@ export default async function SellerEarningsPage() {
                               )}
                             </td>
                             <td className="py-3 px-4">
-                              {earning.sale_item?.inventory_item?.name ||
+                              {getNestedProperty(earning.sale_item, ["inventory_item", "name"]) ||
                                 `Item #${earning.sale_item_id.substring(0, 8)}`}
                             </td>
                             <td className="py-3 px-4">
