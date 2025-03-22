@@ -12,9 +12,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ArrowLeft, Loader2, Clock, InfoIcon } from "lucide-react";
 
 // Server action wrapper
 import { addItemAction } from "./actions";
+
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
 
 export default function AddListingPage({
   searchParams,
@@ -238,6 +250,27 @@ export default function AddListingPage({
                       {searchParams.success}
                     </div>
                   )}
+
+                  <div className="p-3 bg-blue-50 rounded-lg mb-4">
+                    <div className="flex items-start gap-3">
+                      <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Your active cubby rental:</p>
+                        <p className="text-sm mt-1">
+                          Cubby #{getProperty(activeCubby.cubby, 'cubby_number')}
+                        </p>
+                        {activeCubby.remaining_days > 0 ? (
+                          <p className="text-xs text-blue-700 mt-1">
+                            {activeCubby.remaining_days} days remaining
+                          </p>
+                        ) : (
+                          <p className="text-xs text-red-700 mt-1">
+                            Expired! Please renew your cubby rental.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

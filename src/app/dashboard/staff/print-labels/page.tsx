@@ -121,7 +121,7 @@ export default function PrintLabelsPage() {
     itemId: string,
     checked: boolean,
   ) => {
-    setSelectedItems((prev) => {
+    setSelectedItems((prev: Record<string, Set<string>>) => {
       const newSelectedItems = { ...prev };
 
       if (!newSelectedItems[cubbyId]) {
@@ -140,7 +140,7 @@ export default function PrintLabelsPage() {
 
   // Handle select all for a cubby
   const handleSelectAll = (cubbyId: string, checked: boolean) => {
-    setSelectedItems((prev) => {
+    setSelectedItems((prev: Record<string, Set<string>>) => {
       const newSelectedItems = { ...prev };
 
       if (!newSelectedItems[cubbyId]) {
@@ -150,7 +150,9 @@ export default function PrintLabelsPage() {
       if (checked) {
         // Select all items in this cubby
         itemsByCubby[cubbyId]?.forEach((item) => {
-          newSelectedItems[cubbyId].add(item.id);
+          if (item && item.id) {
+            newSelectedItems[cubbyId].add(item.id);
+          }
         });
       } else {
         // Deselect all items in this cubby

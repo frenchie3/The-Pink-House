@@ -68,7 +68,7 @@ export function SettingsForm({
 
   // Update item limits
   const updateItemLimit = (type: "default" | "premium", value: number) => {
-    setCurrentItemLimits((prev) => ({
+    setCurrentItemLimits((prev: typeof itemLimits) => ({
       ...prev,
       [type]: value,
     }));
@@ -76,7 +76,7 @@ export function SettingsForm({
 
   // Update commission rates
   const updateCommRate = (type: "self_listed" | "staff_listed", value: number) => {
-    setCurrentCommRates((prev) => ({
+    setCurrentCommRates((prev: typeof commRates) => ({
       ...prev,
       [type]: value,
     }));
@@ -87,7 +87,7 @@ export function SettingsForm({
     type: "weekly" | "monthly" | "quarterly",
     value: number,
   ) => {
-    setCurrentRentalFees((prev) => ({
+    setCurrentRentalFees((prev: typeof rentalFees) => ({
       ...prev,
       [type]: value,
     }));
@@ -98,7 +98,7 @@ export function SettingsForm({
     type: "gracePickupDays" | "lastChanceDays",
     value: number,
   ) => {
-    setCurrentPickupSettings((prev) => ({
+    setCurrentPickupSettings((prev: typeof pickupSettings) => ({
       ...prev,
       [type]: value,
     }));
