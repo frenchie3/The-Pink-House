@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createClient } from "../../../../../supabase/client";
 import "./print-labels.css";
+import * as React from "react";
 
 interface Cubby {
   id: string;
@@ -344,14 +345,16 @@ export default function PrintLabelsPage() {
                                     id={`select-all-${rental.cubby_id}`}
                                     className="select-all-checkbox"
                                     checked={areAllSelected(rental.cubby_id)}
-                                    ref={(input) => {
-                                      if (input) {
-                                        input.indeterminate = areSomeSelected(
-                                          rental.cubby_id,
-                                        );
-                                      }
-                                    }}
-                                    onCheckedChange={(checked) => {
+                                    ref={React.useCallback(
+                                      (checkboxRef: HTMLElement | null) => {
+                                        const inputElement = checkboxRef?.querySelector('input[type="checkbox"]');
+                                        if (inputElement instanceof HTMLInputElement) {
+                                          inputElement.indeterminate = areSomeSelected(rental.cubby_id);
+                                        }
+                                      },
+                                      [rental.cubby_id]
+                                    )}
+                                    onCheckedChange={(checked: boolean) => {
                                       handleSelectAll(
                                         rental.cubby_id,
                                         checked === true,
