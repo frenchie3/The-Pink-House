@@ -74,7 +74,7 @@ export default async function ResetPassword(props: {
             </div>
 
             <SubmitButton
-              loadingText="Updating password..."
+              pendingText="Updating password..."
               className="w-full bg-pink-600 hover:bg-pink-700"
             >
               Reset Password

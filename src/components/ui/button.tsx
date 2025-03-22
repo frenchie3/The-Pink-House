@@ -38,6 +38,7 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  formAction?: (formData: FormData) => Promise<any>;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(

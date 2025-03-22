@@ -6,7 +6,7 @@ import { ButtonHTMLAttributes, forwardRef } from "react";
 
 interface ButtonLoadingProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
-  loadingText?: string;
+  pendingText?: string;
   loadingType?: "spinner" | "dots";
   variant?:
     | "default"
@@ -17,6 +17,7 @@ interface ButtonLoadingProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     | "link";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
+  formAction?: (formData: FormData) => Promise<any>;
 }
 
 export const ButtonLoading = forwardRef<HTMLButtonElement, ButtonLoadingProps>(
@@ -24,12 +25,13 @@ export const ButtonLoading = forwardRef<HTMLButtonElement, ButtonLoadingProps>(
     {
       children,
       isLoading = false,
-      loadingText,
+      pendingText,
       loadingType = "spinner",
       variant = "default",
       size = "default",
       className,
       disabled,
+      formAction,
       ...props
     },
     ref,
@@ -41,6 +43,7 @@ export const ButtonLoading = forwardRef<HTMLButtonElement, ButtonLoadingProps>(
         size={size}
         disabled={disabled || isLoading}
         className={cn(isLoading && "relative cursor-not-allowed", className)}
+        formAction={formAction}
         {...props}
       >
         {isLoading && (

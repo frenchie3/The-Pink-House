@@ -62,7 +62,7 @@ export default async function ForgotPassword(props: {
             </div>
 
             <SubmitButton
-              loadingText="Sending reset link..."
+              pendingText="Sending reset link..."
               className="w-full"
             >
               Reset Password
