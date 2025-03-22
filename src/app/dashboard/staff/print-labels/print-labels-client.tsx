@@ -10,8 +10,9 @@ export default function PrintLabelsClient() {
     );
 
     selectAllCheckboxes.forEach((checkbox) => {
-      checkbox.addEventListener("change", (e) => {
+      checkbox.addEventListener("change", (e: Event) => {
         const cubbyId = checkbox.id.replace("select-all-", "");
+        // Type assertion to ensure we have the correct event target type
         const target = e.target as HTMLInputElement;
         const isChecked = target.checked;
 
