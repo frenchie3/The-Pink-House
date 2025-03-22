@@ -24,6 +24,11 @@ interface User {
 
 const ROLES = ["admin", "staff", "seller"] as const;
 
+const VERIFICATION_STATUS = [
+  { label: "Verified", value: true },
+  { label: "Pending", value: false }
+] as const;
+
 const DATE_PRESETS = [
   { label: "Last 7 days", days: 7 },
   { label: "Last 30 days", days: 30 },
@@ -39,6 +44,7 @@ export default function AdminUsersPage() {
   const [selectedRoles, setSelectedRoles] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [selectedDatePreset, setSelectedDatePreset] = useState<number>(0);
+  const [selectedVerificationStatus, setSelectedVerificationStatus] = useState<boolean | null>(null);
   
   const supabase = createClient();
 
@@ -79,6 +85,7 @@ export default function AdminUsersPage() {
   const clearFilters = () => {
     setSelectedRoles(new Set());
     setSelectedDatePreset(0);
+    setSelectedVerificationStatus(null);
   };
 
   // Filter users based on search query, roles, and date range
@@ -89,6 +96,8 @@ export default function AdminUsersPage() {
     
     const matchesRole = selectedRoles.size === 0 || selectedRoles.has(user.role);
     
+    const matchesVerification = selectedVerificationStatus === null || user.email_verified === selectedVerificationStatus;
+    
     const userCreatedAt = new Date(user.created_at);
     let matchesDate = true;
     
@@ -98,7 +107,7 @@ export default function AdminUsersPage() {
       matchesDate = userCreatedAt >= cutoffDate;
     }
     
-    return matchesSearch && matchesRole && matchesDate;
+    return matchesSearch && matchesRole && matchesDate && matchesVerification;
   });
 
   const getRoleBadgeColor = (role: string, isSelected: boolean) => {
@@ -152,13 +161,13 @@ export default function AdminUsersPage() {
                   >
                     <SlidersHorizontal className="mr-2 h-4 w-4" />
                     Filters
-                    {(selectedRoles.size > 0 || selectedDatePreset > 0) && (
+                    {(selectedRoles.size > 0 || selectedDatePreset > 0 || selectedVerificationStatus !== null) && (
                       <Badge variant="secondary" className="ml-2">
-                        {selectedRoles.size + (selectedDatePreset > 0 ? 1 : 0)}
+                        {selectedRoles.size + (selectedDatePreset > 0 ? 1 : 0) + (selectedVerificationStatus !== null ? 1 : 0)}
                       </Badge>
                     )}
                   </Button>
-                  {(selectedRoles.size > 0 || selectedDatePreset > 0) && (
+                  {(selectedRoles.size > 0 || selectedDatePreset > 0 || selectedVerificationStatus !== null) && (
                     <Button
                       variant="outline"
                       className="flex-shrink-0"
@@ -184,6 +193,26 @@ export default function AdminUsersPage() {
                         onClick={() => toggleRole(role)}
                       >
                         {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {/* Verification Status Filters */}
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <div className="text-sm text-gray-500 mr-2">Filter by verification:</div>
+                    {VERIFICATION_STATUS.map((status) => (
+                      <Badge
+                        key={status.value.toString()}
+                        className={`cursor-pointer ${
+                          selectedVerificationStatus === status.value
+                            ? "bg-pink-600 text-white hover:bg-pink-700"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        }`}
+                        onClick={() => setSelectedVerificationStatus(
+                          selectedVerificationStatus === status.value ? null : status.value
+                        )}
+                      >
+                        {status.label}
                       </Badge>
                     ))}
                   </div>
