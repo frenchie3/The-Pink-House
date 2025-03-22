@@ -105,77 +105,84 @@ export default async function SellerCubbyPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {cubbyRentals.map((rental) => (
-                          <tr
-                            key={rental.id}
-                            className="border-b hover:bg-gray-50"
-                          >
-                            <td className="py-3 px-4">
-                              {rental.cubby?.cubby_number}
-                            </td>
-                            <td className="py-3 px-4">
-                              {new Date(rental.start_date).toLocaleDateString(
-                                "en-NZ",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                },
-                              )}
-                            </td>
-                            <td className="py-3 px-4">
-                              {new Date(rental.end_date).toLocaleDateString(
-                                "en-NZ",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                },
-                              )}
-                            </td>
-                            <td className="py-3 px-4">
-                              {formatPrice(rental.rental_fee)}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  rental.status === "active"
-                                    ? "bg-green-100 text-green-800"
-                                    : rental.status === "expired"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {rental.status.charAt(0).toUpperCase() +
-                                  rental.status.slice(1)}
-                              </span>
-                              <div className="mt-1 text-xs text-gray-500">
-                                {rental.listing_type === "self"
-                                  ? "Self-Listing"
-                                  : "Staff-Managed"}
-                                (
-                                {rental.commission_rate
-                                  ? (rental.commission_rate * 100).toFixed(0)
-                                  : 15}
-                                %)
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  rental.payment_status === "paid"
-                                    ? "bg-green-100 text-green-800"
-                                    : rental.payment_status === "pending"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {rental.payment_status.charAt(0).toUpperCase() +
-                                  rental.payment_status.slice(1)}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                        {cubbyRentals.map((rental) => {
+                          // Handle the cubby data, whether it's an array or an object
+                          const cubbyNumber = Array.isArray(rental.cubby)
+                            ? rental.cubby[0]?.cubby_number
+                            : rental.cubby?.cubby_number;
+                            
+                          return (
+                            <tr
+                              key={rental.id}
+                              className="border-b hover:bg-gray-50"
+                            >
+                              <td className="py-3 px-4">
+                                {cubbyNumber}
+                              </td>
+                              <td className="py-3 px-4">
+                                {new Date(rental.start_date).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  },
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                {new Date(rental.end_date).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  },
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                {formatPrice(rental.rental_fee)}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    rental.status === "active"
+                                      ? "bg-green-100 text-green-800"
+                                      : rental.status === "expired"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {rental.status.charAt(0).toUpperCase() +
+                                    rental.status.slice(1)}
+                                </span>
+                                <div className="mt-1 text-xs text-gray-500">
+                                  {rental.listing_type === "self"
+                                    ? "Self-Listing"
+                                    : "Staff-Managed"}
+                                  (
+                                  {rental.commission_rate
+                                    ? (rental.commission_rate * 100).toFixed(0)
+                                    : 15}
+                                  %)
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    rental.payment_status === "paid"
+                                      ? "bg-green-100 text-green-800"
+                                      : rental.payment_status === "pending"
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {rental.payment_status.charAt(0).toUpperCase() +
+                                    rental.payment_status.slice(1)}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

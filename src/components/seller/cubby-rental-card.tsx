@@ -10,6 +10,17 @@ interface CubbyRentalCardProps {
   daysRemaining: number;
 }
 
+// Helper function to get cubby properties safely
+const getCubbyProperty = (cubby: any, property: string) => {
+  if (!cubby) return null;
+  
+  if (Array.isArray(cubby)) {
+    return cubby[0]?.[property];
+  }
+  
+  return cubby[property];
+};
+
 // Memoized to prevent re-renders when parent components update but props don't change
 const CubbyRentalCard = memo(function CubbyRentalCard({
   activeCubby,
@@ -32,6 +43,10 @@ const CubbyRentalCard = memo(function CubbyRentalCard({
     );
   }
 
+  // Get cubby properties safely
+  const cubbyNumber = getCubbyProperty(activeCubby.cubby, 'cubby_number');
+  const cubbyLocation = getCubbyProperty(activeCubby.cubby, 'location') || 'Main Floor';
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Cubby Details */}
@@ -49,7 +64,7 @@ const CubbyRentalCard = memo(function CubbyRentalCard({
                       Cubby Number
                     </h3>
                     <p className="text-2xl font-bold">
-                      {activeCubby.cubby?.cubby_number}
+                      {cubbyNumber}
                     </p>
                   </div>
                   <div>
@@ -57,7 +72,7 @@ const CubbyRentalCard = memo(function CubbyRentalCard({
                       Location
                     </h3>
                     <p className="text-lg">
-                      {activeCubby.cubby?.location || "Main Floor"}
+                      {cubbyLocation}
                     </p>
                   </div>
                   <div>
