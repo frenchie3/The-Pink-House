@@ -48,4 +48,17 @@ serve(async (req) => {
 
     if (payoutError || !payout) {
       return new Response(
-        JSON.
+        JSON.stringify({ error: payoutError?.message || 'Payout not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+
+    // Handle the rest of the function
+    // ... (existing code)
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ error: e.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+});
