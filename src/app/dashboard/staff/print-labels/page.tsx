@@ -12,6 +12,39 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "../../../../../supabase/client";
 import "./print-labels.css";
 
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+}
+
+interface Seller {
+  id: string;
+  full_name?: string;
+  name?: string;
+  email?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  seller_id: string;
+  status: string;
+  cubby: Cubby | Cubby[];
+  seller: Seller | Seller[];
+}
+
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
+
 export default function PrintLabelsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -277,15 +310,20 @@ export default function PrintLabelsPage() {
 
               if (!hasUnlockedItems) return null;
 
+              // Modify the mapping function for rental card headers
+              // Replace the original rental.cubby?.cubby_number with a safer access
+              const cubbyNumber = getProperty(rental.cubby, 'cubby_number');
+              const sellerName = getProperty(rental.seller, 'full_name') || 
+                                 getProperty(rental.seller, 'name') || 
+                                 "Unknown Seller";
+
               return (
                 <Card key={rental.id}>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <div>
-                        Cubby #{rental.cubby?.cubby_number} -
-                        {rental.seller?.full_name ||
-                          rental.seller?.name ||
-                          "Unknown Seller"}
+                        Cubby #{cubbyNumber} -
+                        {sellerName}
                       </div>
                       <div className="text-sm font-normal text-gray-500">
                         {cubbyItems.length} unlocked item(s)

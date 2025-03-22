@@ -16,8 +16,15 @@ interface Cubby {
   [key: string]: any;
 }
 
+interface RentalCubby {
+  id: string;
+  cubby_id: string;
+  cubby: Cubby | Cubby[];
+  [key: string]: any;
+}
+
 interface CubbyExtensionOptionsProps {
-  currentCubby: any;
+  currentCubby: RentalCubby;
   canExtendCurrentCubby: boolean;
   alternativeCubbies: Cubby[];
   loading: boolean;
@@ -25,6 +32,17 @@ interface CubbyExtensionOptionsProps {
   onSelectCubby: (cubbyId: string) => void;
   selectedCubbyId: string | null;
 }
+
+// Helper function to get cubby properties safely
+const getCubbyProperty = (cubby: Cubby | Cubby[] | null | undefined, property: keyof Cubby): string | null => {
+  if (!cubby) return null;
+  
+  if (Array.isArray(cubby)) {
+    return cubby[0]?.[property] ?? null;
+  }
+  
+  return cubby[property] ?? null;
+};
 
 export default function CubbyExtensionOptions({
   currentCubby,
@@ -63,9 +81,15 @@ export default function CubbyExtensionOptions({
       cubbyIdToUse = currentCubby.id;
     }
     // If neither is available but we have a cubby object nested inside currentCubby
-    else if (currentCubby?.cubby?.id) {
-      console.log("Using id from nested cubby object:", currentCubby.cubby.id);
-      cubbyIdToUse = currentCubby.cubby.id;
+    else if (currentCubby?.cubby) {
+      const cubbyId = Array.isArray(currentCubby.cubby) 
+        ? currentCubby.cubby[0]?.id 
+        : currentCubby.cubby.id;
+        
+      if (cubbyId) {
+        console.log("Using id from nested cubby object:", cubbyId);
+        cubbyIdToUse = cubbyId;
+      }
     }
 
     // Only update the selected cubby if we found a valid ID and we can extend it
@@ -101,6 +125,10 @@ export default function CubbyExtensionOptions({
       </div>
     );
   }
+
+  // Get cubby properties safely
+  const cubbyNumber = getCubbyProperty(currentCubby.cubby, 'cubby_number');
+  const cubbyLocation = getCubbyProperty(currentCubby.cubby, 'location') || 'Main Floor';
 
   return (
     <Card>
@@ -143,20 +171,25 @@ export default function CubbyExtensionOptions({
                 value={
                   currentCubby.cubby_id ||
                   currentCubby.id ||
-                  (currentCubby.cubby && currentCubby.cubby.id)
+                  (currentCubby.cubby && (Array.isArray(currentCubby.cubby) 
+                    ? currentCubby.cubby[0]?.id 
+                    : currentCubby.cubby.id))
                 }
-                id={`cubby-${currentCubby.cubby_id || currentCubby.id || (currentCubby.cubby && currentCubby.cubby.id)}`}
+                id={`cubby-${currentCubby.cubby_id || currentCubby.id || (currentCubby.cubby && (Array.isArray(currentCubby.cubby) 
+                  ? currentCubby.cubby[0]?.id 
+                  : currentCubby.cubby.id))}`}
               />
               <Label
-                htmlFor={`cubby-${currentCubby.cubby_id || currentCubby.id || (currentCubby.cubby && currentCubby.cubby.id)}`}
+                htmlFor={`cubby-${currentCubby.cubby_id || currentCubby.id || (currentCubby.cubby && (Array.isArray(currentCubby.cubby) 
+                  ? currentCubby.cubby[0]?.id 
+                  : currentCubby.cubby.id))}`}
                 className="flex-1 cursor-pointer"
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium">Keep Current Cubby</p>
                     <p className="text-sm text-gray-700">
-                      Cubby #{currentCubby.cubby?.cubby_number} -{" "}
-                      {currentCubby.cubby?.location || "Main Floor"}
+                      Cubby #{cubbyNumber} - {cubbyLocation}
                     </p>
                     <p className="text-xs text-green-700 mt-1">
                       <CheckCircle className="h-3 w-3 inline mr-1" />

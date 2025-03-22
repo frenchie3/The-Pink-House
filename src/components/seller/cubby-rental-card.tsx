@@ -5,20 +5,40 @@ import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 import { memo } from "react";
 
+// Define interfaces for type safety
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  start_date: string;
+  end_date: string;
+  rental_fee: number;
+  status: string;
+  payment_status: string;
+  listing_type: string;
+  commission_rate: number;
+  cubby: Cubby | Cubby[];
+}
+
 interface CubbyRentalCardProps {
-  activeCubby: any;
+  activeCubby: CubbyRental | undefined;
   daysRemaining: number;
 }
 
 // Helper function to get cubby properties safely
-const getCubbyProperty = (cubby: any, property: string) => {
+const getCubbyProperty = (cubby: Cubby | Cubby[] | null | undefined, property: keyof Cubby): string | null => {
   if (!cubby) return null;
   
   if (Array.isArray(cubby)) {
-    return cubby[0]?.[property];
+    return cubby[0]?.[property] ?? null;
   }
   
-  return cubby[property];
+  return cubby[property] ?? null;
 };
 
 // Memoized to prevent re-renders when parent components update but props don't change

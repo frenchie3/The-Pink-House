@@ -18,6 +18,34 @@ import {
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  start_date: string;
+  end_date: string;
+  rental_fee: number;
+  status: string;
+  payment_status: string;
+  cubby: Cubby | Cubby[];
+}
+
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
+
 export default async function SellerDashboard() {
   const supabase = await createClient();
 
@@ -79,6 +107,12 @@ export default async function SellerDashboard() {
   const activeCubby = cubbyRentals?.find(
     (rental) => rental.status === "active",
   );
+
+  // Inside the component, add this type assertion for activeCubby
+  const typedActiveCubby = activeCubby as CubbyRental | undefined;
+
+  // Inside the JSX where activeCubby.cubby?.cubby_number is used, replace with:
+  const cubbyNumber = typedActiveCubby ? getProperty(typedActiveCubby.cubby, 'cubby_number') : null;
 
   return (
     <>
@@ -178,7 +212,7 @@ export default async function SellerDashboard() {
                       {activeCubby ? (
                         <>
                           <div className="text-3xl font-bold">
-                            {activeCubby.cubby?.cubby_number}
+                            {cubbyNumber}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
                             Expires:{" "}
@@ -311,7 +345,7 @@ export default async function SellerDashboard() {
                                 Cubby Number
                               </h3>
                               <p className="text-2xl font-bold">
-                                {activeCubby.cubby?.cubby_number}
+                                {cubbyNumber}
                               </p>
                             </div>
                             <div>
@@ -319,7 +353,7 @@ export default async function SellerDashboard() {
                                 Location
                               </h3>
                               <p className="text-lg">
-                                {activeCubby.cubby?.location || "Main Floor"}
+                                {typedActiveCubby ? getProperty(typedActiveCubby.cubby, 'location') || "Main Floor" : "Main Floor"}
                               </p>
                             </div>
                             <div>
