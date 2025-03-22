@@ -100,6 +100,13 @@ export default function EditListingPage() {
     setIsSubmitting(true);
 
     try {
+      // Guard clause - if item is null, we can't proceed
+      if (!item) {
+        setError("Item data is missing");
+        setIsSubmitting(false);
+        return;
+      }
+
       // Check if the item has labels printed
       if (item.editing_locked) {
         setError(
@@ -241,12 +248,12 @@ export default function EditListingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Item Details</CardTitle>
-              {item.editing_locked && (
+              {item?.editing_locked && (
                 <div className="mt-2 p-2 bg-amber-50 text-amber-800 rounded-md text-sm">
                   This item has had labels printed and can no longer be edited.
                 </div>
               )}
-              {!item.editing_locked && (
+              {item && !item.editing_locked && (
                 <div className="mt-2 p-2 bg-blue-50 text-blue-800 rounded-md text-sm">
                   You can edit this item until labels are printed. Once labels
                   are printed, the item details will be locked.
@@ -265,7 +272,7 @@ export default function EditListingPage() {
                       onChange={handleInputChange}
                       placeholder="Vintage Teacup Set"
                       required
-                      disabled={item.editing_locked}
+                      disabled={item?.editing_locked}
                     />
                   </div>
 
@@ -281,7 +288,7 @@ export default function EditListingPage() {
                       onChange={handleInputChange}
                       placeholder="15.99"
                       required
-                      disabled={item.editing_locked}
+                      disabled={item?.editing_locked}
                     />
                   </div>
 
@@ -294,7 +301,7 @@ export default function EditListingPage() {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                       required
-                      disabled={item.editing_locked}
+                      disabled={item?.editing_locked}
                     >
                       <option value="">Select a category</option>
                       {categories.map((category) => (
@@ -315,7 +322,7 @@ export default function EditListingPage() {
                       value={item?.quantity || ""}
                       onChange={handleInputChange}
                       required
-                      disabled={item.editing_locked}
+                      disabled={item?.editing_locked}
                     />
                   </div>
 
@@ -327,7 +334,7 @@ export default function EditListingPage() {
                       value={item?.condition || "Good"}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                      disabled={item.editing_locked}
+                      disabled={item?.editing_locked}
                     >
                       <option value="New">New</option>
                       <option value="Like New">Like New</option>
@@ -347,9 +354,9 @@ export default function EditListingPage() {
                       </p>
                       <p className="text-sm text-gray-600 mt-1">
                         Commission Rate:{" "}
-                        {item?.commission_rate
+                        {item
                           ? (item.commission_rate * 100).toFixed(0)
-                          : 15}
+                          : "15"}
                         %
                       </p>
                       <p className="text-xs text-gray-500 mt-2">
@@ -377,7 +384,7 @@ export default function EditListingPage() {
                       onChange={handleInputChange}
                       placeholder="Describe your item..."
                       rows={4}
-                      disabled={item.editing_locked}
+                      disabled={item?.editing_locked}
                     />
                   </div>
                 </div>
@@ -393,7 +400,7 @@ export default function EditListingPage() {
                   <Button
                     type="submit"
                     className="bg-pink-600 hover:bg-pink-700"
-                    disabled={isSubmitting || item.editing_locked}
+                    disabled={isSubmitting || item?.editing_locked}
                   >
                     {isSubmitting ? "Updating..." : "Update Item"}
                   </Button>
