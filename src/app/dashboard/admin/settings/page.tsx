@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import RoleGuard from "@/components/role-guard";
@@ -31,7 +31,8 @@ import {
 import { SettingsForm } from "@/components/admin/settings-form";
 import { createClient } from "../../../../../supabase/client";
 
-export default function AdminSettingsPage() {
+// Inner component that uses useSearchParams
+function AdminSettingsInner() {
   const [loading, setLoading] = useState(true);
   const [systemSettings, setSystemSettings] = useState<any[]>([]);
   const [itemLimits, setItemLimits] = useState({ default: 10, premium: 20 });
@@ -419,5 +420,14 @@ export default function AdminSettingsPage() {
         </main>
       </div>
     </RoleGuard>
+  );
+}
+
+// Main component wrapped in Suspense
+export default function AdminSettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminSettingsInner />
+    </Suspense>
   );
 }

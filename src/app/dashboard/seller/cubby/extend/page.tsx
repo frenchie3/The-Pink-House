@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SellerNavbar from "@/components/seller-navbar";
 import SellerGuard from "@/components/seller-guard";
@@ -14,6 +14,7 @@ import {
   Clock,
   ArrowLeft,
   AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { createClient } from "../../../../../../supabase/client";
@@ -21,7 +22,8 @@ import CubbyExtensionOptions from "@/components/seller/cubby-extension-options";
 import { useCubbyExtension } from "@/hooks/use-cubby-extension";
 import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 
-export default function ExtendCubbyPage() {
+// Inner component that uses useSearchParams
+function ExtendCubbyInner() {
   const [rentalPeriod, setRentalPeriod] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentRental, setCurrentRental] = useState<any>(null);
@@ -805,5 +807,14 @@ export default function ExtendCubbyPage() {
         </MainContent>
       </LayoutWrapper>
     </SellerGuard>
+  );
+}
+
+// Main component wrapped in Suspense
+export default function ExtendCubbyPage() {
+  return (
+    <Suspense fallback={null}>
+      <ExtendCubbyInner />
+    </Suspense>
   );
 }

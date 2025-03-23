@@ -7,6 +7,26 @@ import { CreditCard } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import CubbyRentalCard from "@/components/seller/cubby-rental-card";
 
+// Define interfaces for type safety
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  start_date: string;
+  end_date: string;
+  rental_fee: number;
+  status: string;
+  payment_status: string;
+  listing_type: string;
+  commission_rate: number;
+  cubby: Cubby | Cubby[];
+}
+
 export default async function SellerCubbyPage() {
   const supabase = await createClient();
 
@@ -30,7 +50,7 @@ export default async function SellerCubbyPage() {
   // Get active cubby rental
   const activeCubby = cubbyRentals?.find(
     (rental) => rental.status === "active",
-  );
+  ) as CubbyRental | undefined;
 
   // Calculate days remaining if there's an active rental
   let daysRemaining = 0;
@@ -105,77 +125,87 @@ export default async function SellerCubbyPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {cubbyRentals.map((rental) => (
-                          <tr
-                            key={rental.id}
-                            className="border-b hover:bg-gray-50"
-                          >
-                            <td className="py-3 px-4">
-                              {rental.cubby?.cubby_number}
-                            </td>
-                            <td className="py-3 px-4">
-                              {new Date(rental.start_date).toLocaleDateString(
-                                "en-NZ",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                },
-                              )}
-                            </td>
-                            <td className="py-3 px-4">
-                              {new Date(rental.end_date).toLocaleDateString(
-                                "en-NZ",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                },
-                              )}
-                            </td>
-                            <td className="py-3 px-4">
-                              {formatPrice(rental.rental_fee)}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  rental.status === "active"
-                                    ? "bg-green-100 text-green-800"
-                                    : rental.status === "expired"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {rental.status.charAt(0).toUpperCase() +
-                                  rental.status.slice(1)}
-                              </span>
-                              <div className="mt-1 text-xs text-gray-500">
-                                {rental.listing_type === "self"
-                                  ? "Self-Listing"
-                                  : "Staff-Managed"}
-                                (
-                                {rental.commission_rate
-                                  ? (rental.commission_rate * 100).toFixed(0)
-                                  : 15}
-                                %)
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  rental.payment_status === "paid"
-                                    ? "bg-green-100 text-green-800"
-                                    : rental.payment_status === "pending"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {rental.payment_status.charAt(0).toUpperCase() +
-                                  rental.payment_status.slice(1)}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                        {cubbyRentals.map((rental: any) => {
+                          // Type assertion to tell TypeScript what type the cubby property is
+                          const typedRental = rental as CubbyRental;
+                          
+                          // Handle the cubby data, whether it's an array or an object
+                          const cubbyNumber = Array.isArray(typedRental.cubby)
+                            ? typedRental.cubby[0]?.cubby_number
+                            : (typedRental.cubby as Cubby)?.cubby_number;
+                            
+                          return (
+                            <tr
+                              key={typedRental.id}
+                              className="border-b hover:bg-gray-50"
+                            >
+                              <td className="py-3 px-4">
+                                {cubbyNumber}
+                              </td>
+                              <td className="py-3 px-4">
+                                {new Date(typedRental.start_date).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  },
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                {new Date(typedRental.end_date).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  },
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                {formatPrice(typedRental.rental_fee)}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    typedRental.status === "active"
+                                      ? "bg-green-100 text-green-800"
+                                      : typedRental.status === "expired"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {typedRental.status.charAt(0).toUpperCase() +
+                                    typedRental.status.slice(1)}
+                                </span>
+                                <div className="mt-1 text-xs text-gray-500">
+                                  {typedRental.listing_type === "self"
+                                    ? "Self-Listing"
+                                    : "Staff-Managed"}
+                                  (
+                                  {typedRental.commission_rate
+                                    ? (typedRental.commission_rate * 100).toFixed(0)
+                                    : 15}
+                                  %)
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    typedRental.payment_status === "paid"
+                                      ? "bg-green-100 text-green-800"
+                                      : typedRental.payment_status === "pending"
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {typedRental.payment_status.charAt(0).toUpperCase() +
+                                    typedRental.payment_status.slice(1)}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

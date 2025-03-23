@@ -7,7 +7,7 @@ export function ButtonClickEffect() {
     // Create a ripple effect on button clicks
     const addRippleEffect = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const button = target.closest('button, a[role="button"]');
+      const button = target.closest('button, a[role="button"]') as HTMLElement;
 
       if (!button) return;
 
@@ -31,9 +31,10 @@ export function ButtonClickEffect() {
       ripple.style.pointerEvents = "none";
 
       // Add ripple to button
-      button.style.position = "relative";
-      button.style.overflow = "hidden";
-      button.appendChild(ripple);
+      const buttonElement = button as HTMLElement;
+      buttonElement.style.position = "relative";
+      buttonElement.style.overflow = "hidden";
+      buttonElement.appendChild(ripple);
 
       // Animate the ripple
       requestAnimationFrame(() => {

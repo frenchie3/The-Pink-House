@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import SellerNavbar from "@/components/seller-navbar";
 import SellerGuard from "@/components/seller-guard";
 import { createClient } from "../../../../../../supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,27 +12,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ArrowLeft, Loader2, Clock, InfoIcon } from "lucide-react";
+import { getProperty } from "@/lib/utils";
 
 // Server action wrapper
 import { addItemAction } from "./actions";
 
-export default function AddListingPage({
+// Inner component that uses useSearchParams
+function AddListingInner({
   searchParams,
 }: {
   searchParams: { error?: string; success?: string };
 }) {
   const router = useRouter();
-  const supabase = createClient();
-
-  // State variables
   const [loading, setLoading] = useState(true);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [activeCubby, setActiveCubby] = useState<any>(null);
-  const [remainingItems, setRemainingItems] = useState<number>(0);
-  const [itemLimit, setItemLimit] = useState<number>(10);
   const [categories, setCategories] = useState<any[]>([]);
+  const [itemLimit, setItemLimit] = useState(10);
+  const [remainingItems, setRemainingItems] = useState(10);
+  const [activeCubby, setActiveCubby] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const supabase = createClient();
 
   // Load essential data first
   useEffect(() => {
@@ -46,7 +47,6 @@ export default function AddListingPage({
           router.push("/sign-in");
           return;
         }
-        setUser(user);
 
         // Fetch active cubby - this is essential
         const { data: activeCubby } = await supabase
@@ -73,7 +73,7 @@ export default function AddListingPage({
 
   // Load secondary data after initial render
   useEffect(() => {
-    if (!initialDataLoaded || !user) return;
+    if (!initialDataLoaded || !activeCubby) return;
 
     const loadSecondaryData = async () => {
       try {
@@ -91,7 +91,7 @@ export default function AddListingPage({
           supabase
             .from("inventory_items")
             .select("id", { count: "exact", head: true })
-            .eq("seller_id", user.id),
+            .eq("seller_id", activeCubby.seller_id),
 
           // Item limit settings
           supabase
@@ -104,7 +104,7 @@ export default function AddListingPage({
           supabase
             .from("users")
             .select("subscription")
-            .eq("id", user.id)
+            .eq("id", activeCubby.seller_id)
             .single(),
         ]);
 
@@ -124,7 +124,7 @@ export default function AddListingPage({
     };
 
     loadSecondaryData();
-  }, [initialDataLoaded, user, supabase]);
+  }, [initialDataLoaded, activeCubby, supabase]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -238,6 +238,27 @@ export default function AddListingPage({
                       {searchParams.success}
                     </div>
                   )}
+
+                  <div className="p-3 bg-blue-50 rounded-lg mb-4">
+                    <div className="flex items-start gap-3">
+                      <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Your active cubby rental:</p>
+                        <p className="text-sm mt-1">
+                          Cubby #{getProperty(activeCubby.cubby, 'cubby_number')}
+                        </p>
+                        {activeCubby.remaining_days > 0 ? (
+                          <p className="text-xs text-blue-700 mt-1">
+                            {activeCubby.remaining_days} days remaining
+                          </p>
+                        ) : (
+                          <p className="text-xs text-red-700 mt-1">
+                            Expired! Please renew your cubby rental.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -376,5 +397,18 @@ export default function AddListingPage({
         </MainContent>
       </LayoutWrapper>
     </SellerGuard>
+  );
+}
+
+// Main component wrapped in Suspense
+export default function AddListingPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; success?: string };
+}) {
+  return (
+    <Suspense fallback={null}>
+      <AddListingInner searchParams={searchParams} />
+    </Suspense>
   );
 }

@@ -1,14 +1,15 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { LoadingBar } from "./ui/loading-bar";
 
 // Create a global state for loading that persists across page navigations
 let isNavigating = false;
 let loadingBarInstance: HTMLDivElement | null = null;
 
-export function LoadingTransition() {
+// Separate client component that uses useSearchParams
+function LoadingTransitionInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [progress, setProgress] = useState(0);
@@ -103,4 +104,13 @@ export function LoadingTransition() {
       />
     </div>
   ) : null;
+}
+
+// Main component that wraps the inner component with Suspense
+export function LoadingTransition() {
+  return (
+    <Suspense fallback={null}>
+      <LoadingTransitionInner />
+    </Suspense>
+  );
 }

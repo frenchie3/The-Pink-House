@@ -5,18 +5,20 @@ import { useEffect } from "react";
 export default function PrintLabelsClient() {
   useEffect(() => {
     // Handle select all checkboxes
-    const selectAllCheckboxes = document.querySelectorAll(
+    const selectAllCheckboxes = document.querySelectorAll<HTMLInputElement>(
       '[id^="select-all-"]',
     );
 
     selectAllCheckboxes.forEach((checkbox) => {
-      checkbox.addEventListener("change", (e) => {
+      checkbox.addEventListener("change", (e: Event) => {
         const cubbyId = checkbox.id.replace("select-all-", "");
-        const isChecked = e.target.checked;
+        // Type assertion to ensure we have the correct event target type
+        const target = e.target as HTMLInputElement;
+        const isChecked = target.checked;
 
         // Select or deselect all checkboxes for this cubby
         document
-          .querySelectorAll(`[data-cubby="${cubbyId}"]`)
+          .querySelectorAll<HTMLInputElement>(`[data-cubby="${cubbyId}"]`)
           .forEach((itemCheckbox) => {
             itemCheckbox.checked = isChecked;
           });
@@ -27,7 +29,7 @@ export default function PrintLabelsClient() {
     });
 
     // Check all checkboxes by default
-    document.querySelectorAll('[name="item_ids"]').forEach((checkbox) => {
+    document.querySelectorAll<HTMLInputElement>('[name="item_ids"]').forEach((checkbox) => {
       checkbox.checked = true;
     });
   }, []);

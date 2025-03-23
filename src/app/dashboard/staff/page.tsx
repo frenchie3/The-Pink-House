@@ -21,6 +21,45 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
 
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+  status?: string;
+}
+
+interface Seller {
+  id: string;
+  full_name?: string;
+  name?: string;
+  email?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  seller_id: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  payment_status: string;
+  listing_type: string;
+  commission_rate: number;
+  cubby: Cubby | Cubby[];
+  seller: Seller | Seller[];
+}
+
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
+
 export default async function StaffDashboard() {
   const supabase = await createClient();
 
@@ -375,8 +414,10 @@ export default async function StaffDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {cubbyRentals.map((rental) => {
-                              const endDate = new Date(rental.end_date);
+                            {cubbyRentals.map((rental: any) => {
+                              // Type safe version
+                              const typedRental = rental as CubbyRental;
+                              const endDate = new Date(typedRental.end_date);
                               const today = new Date();
                               const diffDays = Math.ceil(
                                 (endDate.getTime() - today.getTime()) /
@@ -385,22 +426,35 @@ export default async function StaffDashboard() {
                               const isExpiringSoon =
                                 diffDays <= 7 && diffDays > 0;
 
+                              // Get properties safely
+                              const cubbyNumber = getProperty(typedRental.cubby, 'cubby_number');
+                              const sellerName = getProperty(typedRental.seller, 'full_name') || 
+                                                 getProperty(typedRental.seller, 'name') || 
+                                                 "Unknown";
+
                               return (
                                 <tr
-                                  key={rental.id}
+                                  key={typedRental.id}
                                   className="border-b hover:bg-gray-50"
                                 >
                                   <td className="py-3 px-4">
-                                    {rental.cubby?.cubby_number}
+                                    {cubbyNumber}
                                   </td>
                                   <td className="py-3 px-4">
-                                    {rental.seller?.full_name ||
-                                      rental.seller?.name ||
-                                      "Unknown"}
+                                    {sellerName}
                                   </td>
                                   <td className="py-3 px-4">
                                     {new Date(
-                                      rental.start_date,
+                                      typedRental.start_date,
+                                    ).toLocaleDateString("en-NZ", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })}
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    {new Date(
+                                      typedRental.end_date,
                                     ).toLocaleDateString("en-NZ", {
                                       day: "2-digit",
                                       month: "2-digit",
@@ -409,34 +463,26 @@ export default async function StaffDashboard() {
                                   </td>
                                   <td className="py-3 px-4">
                                     <span
-                                      className={
-                                        isExpiringSoon
-                                          ? "text-amber-600 font-medium"
-                                          : ""
-                                      }
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        diffDays < 0
+                                          ? "bg-red-100 text-red-800"
+                                          : isExpiringSoon
+                                            ? "bg-amber-100 text-amber-800"
+                                            : "bg-green-100 text-green-800"
+                                      }`}
                                     >
-                                      {new Date(
-                                        rental.end_date,
-                                      ).toLocaleDateString("en-NZ", {
-                                        day: "2-digit",
-                                        month: "2-digit",
-                                        year: "numeric",
-                                      })}
-                                      {isExpiringSoon && ` (${diffDays} days)`}
+                                      {diffDays < 0
+                                        ? "Expired"
+                                        : isExpiringSoon
+                                          ? `Expires in ${diffDays} days`
+                                          : "Active"}
                                     </span>
                                   </td>
                                   <td className="py-3 px-4">
                                     <span
-                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rental.status === "active" ? "bg-green-100 text-green-800" : rental.status === "expired" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-800"}`}
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typedRental.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}
                                     >
-                                      {rental.status}
-                                    </span>
-                                  </td>
-                                  <td className="py-3 px-4">
-                                    <span
-                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rental.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}
-                                    >
-                                      {rental.payment_status}
+                                      {typedRental.payment_status}
                                     </span>
                                   </td>
                                   <td className="py-3 px-4">

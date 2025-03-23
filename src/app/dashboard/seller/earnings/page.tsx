@@ -7,6 +7,51 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Download, ArrowUpRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
+
+// Helper to get nested properties safely
+const getNestedProperty = (obj: any, path: string[]): any => {
+  if (!obj) return null;
+  
+  let current = obj;
+  for (const prop of path) {
+    current = getProperty(current, prop);
+    if (current === null || current === undefined) return null;
+  }
+  
+  return current;
+};
+
+// Add interfaces for better type safety
+interface Earning {
+  id: string;
+  sale_item_id: string;
+  net_amount: number;
+  gross_amount: number;
+  commission_amount: number;
+  payout_id: string | null;
+  created_at: string;
+  sale_item?: any;
+}
+
+interface Payout {
+  id: string;
+  amount: number;
+  created_at: string;
+  payout_date: string | null;
+  status: string;
+  notes: string | null;
+}
+
 export default async function SellerEarningsPage() {
   const supabase = await createClient();
 
@@ -38,16 +83,20 @@ export default async function SellerEarningsPage() {
     .order("created_at", { ascending: false })
     .range(0, itemsPerPage - 1);
 
+  // Type assertions for proper typing
+  const typedEarnings = earnings as Earning[] | null;
+  const typedPayouts = payouts as Payout[] | null;
+
   // Calculate totals
   const totalEarnings =
-    earnings?.reduce((sum, earning) => sum + earning.net_amount, 0) || 0;
+    typedEarnings?.reduce((sum, earning) => sum + earning.net_amount, 0) || 0;
   const availableBalance =
-    earnings?.reduce(
+    typedEarnings?.reduce(
       (sum, earning) => (earning.payout_id ? sum : sum + earning.net_amount),
       0,
     ) || 0;
   const totalPaid =
-    payouts?.reduce((sum, payout) => sum + payout.amount, 0) || 0;
+    typedPayouts?.reduce((sum, payout) => sum + payout.amount, 0) || 0;
 
   return (
     <>
@@ -138,7 +187,7 @@ export default async function SellerEarningsPage() {
                 <CardTitle>Earnings History</CardTitle>
               </CardHeader>
               <CardContent>
-                {earnings && earnings.length > 0 ? (
+                {typedEarnings && typedEarnings.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -164,23 +213,24 @@ export default async function SellerEarningsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {earnings.map((earning) => (
+                        {typedEarnings.map((earning) => (
                           <tr
                             key={earning.id}
                             className="border-b hover:bg-gray-50"
                           >
                             <td className="py-3 px-4">
-                              {new Date(earning.created_at).toLocaleDateString(
-                                "en-NZ",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                },
-                              )}
+                              {earning.created_at ? 
+                                new Date(earning.created_at).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  },
+                                ) : "N/A"}
                             </td>
                             <td className="py-3 px-4">
-                              {earning.sale_item?.inventory_item?.name ||
+                              {getNestedProperty(earning.sale_item, ["inventory_item", "name"]) ||
                                 `Item #${earning.sale_item_id.substring(0, 8)}`}
                             </td>
                             <td className="py-3 px-4">
@@ -222,7 +272,7 @@ export default async function SellerEarningsPage() {
                 <CardTitle>Payout History</CardTitle>
               </CardHeader>
               <CardContent>
-                {payouts && payouts.length > 0 ? (
+                {typedPayouts && typedPayouts.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -245,20 +295,21 @@ export default async function SellerEarningsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {payouts.map((payout) => (
+                        {typedPayouts.map((payout) => (
                           <tr
                             key={payout.id}
                             className="border-b hover:bg-gray-50"
                           >
                             <td className="py-3 px-4">
-                              {new Date(payout.created_at).toLocaleDateString(
-                                "en-NZ",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                },
-                              )}
+                              {payout.created_at ? 
+                                new Date(payout.created_at).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  }
+                                ) : "N/A"}
                             </td>
                             <td className="py-3 px-4 font-medium">
                               {formatPrice(payout.amount)}

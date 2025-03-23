@@ -5,10 +5,41 @@ import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 import { memo } from "react";
 
+// Define interfaces for type safety
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  start_date: string;
+  end_date: string;
+  rental_fee: number;
+  status: string;
+  payment_status: string;
+  listing_type: string;
+  commission_rate: number;
+  cubby: Cubby | Cubby[];
+}
+
 interface CubbyRentalCardProps {
-  activeCubby: any;
+  activeCubby: CubbyRental | undefined;
   daysRemaining: number;
 }
+
+// Helper function to get cubby properties safely
+const getCubbyProperty = (cubby: Cubby | Cubby[] | null | undefined, property: keyof Cubby): string | null => {
+  if (!cubby) return null;
+  
+  if (Array.isArray(cubby)) {
+    return cubby[0]?.[property] ?? null;
+  }
+  
+  return cubby[property] ?? null;
+};
 
 // Memoized to prevent re-renders when parent components update but props don't change
 const CubbyRentalCard = memo(function CubbyRentalCard({
@@ -32,6 +63,10 @@ const CubbyRentalCard = memo(function CubbyRentalCard({
     );
   }
 
+  // Get cubby properties safely
+  const cubbyNumber = getCubbyProperty(activeCubby.cubby, 'cubby_number');
+  const cubbyLocation = getCubbyProperty(activeCubby.cubby, 'location') || 'Main Floor';
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Cubby Details */}
@@ -49,7 +84,7 @@ const CubbyRentalCard = memo(function CubbyRentalCard({
                       Cubby Number
                     </h3>
                     <p className="text-2xl font-bold">
-                      {activeCubby.cubby?.cubby_number}
+                      {cubbyNumber}
                     </p>
                   </div>
                   <div>
@@ -57,7 +92,7 @@ const CubbyRentalCard = memo(function CubbyRentalCard({
                       Location
                     </h3>
                     <p className="text-lg">
-                      {activeCubby.cubby?.location || "Main Floor"}
+                      {cubbyLocation}
                     </p>
                   </div>
                   <div>
@@ -92,23 +127,27 @@ const CubbyRentalCard = memo(function CubbyRentalCard({
                       Rental Period
                     </h3>
                     <p className="text-lg">
-                      {new Date(activeCubby.start_date).toLocaleDateString(
-                        "en-NZ",
-                        {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        },
-                      )}{" "}
+                      {activeCubby.start_date ? 
+                        new Date(activeCubby.start_date).toLocaleDateString(
+                          "en-NZ",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          },
+                        )
+                      : "N/A"}{" "}
                       -{" "}
-                      {new Date(activeCubby.end_date).toLocaleDateString(
-                        "en-NZ",
-                        {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        },
-                      )}
+                      {activeCubby.end_date ?
+                        new Date(activeCubby.end_date).toLocaleDateString(
+                          "en-NZ",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          },
+                        )
+                      : "N/A"}
                     </p>
                   </div>
                   <div>

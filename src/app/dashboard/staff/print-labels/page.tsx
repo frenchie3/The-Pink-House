@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,43 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createClient } from "../../../../../supabase/client";
 import "./print-labels.css";
+import * as React from "react";
 
-export default function PrintLabelsPage() {
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+}
+
+interface Seller {
+  id: string;
+  full_name?: string;
+  name?: string;
+  email?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  seller_id: string;
+  status: string;
+  cubby: Cubby | Cubby[];
+  seller: Seller | Seller[];
+}
+
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
+
+// Inner component that uses useSearchParams
+function PrintLabelsInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeRentals, setActiveRentals] = useState<any[]>([]);
@@ -88,7 +123,7 @@ export default function PrintLabelsPage() {
     itemId: string,
     checked: boolean,
   ) => {
-    setSelectedItems((prev) => {
+    setSelectedItems((prev: Record<string, Set<string>>) => {
       const newSelectedItems = { ...prev };
 
       if (!newSelectedItems[cubbyId]) {
@@ -107,7 +142,7 @@ export default function PrintLabelsPage() {
 
   // Handle select all for a cubby
   const handleSelectAll = (cubbyId: string, checked: boolean) => {
-    setSelectedItems((prev) => {
+    setSelectedItems((prev: Record<string, Set<string>>) => {
       const newSelectedItems = { ...prev };
 
       if (!newSelectedItems[cubbyId]) {
@@ -117,7 +152,9 @@ export default function PrintLabelsPage() {
       if (checked) {
         // Select all items in this cubby
         itemsByCubby[cubbyId]?.forEach((item) => {
-          newSelectedItems[cubbyId].add(item.id);
+          if (item && item.id) {
+            newSelectedItems[cubbyId].add(item.id);
+          }
         });
       } else {
         // Deselect all items in this cubby
@@ -277,15 +314,20 @@ export default function PrintLabelsPage() {
 
               if (!hasUnlockedItems) return null;
 
+              // Modify the mapping function for rental card headers
+              // Replace the original rental.cubby?.cubby_number with a safer access
+              const cubbyNumber = getProperty(rental.cubby, 'cubby_number');
+              const sellerName = getProperty(rental.seller, 'full_name') || 
+                                 getProperty(rental.seller, 'name') || 
+                                 "Unknown Seller";
+
               return (
                 <Card key={rental.id}>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <div>
-                        Cubby #{rental.cubby?.cubby_number} -
-                        {rental.seller?.full_name ||
-                          rental.seller?.name ||
-                          "Unknown Seller"}
+                        Cubby #{cubbyNumber} -
+                        {sellerName}
                       </div>
                       <div className="text-sm font-normal text-gray-500">
                         {cubbyItems.length} unlocked item(s)
@@ -304,14 +346,16 @@ export default function PrintLabelsPage() {
                                     id={`select-all-${rental.cubby_id}`}
                                     className="select-all-checkbox"
                                     checked={areAllSelected(rental.cubby_id)}
-                                    ref={(input) => {
-                                      if (input) {
-                                        input.indeterminate = areSomeSelected(
-                                          rental.cubby_id,
-                                        );
-                                      }
-                                    }}
-                                    onCheckedChange={(checked) => {
+                                    ref={React.useCallback(
+                                      (checkboxRef: HTMLElement | null) => {
+                                        const inputElement = checkboxRef?.querySelector('input[type="checkbox"]');
+                                        if (inputElement instanceof HTMLInputElement) {
+                                          inputElement.indeterminate = areSomeSelected(rental.cubby_id);
+                                        }
+                                      },
+                                      [rental.cubby_id]
+                                    )}
+                                    onCheckedChange={(checked: boolean) => {
                                       handleSelectAll(
                                         rental.cubby_id,
                                         checked === true,
@@ -474,5 +518,14 @@ export default function PrintLabelsPage() {
         </div>
       </main>
     </>
+  );
+}
+
+// Main component wrapped in Suspense
+export default function PrintLabelsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PrintLabelsInner />
+    </Suspense>
   );
 }

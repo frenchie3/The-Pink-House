@@ -1,24 +1,24 @@
-export type Message =
-  | { success: string }
-  | { error: string }
-  | { message: string };
+export type Message = {
+  type: "success" | "error" | "warning";
+  message: string;
+};
 
-export function FormMessage({ message }: { message: Message }) {
+interface FormMessageProps {
+  message: Message | Record<string, never>;
+}
+
+export function FormMessage({ message }: FormMessageProps) {
+  if (!("type" in message)) return null;
+
+  const styles = {
+    success: "bg-green-50 border-green-200 text-green-800",
+    error: "bg-red-50 border-red-200 text-red-800",
+    warning: "bg-yellow-50 border-yellow-200 text-yellow-800",
+  };
+
   return (
-    <div className="flex flex-col gap-2 w-full max-w-md text-sm">
-      {"success" in message && (
-        <div className="text-green-500 border-l-2 px-4">
-          {message.success}
-        </div>
-      )}
-      {"error" in message && (
-        <div className="text-red-500 border-l-2 px-4">
-          {message.error}
-        </div>
-      )}
-      {"message" in message && (
-        <div className="text-foreground border-l-2 px-4">{message.message}</div>
-      )}
+    <div className={`px-4 py-3 rounded border ${styles[message.type]}`}>
+      <p className="text-sm">{message.message}</p>
     </div>
   );
 }

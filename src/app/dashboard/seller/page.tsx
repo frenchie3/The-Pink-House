@@ -18,6 +18,61 @@ import {
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  start_date: string;
+  end_date: string;
+  rental_fee: number;
+  status: string;
+  payment_status: string;
+  cubby: Cubby | Cubby[];
+}
+
+interface Earning {
+  id: string;
+  net_amount: number;
+  gross_amount: number;
+  commission_amount: number;
+  payout_id: string | null;
+  sale_item_id: string;
+  created_at: string;
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  created_at: string;
+  is_read: boolean;
+}
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  quantity: number;
+}
+
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
+
 export default async function SellerDashboard() {
   const supabase = await createClient();
 
@@ -47,8 +102,11 @@ export default async function SellerDashboard() {
 
   const { data: earnings } = await supabase
     .from("seller_earnings")
-    .select("id, net_amount, payout_id")
+    .select("id, net_amount, payout_id, gross_amount, commission_amount, sale_item_id, created_at")
     .eq("seller_id", user.id);
+
+  // Type assertion for earnings
+  const typedEarnings = earnings as Earning[] | null;
 
   // Only fetch count of unread notifications for the badge
   const { count: notificationCount } = await supabase
@@ -66,19 +124,28 @@ export default async function SellerDashboard() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  // Type assertion for notifications
+  const typedNotifications = notifications as Notification[] | null;
+
   // Calculate total earnings
   const totalEarnings =
-    earnings?.reduce((sum, earning) => sum + earning.net_amount, 0) || 0;
+    typedEarnings?.reduce((sum, earning) => sum + earning.net_amount, 0) || 0;
   const availableBalance =
-    earnings?.reduce(
+    typedEarnings?.reduce(
       (sum, earning) => (earning.payout_id ? sum : sum + earning.net_amount),
       0,
     ) || 0;
 
   // Get active cubby rental
   const activeCubby = cubbyRentals?.find(
-    (rental) => rental.status === "active",
+    (rental: any) => rental.status === "active",
   );
+
+  // Inside the component, add this type assertion for activeCubby
+  const typedActiveCubby = activeCubby as CubbyRental | undefined;
+
+  // Inside the JSX where activeCubby.cubby?.cubby_number is used, replace with:
+  const cubbyNumber = typedActiveCubby ? getProperty(typedActiveCubby.cubby, 'cubby_number') : null;
 
   return (
     <>
@@ -107,9 +174,9 @@ export default async function SellerDashboard() {
                 <Button variant="outline">
                   <Bell className="mr-2 h-5 w-5" />
                   Notifications
-                  {notifications && notifications.length > 0 && (
+                  {typedNotifications && typedNotifications.length > 0 && (
                     <span className="ml-1 bg-pink-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {notifications.length}
+                      {typedNotifications.length}
                     </span>
                   )}
                 </Button>
@@ -178,18 +245,20 @@ export default async function SellerDashboard() {
                       {activeCubby ? (
                         <>
                           <div className="text-3xl font-bold">
-                            {activeCubby.cubby?.cubby_number}
+                            {cubbyNumber}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
                             Expires:{" "}
-                            {new Date(activeCubby.end_date).toLocaleDateString(
-                              "en-NZ",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              },
-                            )}
+                            {typedActiveCubby?.end_date 
+                              ? new Date(typedActiveCubby.end_date).toLocaleDateString(
+                                  "en-NZ",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  }
+                                )
+                              : "N/A"}
                           </div>
                         </>
                       ) : (
@@ -246,7 +315,7 @@ export default async function SellerDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {inventoryItems.map((item) => (
+                            {inventoryItems.map((item: InventoryItem) => (
                               <tr
                                 key={item.id}
                                 className="border-b hover:bg-gray-50"
@@ -311,7 +380,7 @@ export default async function SellerDashboard() {
                                 Cubby Number
                               </h3>
                               <p className="text-2xl font-bold">
-                                {activeCubby.cubby?.cubby_number}
+                                {cubbyNumber}
                               </p>
                             </div>
                             <div>
@@ -319,7 +388,7 @@ export default async function SellerDashboard() {
                                 Location
                               </h3>
                               <p className="text-lg">
-                                {activeCubby.cubby?.location || "Main Floor"}
+                                {typedActiveCubby ? getProperty(typedActiveCubby.cubby, 'location') || "Main Floor" : "Main Floor"}
                               </p>
                             </div>
                             <div>
@@ -337,21 +406,25 @@ export default async function SellerDashboard() {
                                 Rental Period
                               </h3>
                               <p className="text-lg">
-                                {new Date(
-                                  activeCubby.start_date,
-                                ).toLocaleDateString("en-NZ", {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                })}{" "}
+                                {typedActiveCubby?.start_date
+                                  ? new Date(
+                                      typedActiveCubby.start_date,
+                                    ).toLocaleDateString("en-NZ", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })
+                                  : "N/A"}{" "}
                                 -{" "}
-                                {new Date(
-                                  activeCubby.end_date,
-                                ).toLocaleDateString("en-NZ", {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                })}
+                                {typedActiveCubby?.end_date
+                                  ? new Date(
+                                      typedActiveCubby.end_date,
+                                    ).toLocaleDateString("en-NZ", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })
+                                  : "N/A"}
                               </p>
                             </div>
                             <div>
@@ -359,7 +432,7 @@ export default async function SellerDashboard() {
                                 Rental Fee
                               </h3>
                               <p className="text-lg">
-                                {formatPrice(activeCubby.rental_fee)}
+                                {formatPrice(typedActiveCubby?.rental_fee)}
                               </p>
                             </div>
                             <div>
@@ -367,7 +440,7 @@ export default async function SellerDashboard() {
                                 Payment Status
                               </h3>
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                {activeCubby.payment_status}
+                                {typedActiveCubby?.payment_status}
                               </span>
                             </div>
                           </div>
@@ -442,7 +515,7 @@ export default async function SellerDashboard() {
                       </div>
                     </div>
 
-                    {earnings && earnings.length > 0 ? (
+                    {typedEarnings && typedEarnings.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full">
                           <thead>
@@ -468,19 +541,21 @@ export default async function SellerDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {earnings.map((earning) => (
+                            {typedEarnings.map((earning) => (
                               <tr
                                 key={earning.id}
                                 className="border-b hover:bg-gray-50"
                               >
                                 <td className="py-3 px-4">
-                                  {new Date(
-                                    earning.created_at,
-                                  ).toLocaleDateString("en-NZ", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                  })}
+                                  {earning.created_at 
+                                    ? new Date(
+                                        earning.created_at,
+                                      ).toLocaleDateString("en-NZ", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                      })
+                                    : "N/A"}
                                 </td>
                                 <td className="py-3 px-4">
                                   Item #{earning.sale_item_id.substring(0, 8)}
@@ -524,9 +599,9 @@ export default async function SellerDashboard() {
                     <CardTitle>Notifications</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {notifications && notifications.length > 0 ? (
+                    {typedNotifications && typedNotifications.length > 0 ? (
                       <div className="space-y-4">
-                        {notifications.map((notification) => (
+                        {typedNotifications.map((notification) => (
                           <div
                             key={notification.id}
                             className="p-4 border rounded-lg hover:bg-gray-50"
@@ -546,15 +621,17 @@ export default async function SellerDashboard() {
                                 </p>
                                 <div className="flex justify-between items-center mt-2">
                                   <span className="text-xs text-gray-500">
-                                    {new Date(
-                                      notification.created_at,
-                                    ).toLocaleString("en-NZ", {
-                                      day: "2-digit",
-                                      month: "2-digit",
-                                      year: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
+                                    {notification.created_at
+                                      ? new Date(
+                                          notification.created_at,
+                                        ).toLocaleString("en-NZ", {
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                          year: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })
+                                      : "N/A"}
                                   </span>
                                   <Button variant="ghost" size="sm">
                                     Mark as Read

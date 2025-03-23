@@ -20,6 +20,34 @@ import { formatPrice } from "@/lib/utils";
 import { createClient } from "../../../../../../supabase/client";
 import { LayoutWrapper, MainContent } from "@/components/layout-wrapper";
 
+interface Cubby {
+  id: string;
+  cubby_number: string;
+  location?: string;
+}
+
+interface CubbyRental {
+  id: string;
+  cubby_id: string;
+  start_date: string;
+  end_date: string;
+  rental_fee: number;
+  status: string;
+  payment_status: string;
+  cubby: Cubby | Cubby[];
+}
+
+// Helper function to get property from potentially array fields
+const getProperty = <T,>(obj: T | T[] | null | undefined, property: keyof T): any => {
+  if (!obj) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj[0]?.[property] ?? null;
+  }
+  
+  return obj[property] ?? null;
+};
+
 export default function CubbyPaymentPage() {
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -217,6 +245,12 @@ export default function CubbyPaymentPage() {
     );
   }
 
+  const typedRental = currentRental as CubbyRental;
+
+  // Get cubby properties safely
+  const cubbyNumber = typedRental ? getProperty(typedRental.cubby, 'cubby_number') : null;
+  const cubbyLocation = typedRental ? getProperty(typedRental.cubby, 'location') || "Main Floor" : "Main Floor";
+
   return (
     <SellerGuard>
       <LayoutWrapper>
@@ -338,10 +372,10 @@ export default function CubbyPaymentPage() {
                               Cubby Details
                             </h3>
                             <p className="font-medium">
-                              Cubby #{currentRental.cubby?.cubby_number}
+                              Cubby #{cubbyNumber}
                             </p>
                             <p className="text-sm text-gray-600">
-                              {currentRental.cubby?.location || "Main Floor"}
+                              {cubbyLocation}
                             </p>
                           </div>
 

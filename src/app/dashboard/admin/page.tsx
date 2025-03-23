@@ -203,14 +203,17 @@ export default async function AdminDashboard() {
                         <Button
                           variant="outline"
                           className="h-auto py-4 justify-start"
+                          asChild
                         >
-                          <Users className="mr-2 h-5 w-5 text-pink-600" />
-                          <div className="text-left">
-                            <div className="font-medium">Manage Users</div>
-                            <div className="text-xs text-gray-500">
-                              Add, edit, or remove users
+                          <Link href="/dashboard/admin/users">
+                            <Users className="mr-2 h-5 w-5 text-pink-600" />
+                            <div className="text-left">
+                              <div className="font-medium">Manage Users</div>
+                              <div className="text-xs text-gray-500">
+                                Add, edit, or remove users
+                              </div>
                             </div>
-                          </div>
+                          </Link>
                         </Button>
                         <Button
                           variant="outline"

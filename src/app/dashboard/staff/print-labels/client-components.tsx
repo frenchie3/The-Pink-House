@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
+import * as React from "react";
 
 interface ItemCheckboxProps {
   id: string;
@@ -151,12 +152,16 @@ export function SelectAllCheckbox({ cubbyId }: SelectAllCheckboxProps) {
       id={`select-all-${cubbyId}`}
       checked={checked}
       data-indeterminate={indeterminate}
-      ref={(ref) => {
-        if (ref) {
-          ref.indeterminate = indeterminate;
-        }
-      }}
-      onCheckedChange={handleChange}
+      ref={React.useCallback(
+        (checkboxRef: any) => {
+          const inputElement = checkboxRef?.querySelector('input[type="checkbox"]');
+          if (inputElement instanceof HTMLInputElement) {
+            inputElement.indeterminate = indeterminate;
+          }
+        },
+        [indeterminate]
+      )}
+      onCheckedChange={(isChecked: boolean) => handleChange(isChecked)}
     />
   );
 }
