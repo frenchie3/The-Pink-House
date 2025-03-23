@@ -6,10 +6,19 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next");
   const type = requestUrl.searchParams.get("type");
+  
+  console.log("Auth callback received:", { code: code?.substring(0, 5) + "...", type, url: requestUrl.toString() });
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    
+    if (error) {
+      console.error("Error exchanging code for session:", error);
+      return NextResponse.redirect(
+        new URL("/sign-in?type=error&message=Authentication failed. Please try again.", requestUrl.origin)
+      );
+    }
     
     // If this is an email confirmation
     if (type === "signup") {
@@ -33,6 +42,7 @@ export async function GET(request: Request) {
 
     // Handle password reset flow
     if (code && !type) {
+      console.log("Password reset flow detected, redirecting to reset password page");
       return NextResponse.redirect(
         new URL("/protected/reset-password", requestUrl.origin)
       );

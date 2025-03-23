@@ -30,6 +30,11 @@ export async function middleware(req: NextRequest) {
   const { data } = await supabase.auth.getSession();
   const { session } = data;
 
+  // Allow auth callback and password reset routes without requiring authentication
+  if (req.nextUrl.pathname === "/auth/callback" || req.nextUrl.pathname === "/protected/reset-password") {
+    return res;
+  }
+
   // Protected routes
   if (req.nextUrl.pathname.startsWith("/dashboard") && !session) {
     return NextResponse.redirect(new URL("/sign-in", req.url));
@@ -85,7 +90,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public (public files)
+     * - auth/callback (authentication callback)
      */
     "/((?!_next/static|_next/image|favicon.ico|public|api).*)",
+    "/protected/:path*",
+    "/dashboard/:path*",
   ],
 };
