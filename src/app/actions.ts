@@ -168,155 +168,75 @@ export const forgotPasswordAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const supabase = await createClient();
   const origin = headers().get("origin");
+  const callbackUrl = formData.get("callbackUrl")?.toString();
 
   if (!email) {
     return encodedRedirect("error", "/forgot-password", "Email is required");
   }
 
-  console.log(`Initiating password reset for ${email} with redirect to ${origin}/auth/callback`);
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?redirect_to=/protected/reset-password`,
+  });
 
-  try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/auth/callback?type=recovery`,
-    });
-
-    if (error) {
-      console.error("Password reset error:", error.message);
-      return encodedRedirect(
-        "error",
-        "/forgot-password",
-        `Could not reset password: ${error.message}`
-      );
-    }
-
-    return encodedRedirect(
-      "success",
-      "/forgot-password",
-      "Check your email for a link to reset your password."
-    );
-  } catch (error) {
-    console.error("Unexpected error in forgotPasswordAction:", error);
+  if (error) {
+    console.error(error.message);
     return encodedRedirect(
       "error",
       "/forgot-password",
-      "An unexpected error occurred. Please try again."
+      "Could not reset password",
     );
   }
+
+  if (callbackUrl) {
+    return redirect(callbackUrl);
+  }
+
+  return encodedRedirect(
+    "success",
+    "/forgot-password",
+    "Check your email for a link to reset your password.",
+  );
 };
 
 export const resetPasswordAction = async (formData: FormData) => {
-  try {
-    const supabase = await createClient();
-    const password = formData.get("password") as string;
-    const confirmPassword = formData.get("confirmPassword") as string;
-    const code = formData.get("code") as string;
+  const supabase = await createClient();
 
-    console.log("Processing password reset with code", { hasCode: !!code });
+  const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
 
-    if (!password || !confirmPassword) {
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Password and confirm password are required"
-      );
-    }
-
-    if (password !== confirmPassword) {
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Passwords do not match"
-      );
-    }
-
-    if (password.length < 8) {
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Password must be at least 8 characters long"
-      );
-    }
-
-    if (!/[A-Z]/.test(password)) {
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Password must contain at least one uppercase letter"
-      );
-    }
-
-    if (!/[0-9]/.test(password)) {
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Password must contain at least one number"
-      );
-    }
-
-    if (!code) {
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Missing reset code. Please request a new password reset link."
-      );
-    }
-
-    // First exchange the code for a session
-    const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    
-    if (exchangeError) {
-      console.error("Error exchanging code for session:", exchangeError.message);
-      if (exchangeError.message.includes("invalid flow state")) {
-        return encodedRedirect(
-          "error",
-          "/protected/reset-password",
-          "This password reset link has expired or has already been used. Please request a new one."
-        );
-      }
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        `Authentication failed: ${exchangeError.message}`
-      );
-    }
-    
-    if (!exchangeData.session) {
-      console.error("No session returned after code exchange");
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Unable to authenticate. Please request a new password reset link."
-      );
-    }
-
-    // Now update the password
-    console.log("Updating password for user", exchangeData.user?.id);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-
-    if (updateError) {
-      console.error("Password update failed:", updateError.message);
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        `Password update failed: ${updateError.message}`
-      );
-    }
-
-    console.log("Password updated successfully");
-    return encodedRedirect(
-      "success",
-      "/sign-in",
-      "Password has been updated successfully. Please sign in with your new password."
-    );
-  } catch (error: any) {
-    console.error("Unexpected error in resetPasswordAction:", error);
-    const errorMessage = error.message || "An unexpected error occurred";
+  if (!password || !confirmPassword) {
     return encodedRedirect(
       "error",
       "/protected/reset-password",
-      `Error: ${errorMessage}`
+      "Password and confirm password are required",
     );
   }
+
+  if (password !== confirmPassword) {
+    return encodedRedirect(
+      "error",
+      "/protected/reset-password",
+      "Passwords do not match",
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: password,
+  });
+
+  if (error) {
+    return encodedRedirect(
+      "error",
+      "/protected/reset-password",
+      "Password update failed",
+    );
+  }
+
+  return encodedRedirect(
+    "success",
+    "/sign-in",
+    "Password has been updated successfully. Please sign in with your new password.",
+  );
 };
 
 export const signOutAction = async () => {
