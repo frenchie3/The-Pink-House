@@ -6,11 +6,22 @@ import Link from "next/link";
 import { resetPasswordAction } from "@/app/actions";
 import Navbar from "@/components/navbar";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { createClient } from "../../../../supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function ResetPassword(props: {
   searchParams: Promise<Message>;
 }) {
   const searchParams = await props.searchParams;
+  const supabase = await createClient();
+
+  // Check if user is authenticated
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error || !session) {
+    console.error("Session error:", error);
+    return redirect("/sign-in?type=error&message=Please request a new password reset link.");
+  }
 
   if ("message" in searchParams) {
     return (
