@@ -177,7 +177,7 @@ export const forgotPasswordAction = async (formData: FormData) => {
 
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/auth/callback`,
+      redirectTo: `${origin}/auth/callback?password-reset=true`,
     });
 
     if (error) {
@@ -209,8 +209,9 @@ export const resetPasswordAction = async (formData: FormData) => {
     const supabase = await createClient();
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
+    const code = formData.get("code") as string;
 
-    console.log("Processing password reset with new password");
+    console.log("Processing password reset with new password and code", { hasCode: !!code });
 
     if (!password || !confirmPassword) {
       return encodedRedirect(
@@ -228,28 +229,49 @@ export const resetPasswordAction = async (formData: FormData) => {
       );
     }
 
-    // Check if user is authenticated for this action
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("No authenticated user found when trying to reset password");
+    if (!code) {
       return encodedRedirect(
         "error",
         "/protected/reset-password",
-        "Not authenticated. Please request a new password reset link."
+        "Invalid reset code. Please request a new password reset link."
       );
     }
 
-    console.log(`Updating password for user: ${user.id}`);
-    const { error } = await supabase.auth.updateUser({
-      password: password,
+    // Use the verification code for password reset
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: code,
+      type: 'recovery',
     });
 
     if (error) {
-      console.error("Password update failed:", error.message);
+      console.error("Failed to verify reset code:", error.message);
       return encodedRedirect(
         "error",
         "/protected/reset-password",
-        `Password update failed: ${error.message}`
+        `Verification failed: ${error.message}`
+      );
+    }
+
+    if (!data.session || !data.user) {
+      console.error("No session or user returned after verification");
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        "Verification failed. Please request a new password reset link."
+      );
+    }
+
+    console.log(`Updating password for user: ${data.user.id}`);
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: password,
+    });
+
+    if (updateError) {
+      console.error("Password update failed:", updateError.message);
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        `Password update failed: ${updateError.message}`
       );
     }
 

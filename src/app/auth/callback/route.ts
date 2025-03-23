@@ -21,6 +21,14 @@ export async function GET(request: Request) {
     );
   }
 
+  // Special handling for password reset
+  if (requestUrl.toString().includes("password-reset=true") || type === "recovery") {
+    // For password reset, add code as a query param to the reset page
+    return NextResponse.redirect(
+      new URL(`/protected/reset-password?code=${code}`, requestUrl.origin)
+    );
+  }
+
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
@@ -66,7 +74,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Handle password reset flow
+    // Handle regular password reset flow as a fallback
     if (!type) {
       console.log("Password reset flow detected, redirecting to reset password page");
       return NextResponse.redirect(
