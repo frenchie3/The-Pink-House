@@ -23,9 +23,31 @@ export async function GET(request: Request) {
   // Handle password recovery type - always prioritize this flow
   if (type === "recovery") {
     console.log("Password recovery detected, redirecting to reset password page with code");
-    return NextResponse.redirect(
-      new URL(`/protected/reset-password?code=${code}`, requestUrl.origin)
-    );
+    try {
+      // First try to verify the code is valid
+      const supabase = await createClient();
+      
+      // Attempt to exchange code for a session
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      
+      if (error) {
+        console.error("Invalid recovery code:", error.message);
+        return NextResponse.redirect(
+          new URL(`/sign-in?type=error&message=Invalid recovery code: ${error.message}`, requestUrl.origin)
+        );
+      }
+      
+      // If we reach here, the code is valid
+      console.log("Valid recovery code, redirecting to reset password");
+      return NextResponse.redirect(
+        new URL(`/protected/reset-password?code=${code}`, requestUrl.origin)
+      );
+    } catch (error) {
+      console.error("Error verifying recovery code:", error);
+      return NextResponse.redirect(
+        new URL("/sign-in?type=error&message=Could not verify recovery code.", requestUrl.origin)
+      );
+    }
   }
 
   try {

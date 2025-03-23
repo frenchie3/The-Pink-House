@@ -229,6 +229,30 @@ export const resetPasswordAction = async (formData: FormData) => {
       );
     }
 
+    if (password.length < 8) {
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        "Password must be at least 8 characters long"
+      );
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        "Password must contain at least one uppercase letter"
+      );
+    }
+
+    if (!/[0-9]/.test(password)) {
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        "Password must contain at least one number"
+      );
+    }
+
     if (!code) {
       return encodedRedirect(
         "error",
