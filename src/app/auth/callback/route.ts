@@ -10,8 +10,7 @@ export async function GET(request: Request) {
   console.log("Auth callback received:", { 
     url: requestUrl.toString(),
     code: code ? `${code.substring(0, 5)}...` : 'null', 
-    type: type || 'null',
-    allParams: Object.fromEntries(requestUrl.searchParams.entries())
+    type: type || 'null'
   });
 
   if (!code) {
@@ -21,45 +20,35 @@ export async function GET(request: Request) {
     );
   }
 
-  // Special handling for password reset
-  // Either the password-reset flag is set or type is recovery
-  if (requestUrl.toString().includes("password-reset=true") || type === "recovery") {
-    console.log("Password reset detected, redirecting to reset password page with code");
-    
-    // For password reset, add code as a query param to the reset page
+  // Handle password recovery type - always prioritize this flow
+  if (type === "recovery") {
+    console.log("Password recovery detected, redirecting to reset password page with code");
     return NextResponse.redirect(
       new URL(`/protected/reset-password?code=${code}`, requestUrl.origin)
     );
   }
 
-  // For the email confirmation and other flows, try to exchange the code
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
-    console.log("Exchange code result:", { 
-      success: !error, 
-      errorMessage: error?.message,
-      hasSession: !!data?.session,
-      user: data?.user ? `${data.user.id} (${data.user.email})` : 'null'
-    });
-    
-    if (error) {
-      console.error("Error exchanging code for session:", error.message, error.stack);
-      return NextResponse.redirect(
-        new URL(`/sign-in?type=error&message=Authentication failed: ${error.message}`, requestUrl.origin)
-      );
-    }
-    
-    if (!data.session) {
-      console.error("No session returned after code exchange");
-      return NextResponse.redirect(
-        new URL("/sign-in?type=error&message=Unable to create session. Please try again.", requestUrl.origin)
-      );
-    }
-    
-    // If this is an email confirmation
+    // For the email confirmation flow, try to exchange the code
     if (type === "signup") {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      
+      if (error) {
+        console.error("Error exchanging signup code for session:", error.message);
+        return NextResponse.redirect(
+          new URL(`/sign-in?type=error&message=Email confirmation failed: ${error.message}`, requestUrl.origin)
+        );
+      }
+      
+      if (!data.session) {
+        console.error("No session returned after signup code exchange");
+        return NextResponse.redirect(
+          new URL("/sign-in?type=error&message=Email confirmation failed. Please try again.", requestUrl.origin)
+        );
+      }
+      
       // Update the email_verified status in the users table
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -77,6 +66,15 @@ export async function GET(request: Request) {
         )
       );
     }
+    
+    // Default case - exchange code and redirect to dashboard or home
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error("Error exchanging code for session:", error.message);
+      return NextResponse.redirect(
+        new URL(`/sign-in?type=error&message=Authentication failed: ${error.message}`, requestUrl.origin)
+      );
+    }
   } catch (e) {
     console.error("Unexpected error in auth callback:", e);
     return NextResponse.redirect(
@@ -84,6 +82,6 @@ export async function GET(request: Request) {
     );
   }
 
-  // For other auth callbacks
+  // For other auth callbacks or successful exchanges without specific types
   return NextResponse.redirect(new URL(next || "/", requestUrl.origin));
 } 
