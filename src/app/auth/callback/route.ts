@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next");
   const type = requestUrl.searchParams.get("type");
+  const redirectTo = requestUrl.searchParams.get("redirect_to");
 
   if (code) {
     const supabase = await createClient();
@@ -30,8 +31,18 @@ export async function GET(request: Request) {
         )
       );
     }
+
+    // Handle password reset
+    if (redirectTo?.includes("reset-password")) {
+      return NextResponse.redirect(
+        new URL(
+          "/protected/reset-password",
+          requestUrl.origin
+        )
+      );
+    }
   }
 
-  // For other auth callbacks (password reset, etc)
+  // For other auth callbacks
   return NextResponse.redirect(new URL(next || "/", requestUrl.origin));
 } 
