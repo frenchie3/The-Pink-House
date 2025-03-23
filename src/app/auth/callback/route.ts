@@ -22,13 +22,17 @@ export async function GET(request: Request) {
   }
 
   // Special handling for password reset
+  // Either the password-reset flag is set or type is recovery
   if (requestUrl.toString().includes("password-reset=true") || type === "recovery") {
+    console.log("Password reset detected, redirecting to reset password page with code");
+    
     // For password reset, add code as a query param to the reset page
     return NextResponse.redirect(
       new URL(`/protected/reset-password?code=${code}`, requestUrl.origin)
     );
   }
 
+  // For the email confirmation and other flows, try to exchange the code
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
@@ -50,7 +54,7 @@ export async function GET(request: Request) {
     if (!data.session) {
       console.error("No session returned after code exchange");
       return NextResponse.redirect(
-        new URL("/sign-in?type=error&message=Unable to create session. Please request a new password reset link.", requestUrl.origin)
+        new URL("/sign-in?type=error&message=Unable to create session. Please try again.", requestUrl.origin)
       );
     }
     
@@ -71,14 +75,6 @@ export async function GET(request: Request) {
           "/sign-in?type=success&message=Email confirmed successfully. Please sign in.",
           requestUrl.origin
         )
-      );
-    }
-
-    // Handle regular password reset flow as a fallback
-    if (!type) {
-      console.log("Password reset flow detected, redirecting to reset password page");
-      return NextResponse.redirect(
-        new URL("/protected/reset-password", requestUrl.origin)
       );
     }
   } catch (e) {

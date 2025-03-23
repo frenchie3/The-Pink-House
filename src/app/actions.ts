@@ -229,39 +229,37 @@ export const resetPasswordAction = async (formData: FormData) => {
       );
     }
 
-    if (!code) {
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Invalid reset code. Please request a new password reset link."
-      );
+    // First, get the current session using the code
+    console.log(`Attempting to use code ${code.substring(0, 5)}... for password reset`);
+    
+    // Check if user has a session already
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      // No session, try to exchange the code for a session
+      const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      
+      if (exchangeError) {
+        console.error("Error exchanging code for session:", exchangeError.message);
+        return encodedRedirect(
+          "error",
+          "/protected/reset-password",
+          `Authentication failed: ${exchangeError.message}. Please request a new password reset link.`
+        );
+      }
+      
+      if (!exchangeData.session) {
+        console.error("No session returned after code exchange");
+        return encodedRedirect(
+          "error",
+          "/protected/reset-password",
+          "Unable to authenticate. Please request a new password reset link."
+        );
+      }
     }
-
-    // Use the verification code for password reset
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: code,
-      type: 'recovery',
-    });
-
-    if (error) {
-      console.error("Failed to verify reset code:", error.message);
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        `Verification failed: ${error.message}`
-      );
-    }
-
-    if (!data.session || !data.user) {
-      console.error("No session or user returned after verification");
-      return encodedRedirect(
-        "error",
-        "/protected/reset-password",
-        "Verification failed. Please request a new password reset link."
-      );
-    }
-
-    console.log(`Updating password for user: ${data.user.id}`);
+    
+    // Now we should have a valid session, update the password
+    console.log("Updating password");
     const { error: updateError } = await supabase.auth.updateUser({
       password: password,
     });
