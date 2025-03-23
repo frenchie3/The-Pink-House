@@ -164,15 +164,48 @@ export const resendVerificationEmail = async (formData: FormData) => {
   );
 };
 
+// Simple in-memory rate limiting for password reset attempts
+// This will reset when the server restarts, but provides basic protection
+const resetAttempts = new Map<string, { count: number, lastAttempt: number }>();
+
 export const forgotPasswordAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const supabase = await createClient();
   const origin = headers().get("origin");
   const callbackUrl = formData.get("callbackUrl")?.toString();
+  const clientIp = headers().get("x-forwarded-for") || "unknown";
 
   if (!email) {
     return encodedRedirect("error", "/forgot-password", "Email is required");
   }
+
+  // Implement rate limiting to prevent abuse
+  const key = `${clientIp}:${email.toLowerCase()}`;
+  const now = Date.now();
+  const attempt = resetAttempts.get(key) || { count: 0, lastAttempt: 0 };
+
+  // Allow 3 attempts per 30 minutes per IP+email combination
+  const rateLimit = 3;
+  const cooldownPeriod = 30 * 60 * 1000; // 30 minutes in milliseconds
+  
+  // Reset count if cooldown period has passed
+  if (now - attempt.lastAttempt > cooldownPeriod) {
+    attempt.count = 0;
+  }
+
+  if (attempt.count >= rateLimit) {
+    const timeRemaining = Math.ceil((attempt.lastAttempt + cooldownPeriod - now) / 60000); // minutes
+    return encodedRedirect(
+      "error",
+      "/forgot-password",
+      `Too many requests. Please try again in ${timeRemaining} minutes.`
+    );
+  }
+
+  // Update rate limit tracking
+  attempt.count += 1;
+  attempt.lastAttempt = now;
+  resetAttempts.set(key, attempt);
 
   // Use the new /auth/confirm endpoint for token exchange following PKCE flow
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -201,6 +234,30 @@ export const forgotPasswordAction = async (formData: FormData) => {
 
 export const resetPasswordAction = async (formData: FormData) => {
   const supabase = await createClient();
+  
+  // Check for valid session before allowing password reset
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    return encodedRedirect(
+      "error",
+      "/forgot-password",
+      "Your session has expired. Please request a new password reset link."
+    );
+  }
+  
+  // Check if session is still valid
+  // Supabase session contains an expires_at timestamp in seconds
+  const now = Math.floor(Date.now() / 1000); // Current time in seconds
+  
+  if (sessionData.session.expires_at && now > sessionData.session.expires_at) {
+    // Force session expiry for security
+    await supabase.auth.signOut();
+    return encodedRedirect(
+      "error",
+      "/forgot-password",
+      "Your password reset link has expired. Please request a new one."
+    );
+  }
 
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
@@ -221,15 +278,35 @@ export const resetPasswordAction = async (formData: FormData) => {
     );
   }
 
+  // Enhanced password validation on server-side
+  const passwordValidation = [
+    { isValid: password.length >= 8, message: "Password must be at least 8 characters long" },
+    { isValid: /[A-Z]/.test(password), message: "Password must contain at least one uppercase letter" },
+    { isValid: /[a-z]/.test(password), message: "Password must contain at least one lowercase letter" },
+    { isValid: /[0-9]/.test(password), message: "Password must contain at least one number" },
+    { isValid: /[^A-Za-z0-9]/.test(password), message: "Password must contain at least one special character" }
+  ];
+  
+  const failedValidation = passwordValidation.find(rule => !rule.isValid);
+  if (failedValidation) {
+    return encodedRedirect(
+      "error",
+      "/protected/reset-password",
+      failedValidation.message
+    );
+  }
+
   const { error } = await supabase.auth.updateUser({
     password: password,
   });
 
   if (error) {
+    // Log error without exposing sensitive details to the user
+    console.error("Password update error:", error.message);
     return encodedRedirect(
       "error",
       "/protected/reset-password",
-      "Password update failed",
+      "Password update failed. Please try again."
     );
   }
 

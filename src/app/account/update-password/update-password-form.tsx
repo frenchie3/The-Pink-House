@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReloadIcon } from "@radix-ui/react-icons";
+import { Progress } from "@/components/ui/progress";
 
 /**
  * Form component for updating the user's password
@@ -22,9 +23,32 @@ export default function UpdatePasswordForm() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Password validation rules
-  const isPasswordValid = (password: string) => {
-    return password.length >= 8; // Add more validation as needed
+  // Enhanced password validation rules with detailed requirements
+  const validatePassword = (password: string) => {
+    const requirements = [
+      { met: password.length >= 8, message: "At least 8 characters" },
+      { met: /[A-Z]/.test(password), message: "At least one uppercase letter" },
+      { met: /[a-z]/.test(password), message: "At least one lowercase letter" },
+      { met: /[0-9]/.test(password), message: "At least one number" },
+      { met: /[^A-Za-z0-9]/.test(password), message: "At least one special character" }
+    ];
+    
+    return requirements;
+  };
+  
+  // Calculate password strength for the progress bar
+  const calculatePasswordStrength = (password: string) => {
+    if (!password) return 0;
+    const requirements = validatePassword(password);
+    const metCount = requirements.filter(req => req.met).length;
+    return (metCount / requirements.length) * 100;
+  };
+  
+  // Get CSS color for password strength
+  const getStrengthColor = (strength: number) => {
+    if (strength < 40) return "bg-red-500";
+    if (strength < 80) return "bg-yellow-500";
+    return "bg-green-500";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,8 +58,11 @@ export default function UpdatePasswordForm() {
     setIsLoading(true);
 
     // Validate passwords
-    if (!isPasswordValid(password)) {
-      setError("Password must be at least 8 characters long");
+    const requirements = validatePassword(password);
+    const failedRequirements = requirements.filter(req => !req.met);
+    
+    if (failedRequirements.length > 0) {
+      setError(`Password does not meet requirements: ${failedRequirements.map(r => r.message).join(", ")}`);
       setIsLoading(false);
       return;
     }
@@ -68,6 +95,11 @@ export default function UpdatePasswordForm() {
     }
   };
 
+  // Calculate current password strength
+  const passwordStrength = calculatePasswordStrength(password);
+  const strengthColor = getStrengthColor(passwordStrength);
+  const requirements = validatePassword(password);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
@@ -93,6 +125,31 @@ export default function UpdatePasswordForm() {
           autoComplete="new-password"
           disabled={isLoading}
         />
+        
+        {password && (
+          <div className="mt-2 space-y-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Password strength</Label>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full ${strengthColor}`} 
+                  style={{ width: `${passwordStrength}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Requirements:</Label>
+              <ul className="text-xs space-y-1">
+                {requirements.map((req, index) => (
+                  <li key={index} className={req.met ? "text-green-500" : "text-muted-foreground"}>
+                    {req.met ? "✓ " : "○ "}{req.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="space-y-2">
