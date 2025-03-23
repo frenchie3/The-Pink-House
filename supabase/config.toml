@@ -146,19 +146,23 @@ otp_length = 6
 otp_expiry = 3600
 
 # Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+[auth.email.smtp]
+enabled = true
+host = "smtp.sendgrid.net"
+port = 587
+user = "apikey"
+pass = "env(SENDGRID_API_KEY)"
+admin_email = "noreply@thepinkhouse.com"  # Replace with your verified sender
+sender_name = "The Pink House"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Customize email templates
+[auth.email.template.confirm_signup]
+subject = "Welcome to The Pink House - Please Confirm Your Email"
+content_path = "./templates/confirm-signup.html"
+
+[auth.email.template.reset_password]
+subject = "Reset Your Pink House Password"
+content_path = "./templates/reset-password.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            background-color: #FDF2F8;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #DB2777;
+        }
+        .content {
+            padding: 30px 20px;
+            background: #fff;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #DB2777;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">The Pink House</div>
+        </div>
+        <div class="content">
+            <h2>Confirm your signup</h2>
+            <p>Thank you for creating an account with The Pink House. Please click the button below to confirm your email address:</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ .ConfirmationURL }}" class="button">Confirm your email</a>
+            </div>
+            
+            <p>After confirming your email, you'll be redirected to the sign-in page where you can log in to your account.</p>
+            
+            <p>If you didn't create an account with us, you can safely ignore this email.</p>
+            
+            <p>This confirmation link will expire in 24 hours.</p>
+            
+            <p>If you're having trouble clicking the button, copy and paste this URL into your browser:</p>
+            <p style="font-size: 12px; word-break: break-all; color: #666;">
+                {{ .ConfirmationURL }}
+            </p>
+        </div>
+        <div class="footer">
+            <p>© {{ .CurrentYear }} The Pink House. All rights reserved.</p>
+            <p>This email was sent to {{ .Email }}</p>
+        </div>
+    </div>
+</body>
+</html> 
