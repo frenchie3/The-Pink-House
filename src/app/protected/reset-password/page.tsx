@@ -18,6 +18,11 @@ export default async function ResetPassword(props: {
   // Check if user is authenticated
   const { data: { session }, error } = await supabase.auth.getSession();
   
+  console.log("Reset password page - Session check:", { 
+    hasSession: !!session, 
+    error: error?.message 
+  });
+  
   if (error || !session) {
     console.error("Session error:", error);
     return redirect("/sign-in?type=error&message=Please request a new password reset link.");

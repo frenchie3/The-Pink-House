@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const next = requestUrl.searchParams.get("next");
   const type = requestUrl.searchParams.get("type");
 
-  console.log("Auth callback received:", { code, next, type });
+  console.log("Auth callback received:", { code, next, type, url: request.url });
 
   if (code) {
     try {
@@ -48,17 +48,21 @@ export async function GET(request: Request) {
         );
       }
 
-      // If this is a password recovery
-      if (type === "recovery") {
+      // If this is a password recovery or no type specified
+      if (type === "recovery" || !type) {
+        console.log("Handling password recovery flow");
         // Redirect to the reset password page
         return NextResponse.redirect(
           new URL("/protected/reset-password", requestUrl.origin)
         );
       }
 
-      // If no type specified, assume it's a password reset
+      // For any other type, redirect to sign in
       return NextResponse.redirect(
-        new URL("/protected/reset-password", requestUrl.origin)
+        new URL(
+          `/sign-in?type=error&message=Invalid authentication type.`,
+          requestUrl.origin
+        )
       );
     } catch (error) {
       console.error("Error in auth callback:", error);
