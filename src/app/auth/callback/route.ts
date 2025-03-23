@@ -16,8 +16,11 @@ export async function GET(request: Request) {
         new URL(`/sign-in?error=${encodeURIComponent(error.message)}`, requestUrl.origin)
       );
     }
+
+    // After successful code exchange, redirect to sign-in for password reset
+    return NextResponse.redirect(new URL("/sign-in", requestUrl.origin));
   }
 
-  // URL to redirect to after sign in process completes
+  // If no code, redirect to dashboard
   return NextResponse.redirect(new URL(next, requestUrl.origin));
 } 
