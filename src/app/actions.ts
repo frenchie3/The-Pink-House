@@ -266,6 +266,13 @@ export const resetPasswordAction = async (formData: FormData) => {
     
     if (exchangeError) {
       console.error("Error exchanging code for session:", exchangeError.message);
+      if (exchangeError.message.includes("invalid flow state")) {
+        return encodedRedirect(
+          "error",
+          "/protected/reset-password",
+          "This password reset link has expired or has already been used. Please request a new one."
+        );
+      }
       return encodedRedirect(
         "error",
         "/protected/reset-password",
