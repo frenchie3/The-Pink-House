@@ -30,8 +30,16 @@ export async function GET(request: Request) {
         )
       );
     }
+
+    // If this is a password recovery
+    if (type === "recovery") {
+      // Redirect to the reset password page
+      return NextResponse.redirect(
+        new URL(next || "/protected/reset-password", requestUrl.origin)
+      );
+    }
   }
 
-  // For other auth callbacks (password reset, etc)
+  // For other auth callbacks
   return NextResponse.redirect(new URL(next || "/", requestUrl.origin));
 } 
