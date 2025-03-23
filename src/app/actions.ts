@@ -173,64 +173,100 @@ export const forgotPasswordAction = async (formData: FormData) => {
     return encodedRedirect("error", "/forgot-password", "Email is required");
   }
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback`,
-  });
+  console.log(`Initiating password reset for ${email} with redirect to ${origin}/auth/callback`);
 
-  if (error) {
-    console.error(error.message);
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/auth/callback`,
+    });
+
+    if (error) {
+      console.error("Password reset error:", error.message);
+      return encodedRedirect(
+        "error",
+        "/forgot-password",
+        `Could not reset password: ${error.message}`
+      );
+    }
+
+    return encodedRedirect(
+      "success",
+      "/forgot-password",
+      "Check your email for a link to reset your password."
+    );
+  } catch (error) {
+    console.error("Unexpected error in forgotPasswordAction:", error);
     return encodedRedirect(
       "error",
       "/forgot-password",
-      "Could not reset password",
+      "An unexpected error occurred. Please try again."
     );
   }
-
-  return encodedRedirect(
-    "success",
-    "/forgot-password",
-    "Check your email for a link to reset your password.",
-  );
 };
 
 export const resetPasswordAction = async (formData: FormData) => {
-  const supabase = await createClient();
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
+  try {
+    const supabase = await createClient();
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
 
-  if (!password || !confirmPassword) {
+    console.log("Processing password reset with new password");
+
+    if (!password || !confirmPassword) {
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        "Password and confirm password are required"
+      );
+    }
+
+    if (password !== confirmPassword) {
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        "Passwords do not match"
+      );
+    }
+
+    // Check if user is authenticated for this action
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("No authenticated user found when trying to reset password");
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        "Not authenticated. Please request a new password reset link."
+      );
+    }
+
+    console.log(`Updating password for user: ${user.id}`);
+    const { error } = await supabase.auth.updateUser({
+      password: password,
+    });
+
+    if (error) {
+      console.error("Password update failed:", error.message);
+      return encodedRedirect(
+        "error",
+        "/protected/reset-password",
+        `Password update failed: ${error.message}`
+      );
+    }
+
+    console.log("Password updated successfully");
+    return encodedRedirect(
+      "success",
+      "/sign-in",
+      "Password has been updated successfully. Please sign in with your new password."
+    );
+  } catch (error) {
+    console.error("Unexpected error in resetPasswordAction:", error);
     return encodedRedirect(
       "error",
       "/protected/reset-password",
-      "Password and confirm password are required",
+      "An unexpected error occurred. Please try again."
     );
   }
-
-  if (password !== confirmPassword) {
-    return encodedRedirect(
-      "error",
-      "/protected/reset-password",
-      "Passwords do not match",
-    );
-  }
-
-  const { error } = await supabase.auth.updateUser({
-    password: password,
-  });
-
-  if (error) {
-    return encodedRedirect(
-      "error",
-      "/protected/reset-password",
-      "Password update failed",
-    );
-  }
-
-  return encodedRedirect(
-    "success",
-    "/sign-in",
-    "Password has been updated successfully. Please sign in with your new password.",
-  );
 };
 
 export const signOutAction = async () => {

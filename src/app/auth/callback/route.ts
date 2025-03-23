@@ -7,16 +7,42 @@ export async function GET(request: Request) {
   const next = requestUrl.searchParams.get("next");
   const type = requestUrl.searchParams.get("type");
   
-  console.log("Auth callback received:", { code: code?.substring(0, 5) + "...", type, url: requestUrl.toString() });
+  console.log("Auth callback received:", { 
+    url: requestUrl.toString(),
+    code: code ? `${code.substring(0, 5)}...` : 'null', 
+    type: type || 'null',
+    allParams: Object.fromEntries(requestUrl.searchParams.entries())
+  });
 
-  if (code) {
+  if (!code) {
+    console.error("No code parameter found in auth callback URL");
+    return NextResponse.redirect(
+      new URL("/sign-in?type=error&message=Missing authentication code. Please try again.", requestUrl.origin)
+    );
+  }
+
+  try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    
+    console.log("Exchange code result:", { 
+      success: !error, 
+      errorMessage: error?.message,
+      hasSession: !!data?.session,
+      user: data?.user ? `${data.user.id} (${data.user.email})` : 'null'
+    });
     
     if (error) {
-      console.error("Error exchanging code for session:", error);
+      console.error("Error exchanging code for session:", error.message, error.stack);
       return NextResponse.redirect(
-        new URL("/sign-in?type=error&message=Authentication failed. Please try again.", requestUrl.origin)
+        new URL(`/sign-in?type=error&message=Authentication failed: ${error.message}`, requestUrl.origin)
+      );
+    }
+    
+    if (!data.session) {
+      console.error("No session returned after code exchange");
+      return NextResponse.redirect(
+        new URL("/sign-in?type=error&message=Unable to create session. Please request a new password reset link.", requestUrl.origin)
       );
     }
     
@@ -41,12 +67,17 @@ export async function GET(request: Request) {
     }
 
     // Handle password reset flow
-    if (code && !type) {
+    if (!type) {
       console.log("Password reset flow detected, redirecting to reset password page");
       return NextResponse.redirect(
         new URL("/protected/reset-password", requestUrl.origin)
       );
     }
+  } catch (e) {
+    console.error("Unexpected error in auth callback:", e);
+    return NextResponse.redirect(
+      new URL("/sign-in?type=error&message=An unexpected error occurred. Please try again.", requestUrl.origin)
+    );
   }
 
   // For other auth callbacks
