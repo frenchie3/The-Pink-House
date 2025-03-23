@@ -174,8 +174,9 @@ export const forgotPasswordAction = async (formData: FormData) => {
     return encodedRedirect("error", "/forgot-password", "Email is required");
   }
 
+  // Use the new /auth/confirm endpoint for token exchange following PKCE flow
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?redirect_to=/protected/reset-password`,
+    redirectTo: `${origin}/auth/confirm?type=recovery&next=/account/update-password`,
   });
 
   if (error) {
