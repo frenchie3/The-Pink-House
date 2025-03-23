@@ -6,7 +6,6 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next");
   const type = requestUrl.searchParams.get("type");
-  const redirectTo = requestUrl.searchParams.get("redirect_to");
 
   if (code) {
     const supabase = await createClient();
@@ -32,13 +31,10 @@ export async function GET(request: Request) {
       );
     }
 
-    // Handle password reset
-    if (redirectTo?.includes("reset-password")) {
+    // Handle password reset flow
+    if (code && !type) {
       return NextResponse.redirect(
-        new URL(
-          "/protected/reset-password",
-          requestUrl.origin
-        )
+        new URL("/protected/reset-password", requestUrl.origin)
       );
     }
   }
