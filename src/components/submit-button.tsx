@@ -9,16 +9,18 @@ export function SubmitButton({
   className,
   pendingText = "Processing",
   formAction,
+  disabled,
 }: {
   children: React.ReactNode;
   className?: string;
   pendingText?: string;
   formAction?: (formData: FormData) => Promise<any>;
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" disabled={pending} className={className} formAction={formAction}>
+    <Button type="submit" disabled={disabled || pending} className={className} formAction={formAction}>
       {pending ? (
         <div className="flex items-center">
           <span className="relative flex h-3 w-3 mr-3">

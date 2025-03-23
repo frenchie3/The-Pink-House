@@ -30,6 +30,16 @@ export async function middleware(req: NextRequest) {
   const { data } = await supabase.auth.getSession();
   const { session } = data;
 
+  // Allow reset-password without auth
+  if (req.nextUrl.pathname.startsWith("/protected/reset-password")) {
+    return res;
+  }
+
+  // Protected routes
+  if (req.nextUrl.pathname.startsWith("/protected") && !session) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
+  }
+
   // Protected routes
   if (req.nextUrl.pathname.startsWith("/dashboard") && !session) {
     return NextResponse.redirect(new URL("/sign-in", req.url));
