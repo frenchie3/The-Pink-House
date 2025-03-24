@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReloadIcon } from "@radix-ui/react-icons";
-import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
 
 /**
  * Form component for updating the user's password
@@ -86,7 +86,7 @@ export default function UpdatePasswordForm() {
       // Show success message and redirect after a delay
       setSuccess("Password updated successfully!");
       setTimeout(() => {
-        router.push("/sign-in?message=Your+password+has+been+updated+successfully");
+        router.push("/password-reset-success");
       }, 2000);
     } catch (err: any) {
       setError(err.message || "An error occurred while updating your password");
@@ -109,7 +109,7 @@ export default function UpdatePasswordForm() {
       )}
       
       {success && (
-        <Alert>
+        <Alert className="bg-green-50 border-green-200 text-green-800">
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
@@ -124,15 +124,16 @@ export default function UpdatePasswordForm() {
           required
           autoComplete="new-password"
           disabled={isLoading}
+          className="border-gray-300 focus:border-pink-500 focus:ring-pink-500"
         />
         
         {password && (
           <div className="mt-2 space-y-2">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Password strength</Label>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div 
-                  className={`h-2 rounded-full ${strengthColor}`} 
+                  className={`h-2.5 rounded-full transition-all duration-300 ${strengthColor}`} 
                   style={{ width: `${passwordStrength}%` }}
                 ></div>
               </div>
@@ -140,10 +141,19 @@ export default function UpdatePasswordForm() {
             
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Requirements:</Label>
-              <ul className="text-xs space-y-1">
+              <ul className="text-xs space-y-1.5 mt-1">
                 {requirements.map((req, index) => (
-                  <li key={index} className={req.met ? "text-green-500" : "text-muted-foreground"}>
-                    {req.met ? "✓ " : "○ "}{req.message}
+                  <li key={index} className={req.met ? "text-green-600" : "text-muted-foreground flex items-center"}>
+                    {req.met ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 12m-1 0" />
+                      </svg>
+                    )}
+                    {req.message}
                   </li>
                 ))}
               </ul>
@@ -162,12 +172,13 @@ export default function UpdatePasswordForm() {
           required
           autoComplete="new-password"
           disabled={isLoading}
+          className="border-gray-300 focus:border-pink-500 focus:ring-pink-500"
         />
       </div>
       
       <Button 
         type="submit" 
-        className="w-full" 
+        className="w-full bg-pink-600 hover:bg-pink-700 text-white mt-6" 
         disabled={isLoading}
       >
         {isLoading ? (
@@ -176,7 +187,7 @@ export default function UpdatePasswordForm() {
             Updating Password
           </>
         ) : (
-          "Update Password"
+          "Reset Password"
         )}
       </Button>
     </form>

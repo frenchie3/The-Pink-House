@@ -225,11 +225,8 @@ export const forgotPasswordAction = async (formData: FormData) => {
     return redirect(callbackUrl);
   }
 
-  return encodedRedirect(
-    "success",
-    "/forgot-password",
-    "Check your email for a link to reset your password.",
-  );
+  // Redirect to the check-email page with the email address
+  return redirect(`/check-email?email=${encodeURIComponent(email)}`);
 };
 
 export const resetPasswordAction = async (formData: FormData) => {
