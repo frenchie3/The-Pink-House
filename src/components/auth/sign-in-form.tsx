@@ -17,11 +17,13 @@ interface SignInFormProps {
 
 export default function SignInForm({ message }: SignInFormProps) {
   const [cooldown, setCooldown] = useState(0);
-  const isUnverified = message?.type === "warning" && message.message.includes("verify your email");
+  const isUnverified =
+    message?.type === "warning" &&
+    message.message.includes("verify your email");
 
   useEffect(() => {
     if (cooldown > 0) {
-      const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
+      const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [cooldown]);
@@ -48,8 +50,8 @@ export default function SignInForm({ message }: SignInFormProps) {
               onClick={() => handleResend(message.message.split(" ")[0])}
               disabled={cooldown > 0}
             >
-              {cooldown > 0 
-                ? `Resend in ${cooldown}s` 
+              {cooldown > 0
+                ? `Resend in ${cooldown}s`
                 : "Resend verification email"}
             </Button>
           </AlertDescription>
@@ -117,9 +119,11 @@ export default function SignInForm({ message }: SignInFormProps) {
             Sign in
           </SubmitButton>
 
-          {!isUnverified && <FormMessage message={message} />}
+          {!isUnverified && message?.message && (
+            <FormMessage message={message} />
+          )}
         </form>
       </div>
     </div>
   );
-} 
+}
