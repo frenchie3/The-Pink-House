@@ -4,16 +4,27 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { format, startOfWeek, addDays, addWeeks, isSameDay, isWithinInterval } from "date-fns";
+import {
+  format,
+  startOfWeek,
+  addDays,
+  addWeeks,
+  isSameDay,
+  isWithinInterval,
+} from "date-fns";
 
 // Color palette for rentals (using softer, more pastel colors)
 const RENTAL_COLORS = [
-  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
-  { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-700' },
-  { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
-  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
-  { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700' },
-  { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700' },
+  {
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    text: "text-emerald-700",
+  },
+  { bg: "bg-sky-50", border: "border-sky-200", text: "text-sky-700" },
+  { bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+  { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+  { bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
+  { bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
 ];
 
 // Types for our component
@@ -69,61 +80,62 @@ export default function CubbyCalendarView({
   // Assign colors to rentals based on concurrent usage
   const rentals = useMemo(() => {
     const rentalsWithColor = [...initialRentals] as RentalWithColor[];
-    
+
     // Sort rentals by start date
-    rentalsWithColor.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
-    
-    rentalsWithColor.forEach(rental => {
+    rentalsWithColor.sort(
+      (a, b) =>
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
+    );
+
+    rentalsWithColor.forEach((rental) => {
       const rentalStart = new Date(rental.start_date);
       const rentalEnd = new Date(rental.end_date);
-      
+
       // Find concurrent rentals
-      const concurrentRentals = rentalsWithColor.filter(r => {
+      const concurrentRentals = rentalsWithColor.filter((r) => {
         if (r === rental) return false;
         const rStart = new Date(r.start_date);
         const rEnd = new Date(r.end_date);
-        
+
         return (
           isWithinInterval(rStart, { start: rentalStart, end: rentalEnd }) ||
           isWithinInterval(rEnd, { start: rentalStart, end: rentalEnd }) ||
           isWithinInterval(rentalStart, { start: rStart, end: rEnd })
         );
       });
-      
+
       // Find first available color not used by concurrent rentals
-      const usedColors = new Set(concurrentRentals.map(r => r.colorIndex));
-      const availableColor = RENTAL_COLORS.findIndex((_, index) => !usedColors.has(index));
+      const usedColors = new Set(concurrentRentals.map((r) => r.colorIndex));
+      const availableColor = RENTAL_COLORS.findIndex(
+        (_, index) => !usedColors.has(index),
+      );
       rental.colorIndex = availableColor >= 0 ? availableColor : 0;
     });
-    
+
     return rentalsWithColor;
   }, [initialRentals]);
 
   // Navigate between weeks
   const navigateWeeks = (direction: "prev" | "next") => {
     const weeks = view === "week" ? 1 : 2;
-    setCurrentDate(prev => 
-      direction === "next" 
-        ? addWeeks(prev, weeks)
-        : addWeeks(prev, -weeks)
+    setCurrentDate((prev) =>
+      direction === "next" ? addWeeks(prev, weeks) : addWeeks(prev, -weeks),
     );
   };
 
   // Get rental status for a specific cubby and date
   const getRentalForCubbyAndDate = (cubbyId: string, date: Date) => {
-    return rentals.find(rental => {
+    return rentals.find((rental) => {
       const startDate = new Date(rental.start_date);
       const endDate = new Date(rental.end_date);
       return (
-        rental.cubby_id === cubbyId &&
-        date >= startDate &&
-        date <= endDate
+        rental.cubby_id === cubbyId && date >= startDate && date <= endDate
       );
     });
   };
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 overflow-hidden">
       {/* Calendar Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
@@ -135,7 +147,8 @@ export default function CubbyCalendarView({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="font-medium">
-            {format(dates[0], "MMM d")} - {format(dates[dates.length - 1], "MMM d, yyyy")}
+            {format(dates[0], "MMM d")} -{" "}
+            {format(dates[dates.length - 1], "MMM d, yyyy")}
           </span>
           <Button
             variant="outline"
@@ -167,62 +180,101 @@ export default function CubbyCalendarView({
       <div className="overflow-x-auto">
         <div className="min-w-[800px]">
           {/* Date Headers */}
-          <div className="grid grid-cols-[150px_1fr] gap-4">
+          <div className="grid grid-cols-[150px_1fr] gap-2">
             <div className="font-medium text-gray-500">Cubbies</div>
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-0 border-l border-t border-gray-200">
               {dates.map((date, i) => (
                 <div
                   key={i}
-                  className={`text-center p-2 font-medium ${
-                    isSameDay(date, new Date()) ? "bg-pink-50 rounded-md" : ""
+                  className={`text-center p-2 font-medium border-b-2 ${
+                    isSameDay(date, new Date())
+                      ? "bg-pink-50 rounded-t-md border-pink-200"
+                      : "border-gray-200"
                   }`}
                 >
-                  <div>{format(date, "d")}</div>
-                  <div className="text-sm text-gray-500">{format(date, "ddd")}</div>
+                  <div className="text-lg">{format(date, "d")}</div>
+                  <div className="text-xs font-bold text-gray-500 uppercase">
+                    {format(date, "EEE")}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Cubby Rows */}
-          <div className="mt-4 space-y-1">
-            {cubbies.map(cubby => (
-              <div key={cubby.id} className="grid grid-cols-[150px_1fr] gap-4">
+          <div className="mt-4 space-y-2">
+            {cubbies.map((cubby) => (
+              <div key={cubby.id} className="grid grid-cols-[150px_1fr] gap-2">
                 <div className="font-medium flex items-center">
                   <span className="truncate">
                     #{cubby.cubby_number} - {cubby.location}
                   </span>
                 </div>
-                <div className="grid grid-cols-7 gap-1 relative">
-                  {dates.map((date, i) => {
-                    const rental = getRentalForCubbyAndDate(cubby.id, date) as RentalWithColor;
-                    const isRentalStart = rental && isSameDay(date, new Date(rental.start_date));
-                    const isRentalEnd = rental && isSameDay(date, new Date(rental.end_date));
-                    const colors = rental ? RENTAL_COLORS[rental.colorIndex || 0] : null;
-                    
-                    return (
-                      <div
-                        key={i}
-                        className={`h-12 border ${
-                          rental ? `${colors?.bg} ${colors?.border} ${
-                            isRentalStart ? 'rounded-l-md' : ''
-                          } ${
-                            isRentalEnd ? 'rounded-r-md' : ''
-                          }` : 'border-gray-100 rounded-md'
-                        }`}
-                      >
-                        {rental && isRentalStart && (
-                          <div 
-                            className={`absolute -top-3 left-1 z-10 px-2 py-0.5 rounded-md text-xs font-medium
-                              ${colors?.bg} ${colors?.border} ${colors?.text} shadow-sm`}
-                            style={{ minWidth: 'max-content' }}
-                          >
-                            {rental.seller.full_name}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="grid grid-cols-7 gap-0 relative h-16">
+                  {/* Empty grid cells for structure */}
+                  {dates.map((date, i) => (
+                    <div
+                      key={i}
+                      className="h-16 border border-gray-200 bg-white hover:bg-gray-50/50 transition-colors"
+                    />
+                  ))}
+
+                  {/* Overlay rentals as floating elements */}
+                  {rentals
+                    .filter((rental) => {
+                      const rentalStart = new Date(rental.start_date);
+                      const rentalEnd = new Date(rental.end_date);
+                      // Check if rental overlaps with current date range
+                      return dates.some((date) => {
+                        return (
+                          date >= rentalStart &&
+                          date <= rentalEnd &&
+                          rental.cubby_id === cubby.id
+                        );
+                      });
+                    })
+                    .map((rental, idx) => {
+                      const rentalStart = new Date(rental.start_date);
+                      const rentalEnd = new Date(rental.end_date);
+                      const colors =
+                        RENTAL_COLORS[
+                          (rental as RentalWithColor).colorIndex || 0
+                        ];
+
+                      // Find the position in the grid
+                      const startIdx = dates.findIndex(
+                        (date) => date >= rentalStart,
+                      );
+                      const endIdx = dates.findIndex(
+                        (date) => date > rentalEnd,
+                      );
+                      const actualEndIdx =
+                        endIdx === -1 ? dates.length - 1 : endIdx - 1;
+
+                      // Calculate width based on days
+                      const spanDays = actualEndIdx - startIdx + 1;
+                      const leftPosition = `${(startIdx / dates.length) * 100}%`;
+                      const width = `${(spanDays / dates.length) * 100}%`;
+
+                      return (
+                        <div
+                          key={`rental-${rental.id}-${idx}`}
+                          className={`absolute top-1 rounded-md shadow-sm px-2 py-1 z-10 ${colors?.bg} ${colors?.border} ${colors?.text} border`}
+                          style={{
+                            left: `calc(${leftPosition} + 4px)`,
+                            width: `calc(${width} - 8px)`,
+                            height: "3rem",
+                            display: "flex",
+                            alignItems: "center",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {rental.seller.full_name}
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             ))}
@@ -231,4 +283,4 @@ export default function CubbyCalendarView({
       </div>
     </Card>
   );
-} 
+}
