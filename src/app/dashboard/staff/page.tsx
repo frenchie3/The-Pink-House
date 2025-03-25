@@ -644,7 +644,7 @@ export default async function StaffDashboard() {
               </Link>
 
               <Link
-                href="/dashboard/staff/cubbies"
+                href="/dashboard/staff/cubby-management"
                 className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex items-center"
               >
                 <div className="bg-pink-100 p-3 rounded-lg mr-4">

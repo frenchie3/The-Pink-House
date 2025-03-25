@@ -21,40 +21,122 @@ import {
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { ThemeSwitcher } from "./theme-switcher";
+import { useEffect, useState } from "react";
 
 export default function DashboardNavbar() {
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const navItems = [
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: <Home className="h-5 w-5" />,
-    },
-    {
-      href: "/dashboard/inventory",
-      label: "Inventory",
-      icon: <BoxIcon className="h-5 w-5" />,
-    },
-    {
-      href: "/dashboard/pos",
-      label: "Point of Sale",
-      icon: <CreditCard className="h-5 w-5" />,
-    },
-    {
-      href: "/dashboard/sales",
-      label: "Sales",
-      icon: <ShoppingBag className="h-5 w-5" />,
-    },
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        setIsLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+          setUserRole(userData?.role || null);
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUserRole();
+  }, []);
 
-    {
-      href: "/dashboard/reports",
-      label: "Reports",
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-  ];
+  const getNavItems = () => {
+    const baseItems = [
+      {
+        href: "/dashboard",
+        label: "Dashboard",
+        icon: <Home className="h-5 w-5" />,
+      },
+    ];
+
+    const staffItems = [
+      {
+        href: "/dashboard/inventory",
+        label: "Inventory",
+        icon: <BoxIcon className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/pos",
+        label: "Point of Sale",
+        icon: <CreditCard className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/staff/cubby-management",
+        label: "Cubby Management",
+        icon: <Package className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/sales",
+        label: "Sales",
+        icon: <ShoppingBag className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/reports",
+        label: "Reports",
+        icon: <BarChart3 className="h-5 w-5" />,
+      },
+    ];
+
+    const adminItems = [
+      {
+        href: "/dashboard/inventory",
+        label: "Inventory",
+        icon: <BoxIcon className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/pos",
+        label: "Point of Sale",
+        icon: <CreditCard className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/sales",
+        label: "Sales",
+        icon: <ShoppingBag className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/reports",
+        label: "Reports",
+        icon: <BarChart3 className="h-5 w-5" />,
+      },
+    ];
+
+    switch (userRole) {
+      case "staff":
+        return [...baseItems, ...staffItems];
+      case "admin":
+        return [...baseItems, ...adminItems];
+      default:
+        return baseItems;
+    }
+  };
+
+  const navItems = getNavItems();
+
+  if (isLoading) {
+    return (
+      <nav className="w-full border-b border-gray-200 bg-white py-3">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Link href="/" prefetch className="text-xl font-bold text-teal-600 mr-6">
+              Inventory
+            </Link>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="w-full border-b border-gray-200 bg-white py-3">
