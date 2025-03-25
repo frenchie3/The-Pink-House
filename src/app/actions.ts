@@ -20,6 +20,23 @@ export const signUpAction = async (formData: FormData) => {
     );
   }
 
+  // Password validation
+  const passwordValidation = [
+    { isValid: password.length >= 8, message: "Password must be at least 8 characters long" },
+    { isValid: /[A-Z]/.test(password), message: "Password must contain at least one uppercase letter" },
+    { isValid: /[a-z]/.test(password), message: "Password must contain at least one lowercase letter" },
+    { isValid: /[0-9]/.test(password), message: "Password must contain at least one number" }
+  ];
+  
+  const failedValidation = passwordValidation.find(rule => !rule.isValid);
+  if (failedValidation) {
+    return encodedRedirect(
+      "error",
+      "/sign-up",
+      failedValidation.message
+    );
+  }
+
   const {
     data: { user },
     error,
@@ -280,8 +297,7 @@ export const resetPasswordAction = async (formData: FormData) => {
     { isValid: password.length >= 8, message: "Password must be at least 8 characters long" },
     { isValid: /[A-Z]/.test(password), message: "Password must contain at least one uppercase letter" },
     { isValid: /[a-z]/.test(password), message: "Password must contain at least one lowercase letter" },
-    { isValid: /[0-9]/.test(password), message: "Password must contain at least one number" },
-    { isValid: /[^A-Za-z0-9]/.test(password), message: "Password must contain at least one special character" }
+    { isValid: /[0-9]/.test(password), message: "Password must contain at least one number" }
   ];
   
   const failedValidation = passwordValidation.find(rule => !rule.isValid);

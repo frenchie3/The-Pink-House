@@ -8,6 +8,7 @@ import { signUpAction } from "@/app/actions";
 import Navbar from "@/components/navbar";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
+import PasswordInput from "./password-input";
 
 export default async function Signup(props: {
   searchParams: Promise<Message>;
@@ -97,15 +98,7 @@ export default async function Signup(props: {
                     <Label htmlFor="password" className="text-sm font-medium">
                       Password
                     </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      name="password"
-                      placeholder="Your password"
-                      minLength={6}
-                      required
-                      className="w-full"
-                    />
+                    <PasswordInput required />
                   </div>
                 </div>
 

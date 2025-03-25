@@ -29,8 +29,7 @@ export default function UpdatePasswordForm() {
       { met: password.length >= 8, message: "At least 8 characters" },
       { met: /[A-Z]/.test(password), message: "At least one uppercase letter" },
       { met: /[a-z]/.test(password), message: "At least one lowercase letter" },
-      { met: /[0-9]/.test(password), message: "At least one number" },
-      { met: /[^A-Za-z0-9]/.test(password), message: "At least one special character" }
+      { met: /[0-9]/.test(password), message: "At least one number" }
     ];
     
     return requirements;
