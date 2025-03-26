@@ -279,6 +279,7 @@ export default function CubbyCalendarView({
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                           }}
+                          prefetch={false}
                         >
                           {rental.seller.full_name}
                         </Link>

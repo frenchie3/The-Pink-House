@@ -21,6 +21,8 @@ import {
   Trash,
   CheckCircle,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import {
@@ -32,6 +34,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatPrice } from "@/lib/utils";
+import "@/app/dashboard/staff/print-labels/print-labels.css"; // Import the print-labels CSS
+import { InventoryTable } from "./client-components";
 
 // Types
 interface CubbyRental {
@@ -105,6 +109,7 @@ export default async function CubbyRentalDetailsPage({
     .from("inventory_items")
     .select("*")
     .eq("cubby_id", rental?.cubby_id || "")
+    .eq("seller_id", rental?.seller_id || "")
     .order("name", { ascending: true });
 
   // Fetch sales data for this cubby
@@ -147,7 +152,7 @@ export default async function CubbyRentalDetailsPage({
 
     sales.forEach((sale) => {
       const saleItems = Array.isArray(sale.sale_items) ? sale.sale_items : [];
-      saleItems.forEach((item) => {
+      saleItems.forEach((item: { price: number; quantity: number }) => {
         const amount = item.price * item.quantity;
         totalSales += amount;
         commissionEarned += amount * rental.commission_rate;
@@ -360,64 +365,18 @@ export default async function CubbyRentalDetailsPage({
                       <Tag className="h-5 w-5" />
                       Items in Cubby
                     </CardTitle>
+                    <p className="text-sm text-gray-500">
+                      Only showing items added by this seller for this cubby rental
+                    </p>
                   </CardHeader>
                   <CardContent>
                     {items && items.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>SKU</TableHead>
-                              <TableHead>Price</TableHead>
-                              <TableHead>Quantity</TableHead>
-                              <TableHead>Status</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {items.map((item) => (
-                              <TableRow key={item.id}>
-                                <TableCell className="font-medium">
-                                  {item.name}
-                                </TableCell>
-                                <TableCell>{item.sku}</TableCell>
-                                <TableCell>{formatPrice(item.price)}</TableCell>
-                                <TableCell>{item.quantity}</TableCell>
-                                <TableCell>
-                                  <div className="flex items-center space-x-2">
-                                    {item.editing_locked && (
-                                      <Badge variant="secondary">
-                                        <Lock className="h-3 w-3 mr-1" /> Locked
-                                      </Badge>
-                                    )}
-                                    {item.labels_printed && (
-                                      <Badge variant="outline">
-                                        <Printer className="h-3 w-3 mr-1" />{" "}
-                                        Labeled
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                      <InventoryTable items={items} rentalId={rental.id} />
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                        <p>No items found in this cubby</p>
+                      <div className="text-center py-6">
+                        <p className="text-gray-500">No items found in this cubby</p>
                       </div>
                     )}
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" asChild className="mr-2">
-                        <Link
-                          href={`/dashboard/staff/print-labels?cubby=${rental.cubby_id}`}
-                        >
-                          <Printer className="h-4 w-4 mr-2" /> Print Labels
-                        </Link>
-                      </Button>
-                    </div>
                   </CardContent>
                 </Card>
               </div>
