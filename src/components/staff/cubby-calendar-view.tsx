@@ -146,6 +146,13 @@ export default function CubbyCalendarView({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentDate(new Date())}
+          >
+            Today
+          </Button>
           <span className="font-medium">
             {format(dates[0], "MMM d")} -{" "}
             {format(dates[dates.length - 1], "MMM d, yyyy")}
@@ -259,11 +266,11 @@ export default function CubbyCalendarView({
                       return (
                         <div
                           key={`rental-${rental.id}-${idx}`}
-                          className={`absolute top-1 rounded-md shadow-sm px-2 py-1 z-10 ${colors?.bg} ${colors?.border} ${colors?.text} border`}
+                          className={`absolute top-1/2 -translate-y-1/2 rounded-md shadow-sm px-2 py-1 z-10 ${colors?.bg} ${colors?.border} ${colors?.text} border`}
                           style={{
                             left: `calc(${leftPosition} + 4px)`,
                             width: `calc(${width} - 8px)`,
-                            height: "3rem",
+                            height: "2.5rem",
                             display: "flex",
                             alignItems: "center",
                             overflow: "hidden",
