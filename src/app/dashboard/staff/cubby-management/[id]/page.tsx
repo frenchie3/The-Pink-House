@@ -3,9 +3,35 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Clock, Calendar, User, CreditCard, Package } from "lucide-react";
+import {
+  AlertCircle,
+  Clock,
+  Calendar,
+  User,
+  CreditCard,
+  Package,
+  FileText,
+  History,
+  DollarSign,
+  Tag,
+  Printer,
+  Lock,
+  Unlock,
+  Edit,
+  Trash,
+  CheckCircle,
+} from "lucide-react";
 import Link from "next/link";
 import DashboardNavbar from "@/components/dashboard-navbar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatPrice } from "@/lib/utils";
 
 // Types
 interface CubbyRental {
@@ -19,15 +45,27 @@ interface CubbyRental {
   rental_fee: number;
   listing_type: "self" | "staff";
   commission_rate: number;
+  created_at: string;
+  updated_at: string;
   seller: {
     full_name: string;
     email: string;
-    phone?: string;
   };
   cubby: {
     cubby_number: string;
     location: string;
   };
+}
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  quantity: number;
+  cubby_id: string;
+  editing_locked: boolean;
+  labels_printed: boolean;
 }
 
 export default async function CubbyRentalDetailsPage({
@@ -48,11 +86,13 @@ export default async function CubbyRentalDetailsPage({
   // Fetch rental details with seller and cubby information
   const { data: rental, error } = await supabase
     .from("cubby_rentals")
-    .select(`
+    .select(
+      `
       *,
-      seller:users!cubby_rentals_seller_id_fkey(full_name, email, phone),
+      seller:users!cubby_rentals_seller_id_fkey(full_name, email),
       cubby:cubbies!cubby_rentals_cubby_id_fkey(cubby_number, location)
-    `)
+    `,
+    )
     .eq("id", params.id)
     .single();
 
@@ -60,28 +100,64 @@ export default async function CubbyRentalDetailsPage({
     console.error("Error fetching rental:", error);
   }
 
-  // Debug log to see the data structure
-  console.log("Rental data:", JSON.stringify(rental, null, 2));
+  // Fetch items in this cubby
+  const { data: items } = await supabase
+    .from("inventory_items")
+    .select("*")
+    .eq("cubby_id", rental?.cubby_id || "")
+    .order("name", { ascending: true });
+
+  // Fetch sales data for this cubby
+  const { data: sales } = await supabase
+    .from("sales")
+    .select("*, sale_items(*, inventory_item:inventory_items(*))")
+    .eq("cubby_id", rental?.cubby_id || "")
+    .order("created_at", { ascending: false });
 
   if (!rental) {
     return redirect("/dashboard/staff/cubby-management");
   }
 
   // Helper functions for safe property access
-  const getSellerName = (rental: CubbyRental) => rental.seller?.full_name || "Unknown";
-  const getSellerEmail = (rental: CubbyRental) => rental.seller?.email || "Unknown";
-  const getSellerPhone = (rental: CubbyRental) => rental.seller?.phone || "Not provided";
-  const getCubbyNumber = (rental: CubbyRental) => rental.cubby?.cubby_number || "Unknown";
-  const getCubbyLocation = (rental: CubbyRental) => rental.cubby?.location || "Unknown";
+  const getSellerName = (rental: CubbyRental) =>
+    rental.seller?.full_name || "Unknown";
+  const getSellerEmail = (rental: CubbyRental) =>
+    rental.seller?.email || "Unknown";
+  const getSellerPhone = (rental: CubbyRental) => "Not provided";
+  const getCubbyNumber = (rental: CubbyRental) =>
+    rental.cubby?.cubby_number || "Unknown";
+  const getCubbyLocation = (rental: CubbyRental) =>
+    rental.cubby?.location || "Unknown";
 
   // Helper function for NZ date format
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-NZ', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-NZ", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
+
+  // Calculate financial information
+  const calculateFinancials = () => {
+    if (!sales) return { totalSales: 0, commissionEarned: 0 };
+
+    let totalSales = 0;
+    let commissionEarned = 0;
+
+    sales.forEach((sale) => {
+      const saleItems = Array.isArray(sale.sale_items) ? sale.sale_items : [];
+      saleItems.forEach((item) => {
+        const amount = item.price * item.quantity;
+        totalSales += amount;
+        commissionEarned += amount * rental.commission_rate;
+      });
+    });
+
+    return { totalSales, commissionEarned };
+  };
+
+  const { totalSales, commissionEarned } = calculateFinancials();
 
   return (
     <>
@@ -93,9 +169,7 @@ export default async function CubbyRentalDetailsPage({
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h1 className="text-3xl font-bold">Cubby Rental Details</h1>
-                <p className="text-gray-600 mt-1">
-                  Manage rental #{params.id}
-                </p>
+                <p className="text-gray-600 mt-1">Manage rental #{params.id}</p>
               </div>
               <Button variant="outline" asChild>
                 <Link href="/dashboard/staff/cubby-management">
@@ -105,18 +179,31 @@ export default async function CubbyRentalDetailsPage({
             </div>
 
             {/* Status Banner */}
-            <div className={`mb-8 p-4 rounded-lg ${
-              rental.status === "active" 
-                ? "bg-green-50 text-green-800" 
-                : rental.status === "expired"
-                ? "bg-red-50 text-red-800"
-                : "bg-amber-50 text-amber-800"
-            }`}>
+            <div
+              className={`mb-8 p-4 rounded-lg ${
+                rental.status === "active"
+                  ? "bg-green-50 text-green-800"
+                  : rental.status === "expired"
+                    ? "bg-red-50 text-red-800"
+                    : rental.status === "pending_extension"
+                      ? "bg-amber-50 text-amber-800"
+                      : "bg-gray-50 text-gray-800"
+              }`}
+            >
               <div className="flex items-center gap-2">
-                {rental.status === "expired" && <AlertCircle className="h-5 w-5" />}
-                {rental.status === "pending_extension" && <Clock className="h-5 w-5" />}
+                {rental.status === "expired" && (
+                  <AlertCircle className="h-5 w-5" />
+                )}
+                {rental.status === "pending_extension" && (
+                  <Clock className="h-5 w-5" />
+                )}
+                {rental.status === "active" && (
+                  <CheckCircle className="h-5 w-5" />
+                )}
                 <span className="font-medium">
-                  Status: {rental.status.replace("_", " ")}
+                  Status:{" "}
+                  {rental.status.replace("_", " ").charAt(0).toUpperCase() +
+                    rental.status.replace("_", " ").slice(1)}
                 </span>
               </div>
             </div>
@@ -135,20 +222,34 @@ export default async function CubbyRentalDetailsPage({
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Cubby Number</h3>
-                        <p className="text-lg font-medium">#{getCubbyNumber(rental)}</p>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Cubby Number
+                        </h3>
+                        <p className="text-lg font-medium">
+                          #{getCubbyNumber(rental)}
+                        </p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Location</h3>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Location
+                        </h3>
                         <p className="text-lg">{getCubbyLocation(rental)}</p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Listing Type</h3>
-                        <p className="text-lg capitalize">{rental.listing_type}</p>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Listing Type
+                        </h3>
+                        <p className="text-lg capitalize">
+                          {rental.listing_type}
+                        </p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Commission Rate</h3>
-                        <p className="text-lg">{(rental.commission_rate * 100).toFixed(0)}%</p>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Commission Rate
+                        </h3>
+                        <p className="text-lg">
+                          {(rental.commission_rate * 100).toFixed(0)}%
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -165,35 +266,157 @@ export default async function CubbyRentalDetailsPage({
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Start Date</h3>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Start Date
+                        </h3>
                         <p className="text-lg">
                           {formatDate(rental.start_date)}
                         </p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">End Date</h3>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          End Date
+                        </h3>
+                        <p className="text-lg">{formatDate(rental.end_date)}</p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Rental Fee
+                        </h3>
                         <p className="text-lg">
-                          {formatDate(rental.end_date)}
+                          ${rental.rental_fee.toFixed(2)}
                         </p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Rental Fee</h3>
-                        <p className="text-lg">${rental.rental_fee.toFixed(2)}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Payment Status</h3>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Payment Status
+                        </h3>
                         <Badge
                           variant={
                             rental.payment_status === "paid"
                               ? "default"
                               : rental.payment_status === "pending"
-                              ? "secondary"
-                              : "destructive"
+                                ? "secondary"
+                                : "destructive"
                           }
                         >
                           {rental.payment_status}
                         </Badge>
                       </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Created At
+                        </h3>
+                        <p className="text-lg">
+                          {formatDate(rental.created_at)}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Last Updated
+                        </h3>
+                        <p className="text-lg">
+                          {formatDate(rental.updated_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Financial Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Financial Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Total Sales
+                        </h3>
+                        <p className="text-lg font-medium">
+                          {formatPrice(totalSales)}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Commission Earned
+                        </h3>
+                        <p className="text-lg">
+                          {formatPrice(commissionEarned)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Items in Cubby */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Tag className="h-5 w-5" />
+                      Items in Cubby
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {items && items.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>SKU</TableHead>
+                              <TableHead>Price</TableHead>
+                              <TableHead>Quantity</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {items.map((item) => (
+                              <TableRow key={item.id}>
+                                <TableCell className="font-medium">
+                                  {item.name}
+                                </TableCell>
+                                <TableCell>{item.sku}</TableCell>
+                                <TableCell>{formatPrice(item.price)}</TableCell>
+                                <TableCell>{item.quantity}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center space-x-2">
+                                    {item.editing_locked && (
+                                      <Badge variant="secondary">
+                                        <Lock className="h-3 w-3 mr-1" /> Locked
+                                      </Badge>
+                                    )}
+                                    {item.labels_printed && (
+                                      <Badge variant="outline">
+                                        <Printer className="h-3 w-3 mr-1" />{" "}
+                                        Labeled
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                        <p>No items found in this cubby</p>
+                      </div>
+                    )}
+                    <div className="mt-4 flex justify-end">
+                      <Button variant="outline" asChild className="mr-2">
+                        <Link
+                          href={`/dashboard/staff/print-labels?cubby=${rental.cubby_id}`}
+                        >
+                          <Printer className="h-4 w-4 mr-2" /> Print Labels
+                        </Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -212,15 +435,23 @@ export default async function CubbyRentalDetailsPage({
                   <CardContent>
                     <div className="space-y-4">
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Name</h3>
-                        <p className="text-lg font-medium">{getSellerName(rental)}</p>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Name
+                        </h3>
+                        <p className="text-lg font-medium">
+                          {getSellerName(rental)}
+                        </p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Email</h3>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Email
+                        </h3>
                         <p className="text-lg">{getSellerEmail(rental)}</p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Phone</h3>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Phone
+                        </h3>
                         <p className="text-lg">{getSellerPhone(rental)}</p>
                       </div>
                     </div>
@@ -239,25 +470,74 @@ export default async function CubbyRentalDetailsPage({
                     <div className="space-y-4">
                       {rental.status === "pending_extension" && (
                         <Button className="w-full bg-green-600 hover:bg-green-700">
-                          Approve Extension
+                          <CheckCircle className="h-4 w-4 mr-2" /> Approve
+                          Extension
                         </Button>
                       )}
                       {rental.status === "active" && (
                         <Button className="w-full" variant="outline">
-                          Extend Rental
+                          <Calendar className="h-4 w-4 mr-2" /> Extend Rental
                         </Button>
                       )}
                       {rental.status === "expired" && (
                         <Button className="w-full" variant="outline">
-                          Process Expiration
+                          <Clock className="h-4 w-4 mr-2" /> Process Expiration
                         </Button>
                       )}
                       <Button className="w-full" variant="outline">
-                        View Items
+                        <Edit className="h-4 w-4 mr-2" /> Edit Rental Details
+                      </Button>
+                      {rental.payment_status !== "paid" && (
+                        <Button className="w-full" variant="outline">
+                          <DollarSign className="h-4 w-4 mr-2" /> Record Payment
+                        </Button>
+                      )}
+                      <Button className="w-full" variant="outline" asChild>
+                        <Link
+                          href={`/dashboard/staff/print-labels?cubby=${rental.cubby_id}`}
+                        >
+                          <Printer className="h-4 w-4 mr-2" /> Print Labels
+                        </Link>
                       </Button>
                       <Button className="w-full" variant="outline">
-                        Print Labels
+                        <FileText className="h-4 w-4 mr-2" /> Add Notes
                       </Button>
+                      <Button
+                        className="w-full text-red-600 hover:text-red-700"
+                        variant="outline"
+                      >
+                        <Trash className="h-4 w-4 mr-2" /> Cancel Rental
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* History */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <History className="h-5 w-5" />
+                      Recent Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="border-l-2 border-gray-200 pl-4 py-1">
+                        <p className="text-sm text-gray-600">Today</p>
+                        <p className="text-sm">Staff viewed rental details</p>
+                      </div>
+                      <div className="border-l-2 border-gray-200 pl-4 py-1">
+                        <p className="text-sm text-gray-600">
+                          {formatDate(rental.updated_at)}
+                        </p>
+                        <p className="text-sm">Rental information updated</p>
+                      </div>
+                      <div className="border-l-2 border-gray-200 pl-4 py-1">
+                        <p className="text-sm text-gray-600">
+                          {formatDate(rental.created_at)}
+                        </p>
+                        <p className="text-sm">Rental created</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -268,4 +548,4 @@ export default async function CubbyRentalDetailsPage({
       </div>
     </>
   );
-} 
+}

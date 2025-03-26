@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import {
   format,
   startOfWeek,
@@ -264,9 +265,10 @@ export default function CubbyCalendarView({
                       const width = `${(spanDays / dates.length) * 100}%`;
 
                       return (
-                        <div
+                        <Link
                           key={`rental-${rental.id}-${idx}`}
-                          className={`absolute top-1/2 -translate-y-1/2 rounded-md shadow-sm px-2 py-1 z-10 ${colors?.bg} ${colors?.border} ${colors?.text} border`}
+                          href={`/dashboard/staff/cubby-management/${rental.id}`}
+                          className={`absolute top-1/2 -translate-y-1/2 rounded-md shadow-sm px-2 py-1 z-10 ${colors?.bg} ${colors?.border} ${colors?.text} border cursor-pointer hover:brightness-95 transition-all`}
                           style={{
                             left: `calc(${leftPosition} + 4px)`,
                             width: `calc(${width} - 8px)`,
@@ -279,7 +281,7 @@ export default function CubbyCalendarView({
                           }}
                         >
                           {rental.seller.full_name}
-                        </div>
+                        </Link>
                       );
                     })}
                 </div>
