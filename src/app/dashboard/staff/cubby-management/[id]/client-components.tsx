@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Printer, Lock } from "lucide-react";
+import { Printer, Lock, Edit, RefreshCcw } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatPrice } from "@/lib/utils";
+import Link from "next/link";
 
 // Types
 interface InventoryItem {
@@ -35,12 +36,13 @@ interface InventoryTableProps {
 
 export function InventoryTable({ items, rentalId }: InventoryTableProps) {
   const [selectedItems, setSelectedItems] = useState<string[]>(
-    items.filter(item => !item.editing_locked).map(item => item.id)
+    items.map(item => item.id)
   );
+  const [reprinting, setReprinting] = useState(false);
   
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedItems(items.filter(item => !item.editing_locked).map(item => item.id));
+      setSelectedItems(items.map(item => item.id));
     } else {
       setSelectedItems([]);
     }
@@ -54,8 +56,8 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
     }
   };
 
-  const isAllSelected = selectedItems.length === items.filter(item => !item.editing_locked).length && items.some(item => !item.editing_locked);
-  const isIndeterminate = selectedItems.length > 0 && selectedItems.length < items.filter(item => !item.editing_locked).length;
+  const isAllSelected = selectedItems.length === items.length && items.length > 0;
+  const isIndeterminate = selectedItems.length > 0 && selectedItems.length < items.length;
 
   const handlePrintLabels = async () => {
     if (selectedItems.length === 0) return;
@@ -80,6 +82,36 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
     } catch (error) {
       console.error('Error printing labels:', error);
       alert('Failed to print labels. Please try again.');
+    }
+  };
+
+  // New function to reprint labels
+  const handleReprintLabels = async () => {
+    if (selectedItems.length === 0) return;
+    
+    try {
+      setReprinting(true);
+      
+      // Call staff-specific API endpoint to reprint labels
+      const response = await fetch('/api/staff/reprint-labels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemIds: selectedItems })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to reprint labels');
+      }
+      
+      // Show success message and refresh the page
+      alert('Labels reprinted successfully!');
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Error reprinting labels:', error);
+      alert('Failed to reprint labels. Please try again.');
+    } finally {
+      setReprinting(false);
     }
   };
 
@@ -111,6 +143,7 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
                 <TableHead>Price</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -123,7 +156,7 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
                       value={item.id}
                       checked={selectedItems.includes(item.id)}
                       onCheckedChange={(checked) => handleItemSelect(item.id, !!checked)}
-                      disabled={item.editing_locked}
+                      // Staff can select any item, not limited by editing_locked
                     />
                   </TableCell>
                   <TableCell className="font-medium">
@@ -147,6 +180,15 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/dashboard/staff/inventory/edit/${item.id}`}>
+                          <Edit className="h-3 w-3 mr-1" /> Edit
+                        </Link>
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -154,11 +196,20 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
         </form>
       </div>
       
-      <div className="flex justify-end mt-4">
+      <div className="flex justify-end mt-4 gap-3">
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">
             {selectedItems.length} item(s) selected
           </span>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleReprintLabels}
+            disabled={selectedItems.length === 0 || reprinting}
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            {reprinting ? "Reprinting..." : "Reprint Labels"}
+          </Button>
           <Button
             type="button"
             className="bg-pink-600 hover:bg-pink-700"
