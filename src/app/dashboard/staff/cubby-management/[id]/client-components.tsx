@@ -38,7 +38,7 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
   const [selectedItems, setSelectedItems] = useState<string[]>(
     items.map(item => item.id)
   );
-  const [reprinting, setReprinting] = useState(false);
+  const [printing, setPrinting] = useState(false);
   
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -63,8 +63,9 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
     if (selectedItems.length === 0) return;
     
     try {
-      // Disable button while processing
-      // Call Supabase to update the items
+      setPrinting(true);
+      
+      // Call API endpoint to print labels
       const response = await fetch('/api/inventory/print-labels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,42 +77,14 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
       }
       
       // Show success message and refresh the page
-      alert('Labels printed successfully! Selected items have been locked for editing.');
+      alert('Labels printed successfully!');
       window.location.reload();
       
     } catch (error) {
       console.error('Error printing labels:', error);
       alert('Failed to print labels. Please try again.');
-    }
-  };
-
-  // New function to reprint labels
-  const handleReprintLabels = async () => {
-    if (selectedItems.length === 0) return;
-    
-    try {
-      setReprinting(true);
-      
-      // Call staff-specific API endpoint to reprint labels
-      const response = await fetch('/api/staff/reprint-labels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemIds: selectedItems })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to reprint labels');
-      }
-      
-      // Show success message and refresh the page
-      alert('Labels reprinted successfully!');
-      window.location.reload();
-      
-    } catch (error) {
-      console.error('Error reprinting labels:', error);
-      alert('Failed to reprint labels. Please try again.');
     } finally {
-      setReprinting(false);
+      setPrinting(false);
     }
   };
 
@@ -203,21 +176,12 @@ export function InventoryTable({ items, rentalId }: InventoryTableProps) {
           </span>
           <Button
             type="button"
-            variant="outline"
-            onClick={handleReprintLabels}
-            disabled={selectedItems.length === 0 || reprinting}
-          >
-            <RefreshCcw className="mr-2 h-4 w-4" />
-            {reprinting ? "Reprinting..." : "Reprint Labels"}
-          </Button>
-          <Button
-            type="button"
             className="bg-pink-600 hover:bg-pink-700"
             onClick={handlePrintLabels}
-            disabled={selectedItems.length === 0}
+            disabled={selectedItems.length === 0 || printing}
           >
             <Printer className="mr-2 h-4 w-4" />
-            Print Labels & Lock Items
+            {printing ? "Printing..." : "Print Labels"}
           </Button>
         </div>
       </div>

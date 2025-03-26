@@ -40,27 +40,72 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update the selected items to mark them as locked for editing and with labels printed
-    const { data, error } = await supabase
+    // Get the current state of the items
+    const { data: items, error: fetchError } = await supabase
       .from("inventory_items")
-      .update({
-        editing_locked: true,
-        labels_printed: true,
-      })
-      .in("id", itemIds)
-      .select();
+      .select("id, editing_locked")
+      .in("id", itemIds);
 
-    if (error) {
-      console.error("Error updating items:", error);
+    if (fetchError) {
+      console.error("Error fetching items:", fetchError);
       return NextResponse.json(
-        { error: "Failed to update items" },
+        { error: "Failed to fetch items" },
         { status: 500 }
       );
     }
 
+    // Separate items into locked and unlocked
+    const lockedItemIds = items.filter(item => item.editing_locked).map(item => item.id);
+    const unlockedItemIds = items.filter(item => !item.editing_locked).map(item => item.id);
+    
+    let totalUpdated = 0;
+    
+    // Update locked items (just set labels_printed=true)
+    if (lockedItemIds.length > 0) {
+      const { data: lockedData, error: lockedError } = await supabase
+        .from("inventory_items")
+        .update({ labels_printed: true })
+        .in("id", lockedItemIds)
+        .select();
+        
+      if (lockedError) {
+        console.error("Error updating locked items:", lockedError);
+        return NextResponse.json(
+          { error: "Failed to update locked items" },
+          { status: 500 }
+        );
+      }
+      
+      totalUpdated += lockedData?.length || 0;
+    }
+    
+    // Update unlocked items (set both labels_printed=true and editing_locked=true)
+    if (unlockedItemIds.length > 0) {
+      const { data: unlockedData, error: unlockedError } = await supabase
+        .from("inventory_items")
+        .update({ 
+          labels_printed: true,
+          editing_locked: true 
+        })
+        .in("id", unlockedItemIds)
+        .select();
+        
+      if (unlockedError) {
+        console.error("Error updating unlocked items:", unlockedError);
+        return NextResponse.json(
+          { error: "Failed to update unlocked items" },
+          { status: 500 }
+        );
+      }
+      
+      totalUpdated += unlockedData?.length || 0;
+    }
+
     return NextResponse.json({
       success: true,
-      message: `${data.length} items updated successfully`,
+      message: `${totalUpdated} items updated successfully`,
+      locked: lockedItemIds.length,
+      unlocked: unlockedItemIds.length
     });
   } catch (error) {
     console.error("Error processing request:", error);
