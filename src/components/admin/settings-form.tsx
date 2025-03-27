@@ -75,7 +75,10 @@ export function SettingsForm({
   };
 
   // Update commission rates
-  const updateCommRate = (type: "self_listed" | "staff_listed", value: number) => {
+  const updateCommRate = (
+    type: "self_listed" | "staff_listed",
+    value: number,
+  ) => {
     setCurrentCommRates((prev: typeof commRates) => ({
       ...prev,
       [type]: value,
@@ -812,6 +815,137 @@ export function SettingsForm({
                     type="button"
                     onClick={() => setCurrentPickupSettings(pickupSettings)}
                   >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reset to Defaults
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-pink-600 hover:bg-pink-700"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Shop Open Days Tab */}
+      <TabsContent value="shop_open_days" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Store className="h-5 w-5 text-pink-600" />
+              Shop Open Days
+            </CardTitle>
+            <CardDescription>
+              Configure which days of the week the shop is open for calculating
+              rental periods
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={updateSettings} className="space-y-8">
+              <input type="hidden" name="setting_key" value="shop_open_days" />
+              <input
+                type="hidden"
+                name="setting_value"
+                id="shop_open_days_json"
+                value={JSON.stringify({
+                  monday: true,
+                  tuesday: true,
+                  wednesday: true,
+                  thursday: true,
+                  friday: true,
+                  saturday: true,
+                  sunday: false,
+                })}
+              />
+
+              <div className="space-y-6">
+                <div className="p-6 bg-white rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-medium mb-4">
+                    Open Days Configuration
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <Label htmlFor="monday" className="cursor-pointer">
+                        Monday
+                      </Label>
+                      <Switch id="monday" defaultChecked={true} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <Label htmlFor="tuesday" className="cursor-pointer">
+                        Tuesday
+                      </Label>
+                      <Switch id="tuesday" defaultChecked={true} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <Label htmlFor="wednesday" className="cursor-pointer">
+                        Wednesday
+                      </Label>
+                      <Switch id="wednesday" defaultChecked={true} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <Label htmlFor="thursday" className="cursor-pointer">
+                        Thursday
+                      </Label>
+                      <Switch id="thursday" defaultChecked={true} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <Label htmlFor="friday" className="cursor-pointer">
+                        Friday
+                      </Label>
+                      <Switch id="friday" defaultChecked={true} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <Label htmlFor="saturday" className="cursor-pointer">
+                        Saturday
+                      </Label>
+                      <Switch id="saturday" defaultChecked={true} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <Label htmlFor="sunday" className="cursor-pointer">
+                        Sunday
+                      </Label>
+                      <Switch id="sunday" defaultChecked={false} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800">
+                        About Open Days Rental
+                      </h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        The Open Days feature calculates rental periods based
+                        only on days when the shop is open. For example, a 7-day
+                        rental will include only days when the shop is open,
+                        extending the calendar duration if needed to reach the
+                        full 7 open days.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t">
+                <div className="text-sm text-gray-500">
+                  Last updated: {new Date().toLocaleDateString()}
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" type="button">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reset to Defaults
                   </Button>

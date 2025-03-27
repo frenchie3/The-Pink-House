@@ -13,12 +13,14 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Store,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, calculateOpenDaysEndDate, getShopOpenDays, ShopOpenDays } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../../../../supabase/client";
 import { Input } from "@/components/ui/input";
 import AvailableCubbies from "@/components/seller/available-cubbies";
+import RentalPeriodInfo from "@/components/seller/rental-period-info";
 
 export default function RentCubbyPage() {
   const [rentalPeriod, setRentalPeriod] = useState<string | null>(null);
@@ -28,6 +30,10 @@ export default function RentCubbyPage() {
   const [availableCubbies, setAvailableCubbies] = useState<any[]>([]);
   const [selectedCubby, setSelectedCubby] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shopOpenDays, setShopOpenDays] = useState<ShopOpenDays | null>(null);
+  const [calculatedEndDate, setCalculatedEndDate] = useState<Date | null>(null);
+  const [openDaysCount, setOpenDaysCount] = useState<number>(0);
+  const [calendarDaysCount, setCalendarDaysCount] = useState<number>(0);
 
   // State for unsold items preference - no default selection
   const [pickupPreference, setPickupPreference] = useState<string | null>(null);
@@ -55,11 +61,23 @@ export default function RentCubbyPage() {
     staff: 0.25, // 25% for staff-managed listing (default)
   });
 
-  // Set default start date to today
+  // Set default start date to today and fetch shop open days
   useEffect(() => {
     const today = new Date();
     const formattedDate = today.toISOString().split("T")[0];
     setStartDate(formattedDate);
+    
+    // Fetch shop open days configuration
+    const fetchOpenDays = async () => {
+      try {
+        const openDaysConfig = await getShopOpenDays();
+        setShopOpenDays(openDaysConfig);
+      } catch (err) {
+        console.error("Error fetching shop open days:", err);
+      }
+    };
+    
+    fetchOpenDays();
   }, []);
 
   useEffect(() => {
@@ -365,8 +383,8 @@ export default function RentCubbyPage() {
     // Initial fetch happens within the ensureSettingsExist chain
   }, [supabase]);
 
-  // Calculate end date based on start date and rental period
-  const calculateEndDate = (start: string, period: string) => {
+  // Calculate end date based on start date and rental period (calendar days)
+  const calculateEndDateCalendar = (start: string, period: string) => {
     const startDateObj = new Date(start);
     const endDateObj = new Date(startDateObj);
 
@@ -381,7 +399,7 @@ export default function RentCubbyPage() {
     return endDateObj.toISOString().split("T")[0];
   };
 
-  // Calculate end date based on start date and rental period
+  // Calculate end date string based on start date and rental period (calendar days)
   const calculateEndDateString = (start: string, period: string) => {
     if (!start) return "";
     const startDateObj = new Date(start);
@@ -397,16 +415,58 @@ export default function RentCubbyPage() {
 
     return endDateObj.toISOString().split("T")[0];
   };
-
-  // Get the calculated end date based on the selected start date and rental period
-  const calculatedEndDate = calculateEndDateString(startDate, rentalPeriod || "");
+  
+  // Calculate end date based on open days
+  useEffect(() => {
+    const calculateEndDateWithOpenDays = async () => {
+      if (!startDate || !rentalPeriod) {
+        setCalculatedEndDate(null);
+        setOpenDaysCount(0);
+        setCalendarDaysCount(0);
+        return;
+      }
+      
+      try {
+        // Get the number of open days based on rental period
+        let openDays = 0;
+        if (rentalPeriod === "weekly") {
+          openDays = 7;
+        } else if (rentalPeriod === "monthly") {
+          openDays = 30;
+        } else if (rentalPeriod === "quarterly") {
+          openDays = 90;
+        }
+        
+        // Calculate the end date based on open days
+        const startDateObj = new Date(startDate);
+        const endDate = await calculateOpenDaysEndDate(startDateObj, openDays);
+        
+        // Calculate calendar days
+        const calendarDays = Math.ceil((endDate.getTime() - startDateObj.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+        
+        setCalculatedEndDate(endDate);
+        setOpenDaysCount(openDays);
+        setCalendarDaysCount(calendarDays);
+      } catch (err) {
+        console.error("Error calculating end date with open days:", err);
+        // Fallback to calendar days calculation
+        const endDateStr = calculateEndDateString(startDate, rentalPeriod);
+        setCalculatedEndDate(new Date(endDateStr));
+      }
+    };
+    
+    calculateEndDateWithOpenDays();
+  }, [startDate, rentalPeriod]);
+  
+  // Get the calculated end date string for the availability hook
+  const calculatedEndDateString = calculatedEndDate ? calculatedEndDate.toISOString().split("T")[0] : "";
 
   // Use the cubby availability hook at the component level
   const {
     availableCubbies: fetchedCubbies,
     loading: cubbiesLoading,
     error: cubbiesError,
-  } = useCubbyAvailability(startDate, calculatedEndDate);
+  } = useCubbyAvailability(startDate, calculatedEndDateString);
 
   // Update local state when fetched cubbies change
   useEffect(() => {
@@ -469,9 +529,9 @@ export default function RentCubbyPage() {
         throw new Error("Selected cubby not found");
       }
 
-      // Calculate rental dates
+      // Use the calculated end date that accounts for open days
       const startDateObj = new Date(startDate);
-      const endDateObj = new Date(calculateEndDate(startDate, rentalPeriod));
+      const endDateObj = calculatedEndDate || new Date(calculateEndDateCalendar(startDate, rentalPeriod));
       
       // Calculate grace period date (days after rental expires)
       const gracePeriodDateObj = new Date(endDateObj);
@@ -556,946 +616,3 @@ export default function RentCubbyPage() {
                 className="text-pink-600 mr-2"
               >
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                <line x1="12" y1="22.08" x2="12" y2="12" />
-              </svg>
-              Rent Your Cubby Space
-            </h1>
-          </header>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Rental Options */}
-            <div className="lg:col-span-2">
-              <Card className="shadow-sm bg-white">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-lg sr-only">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-pink-600 mr-2"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <line x1="3" y1="9" x2="21" y2="9" />
-                      <line x1="9" y1="21" x2="9" y2="9" />
-                    </svg>
-                    Cubby Rental Options
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="period" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4 mb-8">
-                      <TabsTrigger value="period">Rental Period</TabsTrigger>
-                      <TabsTrigger value="cubby">Select Cubby</TabsTrigger>
-                      <TabsTrigger value="listing">Listing Type</TabsTrigger>
-                      <TabsTrigger value="pickup">Unsold Options</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="period" className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="start-date">Start Date</Label>
-                          <Input
-                            id="start-date"
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            min={new Date().toISOString().split("T")[0]}
-                            className="w-full"
-                          />
-                          <p className="text-xs text-gray-500">
-                            Rental start date
-                          </p>
-                        </div>
-
-                        <h3 className="text-sm font-medium mt-4">
-                          Rental Period
-                        </h3>
-                        <RadioGroup
-                          value={rentalPeriod || ""}
-                          onValueChange={(value) => {
-                            // If the same value is clicked again, unselect it
-                            if (value === rentalPeriod) {
-                              setRentalPeriod(null);
-                            } else {
-                              setRentalPeriod(value);
-                            }
-                          }}
-                          className="space-y-4"
-                        >
-                          <div
-                            className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "weekly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => {
-                              if (rentalPeriod === "weekly") {
-                                setRentalPeriod(null);
-                              } else {
-                                setRentalPeriod("weekly");
-                              }
-                            }}
-                          >
-                            <RadioGroupItem value="weekly" id="weekly" className="sr-only" />
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="font-medium">Weekly Rental</p>
-                                <p className="text-sm text-gray-500">
-                                  7 days access to your cubby
-                                </p>
-                              </div>
-                              <p
-                                className={`font-medium ${rentalPeriod === "weekly" ? "text-pink-600" : ""}`}
-                              >
-                                {formatPrice(rentalFees.weekly)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div
-                            className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "monthly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => {
-                              if (rentalPeriod === "monthly") {
-                                setRentalPeriod(null);
-                              } else {
-                                setRentalPeriod("monthly");
-                              }
-                            }}
-                          >
-                            <RadioGroupItem value="monthly" id="monthly" className="sr-only" />
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="font-medium">Monthly Rental</p>
-                                <p className="text-sm text-gray-500">
-                                  30 days access to your cubby
-                                </p>
-                              </div>
-                              <p
-                                className={`font-medium ${rentalPeriod === "monthly" ? "text-pink-600" : ""}`}
-                              >
-                                {formatPrice(rentalFees.monthly)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div
-                            className={`border p-4 rounded-lg cursor-pointer transition-all ${rentalPeriod === "quarterly" ? "bg-pink-50 border-pink-200 shadow-sm" : "hover:bg-gray-50 border-gray-200"}`}
-                            onClick={() => {
-                              if (rentalPeriod === "quarterly") {
-                                setRentalPeriod(null);
-                              } else {
-                                setRentalPeriod("quarterly");
-                              }
-                            }}
-                          >
-                            <RadioGroupItem value="quarterly" id="quarterly" className="sr-only" />
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="font-medium">Quarterly Rental</p>
-                                <p className="text-sm text-gray-500">
-                                  90 days access to your cubby
-                                </p>
-                              </div>
-                              <p
-                                className={`font-medium ${rentalPeriod === "quarterly" ? "text-pink-600" : ""}`}
-                              >
-                                {formatPrice(rentalFees.quarterly)}
-                              </p>
-                            </div>
-                          </div>
-                        </RadioGroup>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="cubby" className="space-y-6">
-                      <div className="space-y-4">
-                        {startDate ? (
-                          <>
-                            <div className="bg-pink-50 p-3 rounded-lg text-pink-800 mb-4">
-                              <p className="text-sm">
-                                <strong>Rental:</strong>{" "}
-                                {new Date(startDate).toLocaleDateString()} to{" "}
-                                {new Date(
-                                  calculatedEndDate,
-                                ).toLocaleDateString()}
-                              </p>
-                            </div>
-
-                            <AvailableCubbies
-                              startDate={startDate}
-                              endDate={calculatedEndDate}
-                              onSelectCubby={handleCubbySelection}
-                            />
-                          </>
-                        ) : (
-                          <div className="bg-amber-50 p-4 rounded-lg text-amber-800">
-                            <p className="text-sm">
-                              <strong>Please select a start date</strong> in the
-                              "Rental Period" tab to see available cubbies.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="listing" className="space-y-6">
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-medium mb-4">
-                          Listing Preference
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Self-Listing Option */}
-                          <div
-                            className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${listingType === "self" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
-                            onClick={() => {
-                              if (listingType === "self") {
-                                setListingType(null);
-                              } else {
-                                setListingType("self");
-                              }
-                            }}
-                          >
-                            <div
-                              className="p-6 flex flex-col"
-                              style={{ minHeight: "320px" }}
-                            >
-                              <div className="flex items-start mb-4">
-                                <div className="mr-4 p-3 rounded-full bg-pink-100">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-pink-600"
-                                  >
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                  </svg>
-                                </div>
-                                <div>
-                                  <h4 className="text-lg font-semibold">
-                                    Self-Listing
-                                  </h4>
-                                  <p className="text-gray-500 text-sm mt-1">
-                                    You manage your own listings
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="space-y-3 flex-grow">
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className={`${listingType === "self" ? "text-pink-500" : "text-gray-500"} mr-2 mt-0.5`}
-                                  >
-                                    <polyline points="9 11 12 14 22 4" />
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                                  </svg>
-                                  <p className="text-sm text-gray-600">
-                                    Set your own prices and descriptions
-                                  </p>
-                                </div>
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className={`${listingType === "self" ? "text-pink-500" : "text-gray-500"} mr-2 mt-0.5`}
-                                  >
-                                    <polyline points="9 11 12 14 22 4" />
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                                  </svg>
-                                  <p className="text-sm text-gray-600">
-                                    Lower commission rate
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="mt-4 pt-4 border-t border-gray-100">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium">
-                                    Commission Rate:
-                                  </span>
-                                  <span
-                                    className={`text-lg font-semibold ${listingType === "self" ? "text-pink-600" : "text-gray-600"}`}
-                                  >
-                                    {commissionRates.self * 100}%
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Staff-Managed Option */}
-                          <div
-                            className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${listingType === "staff" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
-                            onClick={() => {
-                              if (listingType === "staff") {
-                                setListingType(null);
-                              } else {
-                                setListingType("staff");
-                              }
-                            }}
-                          >
-                            <div
-                              className="p-6 flex flex-col"
-                              style={{ minHeight: "320px" }}
-                            >
-                              <div className="flex items-start mb-4">
-                                <div className="mr-4 p-3 rounded-full bg-pink-100">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-pink-600"
-                                  >
-                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                                    <circle cx="9" cy="7" r="4" />
-                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                  </svg>
-                                </div>
-                                <div>
-                                  <h4 className="text-lg font-semibold">
-                                    Staff-Managed
-                                  </h4>
-                                  <p className="text-pink-600 text-sm mt-1 font-medium">
-                                    Let us handle everything
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="space-y-3 flex-grow">
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-pink-500 mr-2 mt-0.5"
-                                  >
-                                    <polyline points="9 11 12 14 22 4" />
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                                  </svg>
-                                  <p className="text-sm text-gray-600">
-                                    Save time and hassle—just drop off items
-                                  </p>
-                                </div>
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-pink-500 mr-2 mt-0.5"
-                                  >
-                                    <polyline points="9 11 12 14 22 4" />
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                                  </svg>
-                                  <p className="text-sm text-gray-600">
-                                    Optimal pricing for maximum sales
-                                  </p>
-                                </div>
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-pink-500 mr-2 mt-0.5"
-                                  >
-                                    <polyline points="9 11 12 14 22 4" />
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                                  </svg>
-                                  <p className="text-sm text-gray-600">
-                                    Professional descriptions
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="mt-4 pt-4 border-t border-gray-100">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium">
-                                    Commission Rate:
-                                  </span>
-                                  <span
-                                    className={`text-lg font-semibold ${listingType === "staff" ? "text-pink-600" : "text-gray-600"}`}
-                                  >
-                                    {commissionRates.staff * 100}%
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 bg-blue-50 p-3 rounded-lg">
-                          <div className="flex items-start">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="text-blue-500 mr-2 mt-0.5 flex-shrink-0"
-                            >
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="12" y1="16" x2="12" y2="12" />
-                              <line x1="12" y1="8" x2="12.01" y2="8" />
-                            </svg>
-                            <p className="text-xs text-blue-800">
-                              <strong>Note:</strong> Preference cannot be
-                              changed after rental
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    {/* Unsold Options Tab */}
-                    <TabsContent value="pickup" className="space-y-6">
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-medium mb-4">
-                          What would you like us to do with any unsold items
-                          after your rental expires?
-                        </h3>
-
-                        <RadioGroup
-                          value={pickupPreference || ""}
-                          onValueChange={(value) => {
-                            // If the same value is clicked again, unselect it
-                            if (value === pickupPreference) {
-                              setPickupPreference(null);
-                            } else {
-                              setPickupPreference(value);
-                            }
-                          }}
-                          className="space-y-4"
-                        >
-                          {/* Pickup Option */}
-                          <div
-                            className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${pickupPreference === "pickup" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
-                            onClick={() => {
-                              if (pickupPreference === "pickup") {
-                                setPickupPreference(null);
-                              } else {
-                                setPickupPreference("pickup");
-                              }
-                            }}
-                          >
-                            <div className="p-6">
-                              <div className="flex items-start mb-4">
-                                <div className="mr-4 p-3 rounded-full bg-pink-100">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-pink-600"
-                                  >
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                    <polyline points="14 2 14 8 20 8" />
-                                    <line x1="16" y1="13" x2="8" y2="13" />
-                                    <line x1="16" y1="17" x2="8" y2="17" />
-                                    <polyline points="10 9 9 9 8 9" />
-                                  </svg>
-                                </div>
-                                <div>
-                                  <h4 className="text-lg font-semibold">
-                                    I'll collect my unsold items*
-                                  </h4>
-                                  <p className="text-pink-600 text-sm mt-1 font-medium">
-                                    within {systemSettings.gracePickupDays} days
-                                    after my rental expires
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="bg-blue-50 p-4 rounded-lg mt-4">
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-blue-500 mr-2 mt-0.5 flex-shrink-0"
-                                  >
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" y1="16" x2="12" y2="12" />
-                                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                                  </svg>
-                                  <div>
-                                    <p className="text-sm text-blue-800">
-                                      <strong>Grace Period:</strong> Based on
-                                      our current policy, you'll have{" "}
-                                      {systemSettings.gracePickupDays} days
-                                      after your rental expires to collect your
-                                      items.
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Donate Option */}
-                          <div
-                            className={`relative overflow-hidden rounded-xl transition-all duration-200 cursor-pointer ${pickupPreference === "donate" ? "border-2 border-pink-500 bg-gradient-to-br from-pink-50 to-white shadow-md" : "border border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white"}`}
-                            onClick={() => {
-                              if (pickupPreference === "donate") {
-                                setPickupPreference(null);
-                              } else {
-                                setPickupPreference("donate");
-                              }
-                            }}
-                          >
-                            <div className="p-6">
-                              <div className="flex items-start mb-4">
-                                <div className="mr-4 p-3 rounded-full bg-pink-100">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-pink-600"
-                                  >
-                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                                  </svg>
-                                </div>
-                                <div>
-                                  <h4 className="text-lg font-semibold">
-                                    Donate my unsold items*
-                                  </h4>
-                                  <p className="text-gray-500 text-sm mt-1">
-                                    Items will be donated to charity
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="bg-amber-50 p-4 rounded-lg mt-4">
-                                <div className="flex items-start">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-amber-500 mr-2 mt-0.5 flex-shrink-0"
-                                  >
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" y1="16" x2="12" y2="12" />
-                                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                                  </svg>
-                                  <div>
-                                    <p className="text-sm text-amber-800">
-                                      <strong>Note:</strong> By selecting this
-                                      option, you agree to donate any unsold
-                                      items to our partner charities after your
-                                      rental expires.
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </RadioGroup>
-
-                        <div className="mt-4 text-center text-xs text-gray-500 italic">
-                          *You can modify this preference up to {systemSettings.lastChanceDays} days after your rental expires.
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Summary */}
-            <div>
-              <Card className="sticky top-4 bg-white">
-                <CardHeader className="border-b pb-3">
-                  <CardTitle className="flex items-center text-base">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-pink-600 mr-2"
-                    >
-                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                    </svg>
-                    Rental Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6 pt-6">
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
-                      <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
-                        <Calendar className="h-3 w-3 mr-1 text-pink-600" />
-                        Rental Period
-                      </h3>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {rentalPeriod ? (rentalPeriod.charAt(0).toUpperCase() + rentalPeriod.slice(1)) : "Select a rental period"}
-                        </p>
-                        {startDate && (
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            {new Date(startDate).toLocaleDateString()} to{" "}
-                            {new Date(
-                              calculateEndDate(startDate, rentalPeriod || ""),
-                            ).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
-                      <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="mr-1 text-pink-600"
-                        >
-                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                          <line x1="12" y1="22.08" x2="12" y2="12" />
-                        </svg>
-                        Selected Cubby
-                      </h3>
-                      {selectedCubby ? (
-                        <div className="flex items-center gap-2">
-                          <div className="bg-pink-100 p-2 rounded-full">
-                            <CheckCircle2 className="h-4 w-4 text-pink-600" />
-                          </div>
-                          <p className="text-sm font-medium text-gray-900">
-                            Cubby #
-                            {availableCubbies.find(
-                              (c) => c.id === selectedCubby,
-                            )?.cubby_number || ""}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-gray-500">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="16" />
-                            <line x1="8" y1="12" x2="16" y2="12" />
-                          </svg>
-                          <p className="text-sm italic">
-                            Please select a cubby
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
-                      <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="mr-1 text-pink-600"
-                        >
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                          <polyline points="10 9 9 9 8 9" />
-                        </svg>
-                        Listing Preference
-                      </h3>
-                      {listingType ? (
-                        <div className="flex items-center gap-2">
-                          <div className="p-2 rounded-full bg-pink-100">
-                            <CheckCircle2 className="h-4 w-4 text-pink-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {listingType === "self" ? "Self-Listing" : "Staff-Managed"}
-                            </p>
-                            <p className="text-xs text-gray-600 mt-0.5">
-                              {listingType === "self" ? "You manage listings" : "Staff manages listings"}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-gray-500">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="16" />
-                            <line x1="8" y1="12" x2="16" y2="12" />
-                          </svg>
-                          <p className="text-sm italic">Please select a listing type</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
-                      <h3 className="text-xs font-medium text-gray-700 mb-1 flex items-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="mr-1 text-pink-600"
-                        >
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                          <polyline points="10 9 9 9 8 9" />
-                        </svg>
-                        Unsold Items Preference
-                      </h3>
-                      {pickupPreference ? (
-                        <div className="flex items-center gap-2">
-                          <div className="p-2 rounded-full bg-pink-100">
-                            <CheckCircle2 className="h-4 w-4 text-pink-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {pickupPreference === "pickup" ? "I'll collect my items" : "Donate unsold items"}
-                            </p>
-                            <p className="text-xs text-gray-600 mt-0.5">
-                              {pickupPreference === "pickup" ? `${systemSettings.gracePickupDays} day grace period` : "Items will be donated"}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-gray-500">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="16" />
-                            <line x1="8" y1="12" x2="16" y2="12" />
-                          </svg>
-                          <p className="text-sm italic">Please select a preference</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="border-t pt-6 mt-2">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-gray-600 flex items-center text-sm">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="mr-2 text-gray-400"
-                          >
-                            <rect x="2" y="4" width="20" height="16" rx="2" />
-                            <path d="M7 15h0M12 15h0" />
-                          </svg>
-                          Rental Fee:
-                        </span>
-                        <span className="font-medium text-sm">
-                          {rentalPeriod ? formatPrice(
-                            rentalFees[rentalPeriod as keyof typeof rentalFees],
-                          ) : "--"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-gray-600 flex items-center text-sm">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="mr-2 text-gray-400"
-                          >
-                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                          </svg>
-                          Commission Rate:
-                        </span>
-                        <span className="font-medium text-sm">
-                          {listingType ? `${(commissionRates[
-                            listingType as keyof typeof commissionRates
-                          ] * 100).toFixed(0)}%` : "--"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-4 pt-3 border-t bg-pink-50 p-3 rounded-lg shadow-sm">
-                        <span className="text-sm font-medium">
-                          Total Due Now:
-                        </span>
-                        <span className="text-lg font-bold text-pink-600">
-                          {rentalPeriod ? formatPrice(
-                            rentalFees[rentalPeriod as keyof typeof rentalFees],
-                          ) : "--"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {error && (
-                    <div className="bg-red-50 p-3 rounded-md text-red-800 text-sm">
-                      {error}
-                    </div>
-                  )}
-
-                  <Button
-                    className="w-full bg-pink-600 hover:bg-pink-700 transition-all shadow-md py-5"
-                    size="lg"
-                    onClick={handleSubmit}
-                    disabled={
-                      isSubmitting ||
-                      !rentalPeriod ||
-                      !startDate ||
-                      !selectedCubby ||
-                      !listingType ||
-                      !pickupPreference
-                    }
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Clock className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="mr-2 h-5 w-5" />
-                        Rent Cubby
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-center text-gray-500 text-xs mt-2">
-                    Secure payment • Instant confirmation
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </main>
-    </>
-  );
-}
