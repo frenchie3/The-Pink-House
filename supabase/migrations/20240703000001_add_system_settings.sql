@@ -14,6 +14,5 @@ INSERT INTO system_settings (setting_key, setting_value, description)
 VALUES 
   ('cubby_item_limits', '{"default": 10, "premium": 20}', 'Maximum number of items a seller can add to their cubby based on their plan'),
   ('commission_rates', '{"default": 0.15, "premium": 0.10}', 'Commission rates for seller items'),
-  ('cubby_rental_fees', '{"weekly": 10, "monthly": 35, "quarterly": 90}', 'Cubby rental fees for different time periods'),
-  ('shop_open_days', '{"monday": true, "tuesday": true, "wednesday": true, "thursday": true, "friday": true, "saturday": true, "sunday": false}', 'Days when the charity shop is open for business')
+  ('cubby_rental_fees', '{"weekly": 10, "monthly": 35, "quarterly": 90}', 'Cubby rental fees for different time periods')
 ON CONFLICT (setting_key) DO NOTHING;

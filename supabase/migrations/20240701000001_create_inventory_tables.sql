@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS cubby_rentals (
   cubby_id UUID NOT NULL REFERENCES cubbies(id),
   seller_id UUID NOT NULL REFERENCES users(id),
   start_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  end_date TIMESTAMP WITH TIME ZONE NOT NULL, -- Adjusted to account for shop open days
+  end_date TIMESTAMP WITH TIME ZONE NOT NULL,
   rental_fee DECIMAL(10,2) NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
   payment_status TEXT NOT NULL DEFAULT 'pending',

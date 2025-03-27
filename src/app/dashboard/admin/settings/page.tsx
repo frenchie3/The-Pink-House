@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import RoleGuard from "@/components/role-guard";
@@ -27,12 +27,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Loader2,
 } from "lucide-react";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { createClient } from "../../../../../supabase/client";
-import { toast } from "@/components/ui/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
 
 // Inner component that uses useSearchParams
 function AdminSettingsInner() {
@@ -51,135 +48,116 @@ function AdminSettingsInner() {
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [rawSettingsData, setRawSettingsData] = useState<any[]>([]);
-  const [openDays, setOpenDays] = useState({
-    monday: true,
-    tuesday: true,
-    wednesday: true,
-    thursday: true,
-    friday: true,
-    saturday: true,
-    sunday: false,
-  });
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const supabase = createClient();
 
-  // Extract success message from URL if present
   useEffect(() => {
-    const successMsg = searchParams.get("success");
-    if (successMsg) {
-      setSuccessMessage(successMsg);
-      // Clear the success message after 5 seconds
+    // Check for success message in URL and set it to state
+    const success = searchParams.get("success");
+    if (success) {
+      setSuccessMessage(success);
+      // Clear success message after 5 seconds
       const timer = setTimeout(() => {
         setSuccessMessage(null);
+        // Remove the success parameter from URL without full page reload
+        const url = new URL(window.location.href);
+        url.searchParams.delete("success");
+        router.replace(url.pathname + url.search, { scroll: false });
       }, 5000);
-      
       return () => clearTimeout(timer);
     }
-  }, [searchParams]);
 
-  // Fetch settings on component mount
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+    async function fetchSettings() {
+      try {
+        // Check authentication
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          router.push("/sign-in");
+          return;
+        }
 
-  // Define fetchSettings as a function
-  const fetchSettings = async () => {
-    setLoading(true);
-    try {
-      // Check authentication
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/sign-in");
-        return;
-      }
+        // Fetch settings
+        const { data, error } = await supabase
+          .from("system_settings")
+          .select("id, setting_key, setting_value, description")
+          .order("setting_key", { ascending: true });
 
-      // Fetch settings
-      const { data, error } = await supabase
-        .from("system_settings")
-        .select("id, setting_key, setting_value, description")
-        .order("setting_key", { ascending: true });
+        if (error) throw error;
+        setSystemSettings(data || []);
 
-      if (error) throw error;
-      setSystemSettings(data || []);
+        // Find specific settings
+        const cubbyItemLimits = data?.find(
+          (setting) => setting.setting_key === "cubby_item_limits",
+        );
+        const commissionRates = data?.find(
+          (setting) => setting.setting_key === "commission_rates",
+        );
+        const cubbyRentalFees = data?.find(
+          (setting) => setting.setting_key === "cubby_rental_fees",
+        );
+        const unsoldSettingsData = data?.find(
+          (setting) => setting.setting_key === "unsold_settings",
+        );
 
-      // Find specific settings
-      const cubbyItemLimits = data?.find(
-        (setting) => setting.setting_key === "cubby_item_limits",
-      );
-      const commissionRates = data?.find(
-        (setting) => setting.setting_key === "commission_rates",
-      );
-      const cubbyRentalFees = data?.find(
-        (setting) => setting.setting_key === "cubby_rental_fees",
-      );
-      const unsoldSettingsData = data?.find(
-        (setting) => setting.setting_key === "unsold_settings",
-      );
-
-      // Parse settings for UI display
-      setItemLimits(
-        cubbyItemLimits?.setting_value || { default: 10, premium: 20 },
-      );
-      
-      // For commission rates, make sure we handle both percentage and decimal formats consistently
-      if (commissionRates?.setting_value) {
-        const selfRate = commissionRates.setting_value.self_listed || 15;
-        const staffRate = commissionRates.setting_value.staff_listed || 25;
+        // Parse settings for UI display
+        setItemLimits(
+          cubbyItemLimits?.setting_value || { default: 10, premium: 20 },
+        );
         
-        // No need to normalize for display in admin - we want to show the actual percentage values
-        setCommRates({
-          self_listed: selfRate,
-          staff_listed: staffRate
-        });
-      } else {
-        setCommRates({ self_listed: 15, staff_listed: 25 });
-      }
-      
-      setRentalFees(
-        cubbyRentalFees?.setting_value || {
-          weekly: 10,
-          monthly: 35,
-          quarterly: 90,
-        },
-      );
-      setUnsoldSettings(
-        unsoldSettingsData?.setting_value || {
-          gracePickupDays: 7,
-          lastChanceDays: 3,
-        },
-      );
+        // For commission rates, make sure we handle both percentage and decimal formats consistently
+        if (commissionRates?.setting_value) {
+          const selfRate = commissionRates.setting_value.self_listed || 15;
+          const staffRate = commissionRates.setting_value.staff_listed || 25;
+          
+          // No need to normalize for display in admin - we want to show the actual percentage values
+          setCommRates({
+            self_listed: selfRate,
+            staff_listed: staffRate
+          });
+        } else {
+          setCommRates({ self_listed: 15, staff_listed: 25 });
+        }
+        
+        setRentalFees(
+          cubbyRentalFees?.setting_value || {
+            weekly: 10,
+            monthly: 35,
+            quarterly: 90,
+          },
+        );
+        setUnsoldSettings(
+          unsoldSettingsData?.setting_value || {
+            gracePickupDays: 7,
+            lastChanceDays: 3,
+          },
+        );
 
-      // Also get the raw data for diagnostic purposes
-      const { data: rawSettingsData, error: rawError } = await supabase
-        .from("system_settings")
-        .select("*");
-      
-      if (rawError) {
-        console.error("Error fetching raw settings data:", rawError);
-      } else {
-        console.log("Raw settings data:", rawSettingsData);
-        // Set to state for diagnostic display
-        setRawSettingsData(rawSettingsData || []);
+        // Also get the raw data for diagnostic purposes
+        const { data: rawSettingsData, error: rawError } = await supabase
+          .from("system_settings")
+          .select("*");
+        
+        if (rawError) {
+          console.error("Error fetching raw settings data:", rawError);
+        } else {
+          console.log("Raw settings data:", rawSettingsData);
+          // Set to state for diagnostic display
+          setRawSettingsData(rawSettingsData || []);
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      } finally {
+        setLoading(false);
       }
-
-      // Load open days
-      const openDaysSetting = data?.find(
-        (setting) => setting.setting_key === "shop_open_days",
-      );
-      if (openDaysSetting) {
-        setOpenDays(openDaysSetting.setting_value);
-      }
-    } catch (err) {
-      console.error("Error fetching settings:", err);
-    } finally {
-      setLoading(false);
     }
-  };
+
+    fetchSettings();
+  }, [supabase, router, searchParams]);
 
   // Client-side form submission handler
   const handleUpdateSettings = async (formData: FormData) => {
@@ -212,29 +190,6 @@ function AdminSettingsInner() {
       router.push(
         `/dashboard/admin/settings?error=${encodeURIComponent(error instanceof Error ? error.message : "Failed to update settings")}`,
       );
-    }
-  };
-
-  // Add saveOpenDays function
-  const saveOpenDays = async (openDaysSettings: { [key: string]: boolean }): Promise<void> => {
-    try {
-      const { error } = await supabase
-        .from("system_settings")
-        .upsert(
-          {
-            setting_key: "shop_open_days",
-            setting_value: openDaysSettings,
-            description: "Days when the charity shop is open for business",
-          },
-          { onConflict: "setting_key" }
-        );
-
-      if (error) throw error;
-
-      fetchSettings(); // Refresh settings after save
-    } catch (error) {
-      console.error("Error saving open days settings:", error);
-      throw error;
     }
   };
 
@@ -370,13 +325,6 @@ function AdminSettingsInner() {
                   <Clock size={16} />
                   <span>End of Rental</span>
                 </TabsTrigger>
-                <TabsTrigger
-                  value="opendays"
-                  className="flex items-center gap-2"
-                >
-                  <Clock size={16} />
-                  <span>Open Days</span>
-                </TabsTrigger>
               </TabsList>
 
               {/* Use the client component for all settings forms */}
@@ -452,19 +400,6 @@ function AdminSettingsInner() {
                               setting_key: "cubby_item_limits",
                               setting_value: { default: 10, premium: 20 },
                               description: "Maximum number of items a seller can add to their cubby based on their plan"
-                            },
-                            {
-                              setting_key: "shop_open_days",
-                              setting_value: {
-                                monday: true,
-                                tuesday: true,
-                                wednesday: true,
-                                thursday: true,
-                                friday: true,
-                                saturday: true,
-                                sunday: false,
-                              },
-                              description: "Days when the charity shop is open for business"
                             }
                           ]);
                           
@@ -481,105 +416,10 @@ function AdminSettingsInner() {
                 )}
               </div>
             </div>
-
-            {/* Open Days Settings */}
-            <OpenDaysSettings 
-              settings={openDays} 
-              onSave={saveOpenDays} 
-            />
           </div>
         </main>
       </div>
     </RoleGuard>
-  );
-}
-
-// Add the OpenDaysSettings component below the existing settings components
-function OpenDaysSettings({ 
-  settings, 
-  onSave 
-}: { 
-  settings: { [key: string]: boolean }, 
-  onSave: (settings: { [key: string]: boolean }) => Promise<void> 
-}) {
-  const [openDays, setOpenDays] = useState<{ [key: string]: boolean }>(settings);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleToggle = (day: string) => {
-    setOpenDays({
-      ...openDays,
-      [day]: !openDays[day],
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await onSave(openDays);
-      toast({
-        title: "Settings updated",
-        description: "Shop open days have been updated successfully.",
-      });
-    } catch (error) {
-      console.error("Error saving open days settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update open days settings. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <Card className="mt-8">
-      <CardHeader>
-        <CardTitle>Shop Open Days</CardTitle>
-        <CardDescription>
-          Configure which days the charity shop is open. Cubby rental periods will be adjusted to only count open days.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((day) => (
-              <div key={day} className="flex items-center space-x-2">
-                <Checkbox 
-                  id={`open-${day}`} 
-                  checked={openDays[day] || false}
-                  onCheckedChange={() => handleToggle(day)}
-                />
-                <label
-                  htmlFor={`open-${day}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize"
-                >
-                  {day}
-                </label>
-              </div>
-            ))}
-          </div>
-          
-          <div className="pt-4">
-            <Button 
-              type="submit" 
-              className="bg-pink-600 hover:bg-pink-700"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Open Days"
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
   );
 }
 

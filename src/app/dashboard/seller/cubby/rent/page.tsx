@@ -19,7 +19,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "../../../../../../supabase/client";
 import { Input } from "@/components/ui/input";
 import AvailableCubbies from "@/components/seller/available-cubbies";
-import { rentalDaysToCalendarDays, fetchOpenDaysConfiguration } from "@/utils/rental-utils";
 
 export default function RentCubbyPage() {
   const [rentalPeriod, setRentalPeriod] = useState<string | null>(null);
@@ -55,10 +54,6 @@ export default function RentCubbyPage() {
     self: 0.15, // 15% for self-listing (default)
     staff: 0.25, // 25% for staff-managed listing (default)
   });
-
-  const [calendarDays, setCalendarDays] = useState<number | null>(null);
-  const [openDaysConfig, setOpenDaysConfig] = useState<{ [key: string]: boolean } | null>(null);
-  const [closedDays, setClosedDays] = useState<string[]>([]);
 
   // Set default start date to today
   useEffect(() => {
@@ -369,56 +364,6 @@ export default function RentCubbyPage() {
 
     // Initial fetch happens within the ensureSettingsExist chain
   }, [supabase]);
-
-  // Fetch open days configuration on component mount
-  useEffect(() => {
-    const getOpenDaysConfig = async () => {
-      const config = await fetchOpenDaysConfiguration();
-      setOpenDaysConfig(config);
-      
-      // Determine which days are closed
-      const closed = Object.entries(config)
-        .filter(([_, isOpen]) => !isOpen)
-        .map(([day]) => day);
-      
-      setClosedDays(closed);
-    };
-    
-    getOpenDaysConfig();
-  }, []);
-
-  // Calculate calendar days when rental period or start date changes
-  useEffect(() => {
-    const calculateCalendarDays = async () => {
-      if (!rentalPeriod || !startDate || !openDaysConfig) return;
-      
-      const rentalDays = getRentalDaysFromPeriod(rentalPeriod);
-      if (!rentalDays) return;
-      
-      const { calendarDays: days } = await rentalDaysToCalendarDays(
-        rentalDays,
-        new Date(startDate)
-      );
-      
-      setCalendarDays(days);
-    };
-    
-    calculateCalendarDays();
-  }, [rentalPeriod, startDate, openDaysConfig]);
-
-  // Helper function to get rental days from period
-  const getRentalDaysFromPeriod = (period: string): number | null => {
-    switch (period) {
-      case "weekly":
-        return 7;
-      case "biweekly":
-        return 14;
-      case "monthly":
-        return 30;
-      default:
-        return null;
-    }
-  };
 
   // Calculate end date based on start date and rental period
   const calculateEndDate = (start: string, period: string) => {
@@ -1448,19 +1393,75 @@ export default function RentCubbyPage() {
                       )}
                     </div>
 
-                    {rentalPeriod && closedDays.length > 0 && (
-                      <div className="bg-pink-50 border border-pink-200 p-4 rounded-lg mt-4">
-                        <h3 className="font-medium text-pink-900">Open Days Adjustment</h3>
-                        <p className="text-sm text-pink-700 mt-1">
-                          The charity shop is closed on {closedDays.map(day => 
-                            day.charAt(0).toUpperCase() + day.slice(1)).join(', ')}.
-                          Your {getRentalDaysFromPeriod(rentalPeriod)} rental days will be spread over{' '}
-                          {calendarDays || '--'} calendar days to ensure you get the full value.
-                        </p>
-                      </div>
-                    )}
-
                     <div className="border-t pt-6 mt-2">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-gray-600 flex items-center text-sm">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-2 text-gray-400"
+                          >
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="M7 15h0M12 15h0" />
+                          </svg>
+                          Rental Fee:
+                        </span>
+                        <span className="font-medium text-sm">
+                          {rentalPeriod ? formatPrice(
+                            rentalFees[rentalPeriod as keyof typeof rentalFees],
+                          ) : "--"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-gray-600 flex items-center text-sm">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-2 text-gray-400"
+                          >
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                          </svg>
+                          Commission Rate:
+                        </span>
+                        <span className="font-medium text-sm">
+                          {listingType ? `${(commissionRates[
+                            listingType as keyof typeof commissionRates
+                          ] * 100).toFixed(0)}%` : "--"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-4 pt-3 border-t bg-pink-50 p-3 rounded-lg shadow-sm">
+                        <span className="text-sm font-medium">
+                          Total Due Now:
+                        </span>
+                        <span className="text-lg font-bold text-pink-600">
+                          {rentalPeriod ? formatPrice(
+                            rentalFees[rentalPeriod as keyof typeof rentalFees],
+                          ) : "--"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 p-3 rounded-md text-red-800 text-sm">
+                      {error}
+                    </div>
+                  )}
+
                   <Button
                     className="w-full bg-pink-600 hover:bg-pink-700 transition-all shadow-md py-5"
                     size="lg"
