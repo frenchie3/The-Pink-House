@@ -18,7 +18,7 @@ interface LayoutWrapperProps {
 }
 
 export function LayoutWrapper({ children }: LayoutWrapperProps) {
-  return <div className="flex flex-col h-screen">{children}</div>;
+  return <div className="flex flex-col h-screen overflow-hidden relative">{children}</div>;
 }
 
 /**
@@ -35,7 +35,7 @@ interface MainContentProps {
 
 export function MainContent({ children, className = "" }: MainContentProps) {
   return (
-    <main className={`flex-1 bg-gray-50 overflow-auto ${className}`}>
+    <main className={`flex-1 overflow-auto ${className}`}>
       {children}
     </main>
   );

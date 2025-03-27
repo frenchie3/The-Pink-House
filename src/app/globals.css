@@ -181,3 +181,55 @@
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
+
+/* Navigation sidebar styles */
+.nav-item {
+  @apply flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-150 overflow-hidden;
+  border-radius: 8px; /* Custom border-radius between rounded-md and rounded-full */
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.nav-item:hover {
+  @apply bg-pink-50 text-pink-600;
+  transform: translateX(2px);
+}
+
+.nav-item-active {
+  position: relative;
+  background-color: #fce7f3; /* Light pink background (pink-100) */
+  color: #111827; /* Gray-900 */
+  font-weight: 500;
+  transform: translateX(4px);
+}
+
+.nav-item-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #ec4899; /* Pink-500 */
+  z-index: 1;
+}
+
+/* Navigation sidebar layout */
+aside.fixed {
+  z-index: 50 !important; /* Ensure navigation appears above other content */
+  left: 0;
+  top: 0;
+  will-change: transform; /* Hardware acceleration for fixed position */
+  visibility: visible !important; /* Ensure visibility */
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .nav-item {
+    @apply py-3;
+  }
+  
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}

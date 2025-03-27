@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useCubbyAvailability } from "@/hooks/use-cubby-availability";
-import SellerNavbar from "@/components/seller-navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -539,7 +538,6 @@ export default function RentCubbyPage() {
 
   return (
     <>
-      <SellerNavbar />
       <main className="w-full bg-gray-50 h-screen overflow-auto">
         <div className="container mx-auto px-4 py-6">
           {/* Header Section */}

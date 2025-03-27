@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import SellerNavbar from "@/components/seller-navbar";
 import SellerGuard from "@/components/seller-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -452,7 +451,6 @@ function ExtendCubbyInner() {
     return (
       <SellerGuard>
         <LayoutWrapper>
-          <SellerNavbar />
           <MainContent className="flex justify-center items-center min-h-[60vh]">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
@@ -468,7 +466,6 @@ function ExtendCubbyInner() {
     return (
       <SellerGuard>
         <LayoutWrapper>
-          <SellerNavbar />
           <MainContent>
             <div className="container mx-auto px-4 py-8">
               <Card className="max-w-md mx-auto">
@@ -494,7 +491,6 @@ function ExtendCubbyInner() {
   return (
     <SellerGuard>
       <LayoutWrapper>
-        <SellerNavbar />
         <MainContent>
           <div className="container mx-auto px-4 py-8">
             {/* Header Section */}
