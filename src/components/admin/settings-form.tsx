@@ -29,6 +29,8 @@ import {
   Info,
   RefreshCw,
   Clock,
+  Calendar,
+  Check,
 } from "lucide-react";
 
 interface SettingsFormProps {
@@ -50,6 +52,15 @@ interface SettingsFormProps {
     gracePickupDays: number;
     lastChanceDays: number;
   };
+  openDays?: {
+    monday: boolean;
+    tuesday: boolean;
+    wednesday: boolean;
+    thursday: boolean;
+    friday: boolean;
+    saturday: boolean;
+    sunday: boolean;
+  };
 }
 
 export function SettingsForm({
@@ -58,6 +69,15 @@ export function SettingsForm({
   commRates,
   rentalFees,
   pickupSettings = { gracePickupDays: 7, lastChanceDays: 3 },
+  openDays = {
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: true,
+    sunday: false,
+  },
 }: SettingsFormProps) {
   // State for each setting type
   const [currentItemLimits, setCurrentItemLimits] = useState(itemLimits);
@@ -65,6 +85,10 @@ export function SettingsForm({
   const [currentRentalFees, setCurrentRentalFees] = useState(rentalFees);
   const [currentPickupSettings, setCurrentPickupSettings] =
     useState(pickupSettings);
+  const [currentOpenDays, setCurrentOpenDays] = useState(openDays);
+  const [openDaysError, setOpenDaysError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Update item limits
   const updateItemLimit = (type: "default" | "premium", value: number) => {
@@ -75,7 +99,10 @@ export function SettingsForm({
   };
 
   // Update commission rates
-  const updateCommRate = (type: "self_listed" | "staff_listed", value: number) => {
+  const updateCommRate = (
+    type: "self_listed" | "staff_listed",
+    value: number,
+  ) => {
     setCurrentCommRates((prev: typeof commRates) => ({
       ...prev,
       [type]: value,
@@ -104,6 +131,63 @@ export function SettingsForm({
     }));
   };
 
+  // Update open days settings
+  const updateOpenDays = (day: keyof typeof openDays, value: boolean) => {
+    const updatedOpenDays = {
+      ...currentOpenDays,
+      [day]: value,
+    };
+
+    // Check if at least one day is selected
+    const hasAtLeastOneDay = Object.values(updatedOpenDays).some(
+      (isOpen) => isOpen,
+    );
+
+    if (!hasAtLeastOneDay) {
+      setOpenDaysError("At least one day must be selected");
+      return;
+    }
+
+    setOpenDaysError("");
+    setCurrentOpenDays(updatedOpenDays);
+  };
+
+  // Handle form submission with loading state
+  const handleFormSubmit = async (formData: FormData) => {
+    setIsSubmitting(true);
+    setIsSuccess(false);
+    await updateSettings(formData);
+    setIsSubmitting(false);
+    setIsSuccess(true);
+    setTimeout(() => setIsSuccess(false), 2000);
+  };
+
+  // Render save button with appropriate state
+  const renderSaveButton = () => (
+    <Button
+      type="submit"
+      className="bg-pink-600 hover:bg-pink-700"
+      disabled={isSubmitting || !!openDaysError}
+    >
+      {isSubmitting ? (
+        <>
+          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+          Saving...
+        </>
+      ) : isSuccess ? (
+        <>
+          <Check className="mr-2 h-4 w-4" />
+          Saved!
+        </>
+      ) : (
+        <>
+          <Save className="mr-2 h-4 w-4" />
+          Save Changes
+        </>
+      )}
+    </Button>
+  );
+
   return (
     <>
       {/* Inventory Limits Tab */}
@@ -120,7 +204,7 @@ export function SettingsForm({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={updateSettings} className="space-y-8">
+            <form action={handleFormSubmit} className="space-y-8">
               <input
                 type="hidden"
                 name="setting_key"
@@ -278,13 +362,7 @@ export function SettingsForm({
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reset to Defaults
                   </Button>
-                  <Button
-                    type="submit"
-                    className="bg-pink-600 hover:bg-pink-700"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </Button>
+                  {renderSaveButton()}
                 </div>
               </div>
             </form>
@@ -306,7 +384,7 @@ export function SettingsForm({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={updateSettings} className="space-y-8">
+            <form action={handleFormSubmit} className="space-y-8">
               <input
                 type="hidden"
                 name="setting_key"
@@ -444,13 +522,7 @@ export function SettingsForm({
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reset to Defaults
                   </Button>
-                  <Button
-                    type="submit"
-                    className="bg-pink-600 hover:bg-pink-700"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </Button>
+                  {renderSaveButton()}
                 </div>
               </div>
             </form>
@@ -471,7 +543,7 @@ export function SettingsForm({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={updateSettings} className="space-y-8">
+            <form action={handleFormSubmit} className="space-y-8">
               <input
                 type="hidden"
                 name="setting_key"
@@ -639,14 +711,104 @@ export function SettingsForm({
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reset to Defaults
                   </Button>
-                  <Button
-                    type="submit"
-                    className="bg-pink-600 hover:bg-pink-700"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </Button>
+                  {renderSaveButton()}
                 </div>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Shop Open Days Tab */}
+      <TabsContent value="open_days" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-pink-600" />
+              Shop Open Days
+            </CardTitle>
+            <CardDescription>
+              Configure which days of the week the shop is open for business
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={handleFormSubmit} className="space-y-8">
+              <input type="hidden" name="setting_key" value="shop_open_days" />
+              <input
+                type="hidden"
+                name="setting_value"
+                id="open_days_json"
+                value={JSON.stringify(currentOpenDays)}
+              />
+
+              <div className="space-y-6">
+                <div className="p-6 bg-white rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-medium mb-4">Select Open Days</h3>
+
+                  {openDaysError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+                      {openDaysError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Object.entries(currentOpenDays).map(([day, isOpen]) => (
+                      <div key={day} className="flex items-center space-x-2">
+                        <Switch
+                          id={`open-day-${day}`}
+                          checked={isOpen}
+                          onCheckedChange={(checked) => {
+                            updateOpenDays(
+                              day as keyof typeof openDays,
+                              checked,
+                            );
+                          }}
+                        />
+                        <Label
+                          htmlFor={`open-day-${day}`}
+                          className="capitalize"
+                        >
+                          {day}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-800">
+                          Open Days Impact
+                        </h4>
+                        <p className="text-sm text-blue-700 mt-1">
+                          Sellers will only be charged for days when the shop is
+                          open. For example, if a seller purchases a 7-day
+                          rental and the shop is only open{" "}
+                          {
+                            Object.values(currentOpenDays).filter(Boolean)
+                              .length
+                          }{" "}
+                          days per week, their rental will span{" "}
+                          {Math.ceil(
+                            (7 /
+                              Object.values(currentOpenDays).filter(Boolean)
+                                .length) *
+                              7,
+                          )}{" "}
+                          calendar days.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t">
+                <div className="text-sm text-gray-500">
+                  Last updated: {new Date().toLocaleDateString()}
+                </div>
+                <div className="flex gap-3">{renderSaveButton()}</div>
               </div>
             </form>
           </CardContent>
@@ -666,7 +828,7 @@ export function SettingsForm({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={updateSettings} className="space-y-8">
+            <form action={handleFormSubmit} className="space-y-8">
               <input type="hidden" name="setting_key" value="unsold_settings" />
               <input
                 type="hidden"
@@ -815,13 +977,7 @@ export function SettingsForm({
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reset to Defaults
                   </Button>
-                  <Button
-                    type="submit"
-                    className="bg-pink-600 hover:bg-pink-700"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </Button>
+                  {renderSaveButton()}
                 </div>
               </div>
             </form>

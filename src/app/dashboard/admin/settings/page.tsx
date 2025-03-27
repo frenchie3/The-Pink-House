@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  Calendar,
 } from "lucide-react";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { createClient } from "../../../../../supabase/client";
@@ -36,7 +37,10 @@ function AdminSettingsInner() {
   const [loading, setLoading] = useState(true);
   const [systemSettings, setSystemSettings] = useState<any[]>([]);
   const [itemLimits, setItemLimits] = useState({ default: 10, premium: 20 });
-  const [commRates, setCommRates] = useState({ self_listed: 15, staff_listed: 25 });
+  const [commRates, setCommRates] = useState({
+    self_listed: 15,
+    staff_listed: 25,
+  });
   const [rentalFees, setRentalFees] = useState({
     weekly: 10,
     monthly: 35,
@@ -45,6 +49,15 @@ function AdminSettingsInner() {
   const [unsoldSettings, setUnsoldSettings] = useState({
     gracePickupDays: 7,
     lastChanceDays: 3,
+  });
+  const [openDays, setOpenDays] = useState({
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: true,
+    sunday: false,
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [rawSettingsData, setRawSettingsData] = useState<any[]>([]);
@@ -103,26 +116,29 @@ function AdminSettingsInner() {
         const unsoldSettingsData = data?.find(
           (setting) => setting.setting_key === "unsold_settings",
         );
+        const shopOpenDaysData = data?.find(
+          (setting) => setting.setting_key === "shop_open_days",
+        );
 
         // Parse settings for UI display
         setItemLimits(
           cubbyItemLimits?.setting_value || { default: 10, premium: 20 },
         );
-        
+
         // For commission rates, make sure we handle both percentage and decimal formats consistently
         if (commissionRates?.setting_value) {
           const selfRate = commissionRates.setting_value.self_listed || 15;
           const staffRate = commissionRates.setting_value.staff_listed || 25;
-          
+
           // No need to normalize for display in admin - we want to show the actual percentage values
           setCommRates({
             self_listed: selfRate,
-            staff_listed: staffRate
+            staff_listed: staffRate,
           });
         } else {
           setCommRates({ self_listed: 15, staff_listed: 25 });
         }
-        
+
         setRentalFees(
           cubbyRentalFees?.setting_value || {
             weekly: 10,
@@ -137,11 +153,23 @@ function AdminSettingsInner() {
           },
         );
 
+        setOpenDays(
+          shopOpenDaysData?.setting_value || {
+            monday: true,
+            tuesday: true,
+            wednesday: true,
+            thursday: true,
+            friday: true,
+            saturday: true,
+            sunday: false,
+          },
+        );
+
         // Also get the raw data for diagnostic purposes
         const { data: rawSettingsData, error: rawError } = await supabase
           .from("system_settings")
           .select("*");
-        
+
         if (rawError) {
           console.error("Error fetching raw settings data:", rawError);
         } else {
@@ -296,7 +324,7 @@ function AdminSettingsInner() {
 
             {/* Main Settings Tabs */}
             <Tabs defaultValue="cubby_limits" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-8">
+              <TabsList className="grid w-full grid-cols-5 mb-8">
                 <TabsTrigger
                   value="cubby_limits"
                   className="flex items-center gap-2"
@@ -319,6 +347,13 @@ function AdminSettingsInner() {
                   <span>Rental Pricing</span>
                 </TabsTrigger>
                 <TabsTrigger
+                  value="open_days"
+                  className="flex items-center gap-2"
+                >
+                  <Calendar size={16} />
+                  <span>Open Days</span>
+                </TabsTrigger>
+                <TabsTrigger
                   value="unsold_settings"
                   className="flex items-center gap-2"
                 >
@@ -334,22 +369,28 @@ function AdminSettingsInner() {
                 commRates={commRates}
                 rentalFees={rentalFees}
                 pickupSettings={unsoldSettings}
+                openDays={openDays}
               />
             </Tabs>
 
             {/* Diagnostic Section - for admins to debug system settings */}
             <div className="mt-8 border-t pt-8">
-              <h2 className="text-xl font-bold mb-4">System Settings Diagnostics</h2>
+              <h2 className="text-xl font-bold mb-4">
+                System Settings Diagnostics
+              </h2>
               <p className="text-gray-600 mb-4">
-                This section shows the raw data from the system_settings table for debugging purposes.
+                This section shows the raw data from the system_settings table
+                for debugging purposes.
               </p>
-              
+
               <div className="space-y-4">
                 {rawSettingsData.map((setting) => (
                   <Card key={setting.id} className="overflow-hidden">
                     <CardHeader className="bg-gray-50 py-3">
                       <CardTitle className="text-base flex items-center justify-between">
-                        <span className="font-mono text-pink-600">{setting.setting_key}</span>
+                        <span className="font-mono text-pink-600">
+                          {setting.setting_key}
+                        </span>
                         <span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-700">
                           ID: {setting.id.substring(0, 8)}...
                         </span>
@@ -366,16 +407,22 @@ function AdminSettingsInner() {
                       </div>
                     </CardContent>
                     <CardFooter className="bg-gray-50 py-2 px-4 text-xs text-gray-500 flex justify-between">
-                      <span>Created: {new Date(setting.created_at).toLocaleString()}</span>
-                      <span>Updated: {new Date(setting.updated_at).toLocaleString()}</span>
+                      <span>
+                        Created: {new Date(setting.created_at).toLocaleString()}
+                      </span>
+                      <span>
+                        Updated: {new Date(setting.updated_at).toLocaleString()}
+                      </span>
                     </CardFooter>
                   </Card>
                 ))}
 
                 {rawSettingsData.length === 0 && (
                   <div className="p-8 text-center border rounded-lg">
-                    <p className="text-gray-500">No system settings found in database!</p>
-                    <Button 
+                    <p className="text-gray-500">
+                      No system settings found in database!
+                    </p>
+                    <Button
                       className="mt-4 bg-pink-600 hover:bg-pink-700"
                       onClick={async () => {
                         try {
@@ -383,30 +430,48 @@ function AdminSettingsInner() {
                           await supabase.from("system_settings").insert([
                             {
                               setting_key: "commission_rates",
-                              setting_value: { self_listed: 15, staff_listed: 25 },
-                              description: "Commission rates for seller items"
+                              setting_value: {
+                                self_listed: 15,
+                                staff_listed: 25,
+                              },
+                              description: "Commission rates for seller items",
                             },
                             {
                               setting_key: "cubby_rental_fees",
-                              setting_value: { weekly: 10, monthly: 35, quarterly: 90 },
-                              description: "Cubby rental fees for different time periods"
+                              setting_value: {
+                                weekly: 10,
+                                monthly: 35,
+                                quarterly: 90,
+                              },
+                              description:
+                                "Cubby rental fees for different time periods",
                             },
                             {
                               setting_key: "unsold_settings",
-                              setting_value: { gracePickupDays: 7, lastChanceDays: 3 },
-                              description: "Settings for end of rental unsold item handling"
+                              setting_value: {
+                                gracePickupDays: 7,
+                                lastChanceDays: 3,
+                              },
+                              description:
+                                "Settings for end of rental unsold item handling",
                             },
                             {
                               setting_key: "cubby_item_limits",
                               setting_value: { default: 10, premium: 20 },
-                              description: "Maximum number of items a seller can add to their cubby based on their plan"
-                            }
+                              description:
+                                "Maximum number of items a seller can add to their cubby based on their plan",
+                            },
                           ]);
-                          
+
                           // Refresh the page
-                          router.push("/dashboard/admin/settings?success=Default settings created successfully");
+                          router.push(
+                            "/dashboard/admin/settings?success=Default settings created successfully",
+                          );
                         } catch (error) {
-                          console.error("Error creating default settings:", error);
+                          console.error(
+                            "Error creating default settings:",
+                            error,
+                          );
                         }
                       }}
                     >
