@@ -51,6 +51,9 @@ function ExtendCubbyInner() {
     calendarDaysCount: 0,
   });
 
+  // Add new state for the calculated end date
+  const [newEndDate, setNewEndDate] = useState<Date | null>(null);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const rentalId = searchParams.get("rental_id");
@@ -64,7 +67,7 @@ function ExtendCubbyInner() {
   });
 
   // Calculate new end date based on current end date and rental period
-  const calculatedNewEndDate = useMemo(async () => {
+  const calculateNewEndDate = useMemo(() => {
     if (!currentRental) return null;
 
     const currentEndDate = new Date(currentRental.end_date);
@@ -79,37 +82,51 @@ function ExtendCubbyInner() {
       targetOpenDays = 90;
     }
 
-    try {
-      // Call the calculate_rental_end_date function
-      const { data, error } = await supabase.rpc('calculate_rental_end_date', {
-        p_start_date: currentEndDate.toISOString(),
-        p_target_open_days: targetOpenDays
-      });
+    return {
+      currentEndDate,
+      targetOpenDays,
+      rentalPeriod
+    };
+  }, [currentRental, rentalPeriod]);
 
-      if (error) throw error;
+  // Effect to handle the async calculation
+  useEffect(() => {
+    const updateNewEndDate = async () => {
+      if (!calculateNewEndDate) return;
 
-      // Calculate calendar days count
-      const newEndDateObj = new Date(data);
-      const calendarDays = Math.ceil(
-        (newEndDateObj.getTime() - currentEndDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
+      try {
+        // Call the calculate_rental_end_date function
+        const { data, error } = await supabase.rpc('calculate_rental_end_date', {
+          p_start_date: calculateNewEndDate.currentEndDate.toISOString(),
+          p_target_open_days: calculateNewEndDate.targetOpenDays
+        });
 
-      // Update extension details
-      setExtensionDetails({
-        openDaysCount: targetOpenDays,
-        calendarDaysCount: calendarDays
-      });
+        if (error) throw error;
 
-      return newEndDateObj;
-    } catch (err) {
-      console.error('Error calculating new end date:', err);
-      return null;
-    }
-  }, [currentRental, rentalPeriod, supabase]);
+        // Calculate calendar days count
+        const newEndDateObj = new Date(data);
+        const calendarDays = Math.ceil(
+          (newEndDateObj.getTime() - calculateNewEndDate.currentEndDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        // Update extension details
+        setExtensionDetails({
+          openDaysCount: calculateNewEndDate.targetOpenDays,
+          calendarDaysCount: calendarDays
+        });
+
+        setNewEndDate(newEndDateObj);
+      } catch (err) {
+        console.error('Error calculating new end date:', err);
+        setNewEndDate(null);
+      }
+    };
+    updateNewEndDate();
+  }, [calculateNewEndDate, supabase]);
 
   // Format dates for display and API calls
   const formattedCurrentEndDate = currentRental?.end_date || "";
-  const formattedNewEndDate = calculatedNewEndDate?.toISOString() || "";
+  const formattedNewEndDate = newEndDate?.toISOString() || "";
 
   // Always call the hook but with empty strings when not checking availability
   // This follows React's rules about hooks being called in same order
@@ -437,7 +454,7 @@ function ExtendCubbyInner() {
     if (
       !currentRental ||
       !selectedCubbyId ||
-      !calculatedNewEndDate ||
+      !newEndDate ||
       !rentalPeriod
     )
       return;
@@ -454,7 +471,7 @@ function ExtendCubbyInner() {
         "extend_cubby_rental",
         {
           p_rental_id: currentRental.id,
-          p_new_end_date: calculatedNewEndDate.toISOString(),
+          p_new_end_date: newEndDate.toISOString(),
           p_new_cubby_id: selectedCubbyId,
           p_additional_fee: rentalFees[rentalPeriod as keyof typeof rentalFees],
           p_is_reassignment: isReassignment,
@@ -738,7 +755,7 @@ function ExtendCubbyInner() {
                       {/* Cubby Extension Options */}
                       {showCubbyOptions &&
                         currentRental &&
-                        calculatedNewEndDate && (
+                        newEndDate && (
                           <div className="mt-6">
                             <CubbyExtensionOptions
                               currentCubby={currentRental}
@@ -784,7 +801,7 @@ function ExtendCubbyInner() {
                             <div className="flex items-center gap-2">
                               <Calendar className="h-5 w-5 text-pink-600" />
                               <p className="text-lg font-medium">
-                                {calculatedNewEndDate?.toLocaleDateString() ||
+                                {newEndDate?.toLocaleDateString() ||
                                   ""}
                               </p>
                             </div>
