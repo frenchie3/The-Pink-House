@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   AlertCircle,
   CheckCircle2,
+  Info,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { createClient } from "../../../../../../supabase/client";
@@ -33,6 +34,23 @@ function ExtendCubbyInner() {
   const [showCubbyOptions, setShowCubbyOptions] = useState(false);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
+  // Add new state for open days
+  const [openDays, setOpenDays] = useState({
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: true,
+    sunday: false,
+  });
+
+  // Add new state for extension details
+  const [extensionDetails, setExtensionDetails] = useState({
+    openDaysCount: 0,
+    calendarDaysCount: 0,
+  });
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const rentalId = searchParams.get("rental_id");
@@ -46,22 +64,48 @@ function ExtendCubbyInner() {
   });
 
   // Calculate new end date based on current end date and rental period
-  const calculatedNewEndDate = useMemo(() => {
+  const calculatedNewEndDate = useMemo(async () => {
     if (!currentRental) return null;
 
     const currentEndDate = new Date(currentRental.end_date);
-    const newEndDate = new Date(currentEndDate);
+    let targetOpenDays = 0;
 
+    // Set target open days based on rental period
     if (rentalPeriod === "weekly") {
-      newEndDate.setDate(newEndDate.getDate() + 7);
+      targetOpenDays = 7;
     } else if (rentalPeriod === "monthly") {
-      newEndDate.setMonth(newEndDate.getMonth() + 1);
+      targetOpenDays = 30;
     } else if (rentalPeriod === "quarterly") {
-      newEndDate.setMonth(newEndDate.getMonth() + 3);
+      targetOpenDays = 90;
     }
 
-    return newEndDate;
-  }, [currentRental, rentalPeriod]);
+    try {
+      // Call the calculate_rental_end_date function
+      const { data, error } = await supabase.rpc('calculate_rental_end_date', {
+        p_start_date: currentEndDate.toISOString(),
+        p_target_open_days: targetOpenDays
+      });
+
+      if (error) throw error;
+
+      // Calculate calendar days count
+      const newEndDateObj = new Date(data);
+      const calendarDays = Math.ceil(
+        (newEndDateObj.getTime() - currentEndDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Update extension details
+      setExtensionDetails({
+        openDaysCount: targetOpenDays,
+        calendarDaysCount: calendarDays
+      });
+
+      return newEndDateObj;
+    } catch (err) {
+      console.error('Error calculating new end date:', err);
+      return null;
+    }
+  }, [currentRental, rentalPeriod, supabase]);
 
   // Format dates for display and API calls
   const formattedCurrentEndDate = currentRental?.end_date || "";
@@ -300,6 +344,28 @@ function ExtendCubbyInner() {
     };
 
     fetchSystemSettings();
+  }, [supabase]);
+
+  // Fetch open days settings
+  useEffect(() => {
+    const fetchOpenDays = async () => {
+      try {
+        const { data: settings, error } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'shop_open_days')
+          .single();
+
+        if (error) throw error;
+        if (settings) {
+          setOpenDays(settings.setting_value);
+        }
+      } catch (err) {
+        console.error('Error fetching open days settings:', err);
+      }
+    };
+
+    fetchOpenDays();
   }, [supabase]);
 
   const handleRentalPeriodChange = (value: string) => {
@@ -731,27 +797,37 @@ function ExtendCubbyInner() {
                           )}
                         </div>
 
-                        {showCubbyOptions && selectedCubbyId && (
+                        {/* Add extension details */}
+                        {rentalPeriod && (
                           <div className="bg-gray-50 p-4 rounded-lg">
                             <h3 className="text-sm font-medium text-gray-500 mb-2">
-                              Selected Cubby
+                              Extension Details
                             </h3>
-                            <div className="flex items-center gap-2">
-                              <p className="text-lg font-medium">
-                                {selectedCubbyId === currentRental.cubby_id
-                                  ? `Current Cubby #${currentRental.cubby?.cubby_number}`
-                                  : `New Cubby #${alternativeCubbies.find((c) => c.id === selectedCubbyId)?.cubby_number || ""}`}
+                            <div className="space-y-2">
+                              <p className="text-sm">
+                                <span className="font-medium">Open Days:</span> {extensionDetails.openDaysCount} days
+                              </p>
+                              <p className="text-sm">
+                                <span className="font-medium">Calendar Days:</span> {extensionDetails.calendarDaysCount} days
                               </p>
                             </div>
-                            {selectedCubbyId !== currentRental.cubby_id && (
-                              <p className="text-xs text-amber-600 mt-2">
-                                <AlertCircle className="h-3 w-3 inline mr-1" />
-                                You will need to relocate your items to the new
-                                cubby
-                              </p>
-                            )}
                           </div>
                         )}
+
+                        {/* Add info box about open days */}
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                            <div>
+                              <h4 className="text-sm font-medium text-blue-800">
+                                Open Days Extension
+                              </h4>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Your extension period is calculated based on the shop's open days. The shop is open {Object.values(openDays).filter(Boolean).length} days per week, so your extension will span more calendar days to ensure you get the full number of open days.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
 
                         <div className="border-t pt-4">
                           <div className="flex justify-between items-center mt-4">

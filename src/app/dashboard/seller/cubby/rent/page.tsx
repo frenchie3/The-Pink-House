@@ -13,6 +13,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Info,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -53,6 +54,23 @@ export default function RentCubbyPage() {
   const [commissionRates, setCommissionRates] = useState({
     self: 0.15, // 15% for self-listing (default)
     staff: 0.25, // 25% for staff-managed listing (default)
+  });
+
+  // Add new state for open days
+  const [openDays, setOpenDays] = useState({
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: true,
+    sunday: false,
+  });
+
+  // Add new state for rental details
+  const [rentalDetails, setRentalDetails] = useState({
+    openDaysCount: 0,
+    calendarDaysCount: 0,
   });
 
   // Set default start date to today
@@ -365,37 +383,76 @@ export default function RentCubbyPage() {
     // Initial fetch happens within the ensureSettingsExist chain
   }, [supabase]);
 
-  // Calculate end date based on start date and rental period
-  const calculateEndDate = (start: string, period: string) => {
-    const startDateObj = new Date(start);
-    const endDateObj = new Date(startDateObj);
+  // Fetch open days settings
+  useEffect(() => {
+    const fetchOpenDays = async () => {
+      try {
+        const { data: settings, error } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'shop_open_days')
+          .single();
 
+        if (error) throw error;
+        if (settings) {
+          setOpenDays(settings.setting_value);
+        }
+      } catch (err) {
+        console.error('Error fetching open days settings:', err);
+      }
+    };
+
+    fetchOpenDays();
+  }, [supabase]);
+
+  // Calculate end date based on start date and rental period
+  const calculateEndDate = async (start: string, period: string) => {
+    if (!start) return null;
+
+    const startDateObj = new Date(start);
+    let targetOpenDays = 0;
+
+    // Set target open days based on rental period
     if (period === "weekly") {
-      endDateObj.setDate(endDateObj.getDate() + 7);
+      targetOpenDays = 7;
     } else if (period === "monthly") {
-      endDateObj.setMonth(endDateObj.getMonth() + 1);
+      targetOpenDays = 30;
     } else if (period === "quarterly") {
-      endDateObj.setMonth(endDateObj.getMonth() + 3);
+      targetOpenDays = 90;
     }
 
-    return endDateObj.toISOString().split("T")[0];
+    try {
+      // Call the calculate_rental_end_date function
+      const { data, error } = await supabase.rpc('calculate_rental_end_date', {
+        p_start_date: startDateObj.toISOString(),
+        p_target_open_days: targetOpenDays
+      });
+
+      if (error) throw error;
+
+      // Calculate calendar days count
+      const endDateObj = new Date(data);
+      const calendarDays = Math.ceil(
+        (endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Update rental details
+      setRentalDetails({
+        openDaysCount: targetOpenDays,
+        calendarDaysCount: calendarDays
+      });
+
+      return endDateObj.toISOString().split('T')[0];
+    } catch (err) {
+      console.error('Error calculating end date:', err);
+      return null;
+    }
   };
 
   // Calculate end date based on start date and rental period
-  const calculateEndDateString = (start: string, period: string) => {
+  const calculateEndDateString = async (start: string, period: string) => {
     if (!start) return "";
-    const startDateObj = new Date(start);
-    const endDateObj = new Date(startDateObj);
-
-    if (period === "weekly") {
-      endDateObj.setDate(endDateObj.getDate() + 7);
-    } else if (period === "monthly") {
-      endDateObj.setMonth(endDateObj.getMonth() + 1);
-    } else if (period === "quarterly") {
-      endDateObj.setMonth(endDateObj.getMonth() + 3);
-    }
-
-    return endDateObj.toISOString().split("T")[0];
+    return await calculateEndDate(start, period) || "";
   };
 
   // Get the calculated end date based on the selected start date and rental period
@@ -644,8 +701,13 @@ export default function RentCubbyPage() {
                               <div>
                                 <p className="font-medium">Weekly Rental</p>
                                 <p className="text-sm text-gray-500">
-                                  7 days access to your cubby
+                                  {rentalDetails.openDaysCount} open days access to your cubby
                                 </p>
+                                {rentalDetails.calendarDaysCount > 0 && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Spans {rentalDetails.calendarDaysCount} calendar days
+                                  </p>
+                                )}
                               </div>
                               <p
                                 className={`font-medium ${rentalPeriod === "weekly" ? "text-pink-600" : ""}`}
@@ -670,8 +732,13 @@ export default function RentCubbyPage() {
                               <div>
                                 <p className="font-medium">Monthly Rental</p>
                                 <p className="text-sm text-gray-500">
-                                  30 days access to your cubby
+                                  {rentalDetails.openDaysCount} open days access to your cubby
                                 </p>
+                                {rentalDetails.calendarDaysCount > 0 && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Spans {rentalDetails.calendarDaysCount} calendar days
+                                  </p>
+                                )}
                               </div>
                               <p
                                 className={`font-medium ${rentalPeriod === "monthly" ? "text-pink-600" : ""}`}
@@ -696,8 +763,13 @@ export default function RentCubbyPage() {
                               <div>
                                 <p className="font-medium">Quarterly Rental</p>
                                 <p className="text-sm text-gray-500">
-                                  90 days access to your cubby
+                                  {rentalDetails.openDaysCount} open days access to your cubby
                                 </p>
+                                {rentalDetails.calendarDaysCount > 0 && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Spans {rentalDetails.calendarDaysCount} calendar days
+                                  </p>
+                                )}
                               </div>
                               <p
                                 className={`font-medium ${rentalPeriod === "quarterly" ? "text-pink-600" : ""}`}
@@ -707,6 +779,21 @@ export default function RentCubbyPage() {
                             </div>
                           </div>
                         </RadioGroup>
+
+                        {/* Add info box about open days */}
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                            <div>
+                              <h4 className="text-sm font-medium text-blue-800">
+                                Open Days Rental
+                              </h4>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Your rental period is calculated based on the shop's open days. The shop is open {Object.values(openDays).filter(Boolean).length} days per week, so your rental will span more calendar days to ensure you get the full number of open days.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </TabsContent>
 
@@ -1214,7 +1301,7 @@ export default function RentCubbyPage() {
                           <p className="text-xs text-gray-600 mt-0.5">
                             {new Date(startDate).toLocaleDateString()} to{" "}
                             {new Date(
-                              calculateEndDate(startDate, rentalPeriod || ""),
+                              calculatedEndDate,
                             ).toLocaleDateString()}
                           </p>
                         )}
