@@ -20,6 +20,44 @@ import { createClient } from "../../../../../../supabase/client";
 import { Input } from "@/components/ui/input";
 import AvailableCubbies from "@/components/seller/available-cubbies";
 
+// Create a simple rental period info component inline instead of importing
+const RentalPeriodInfo = ({
+  period,
+  startDate,
+  endDate,
+  calendarDays,
+}: {
+  period: string;
+  startDate: string;
+  endDate: string;
+  calendarDays?: number;
+}) => {
+  // Determine the number of open days based on the period
+  const openDays =
+    period === "weekly"
+      ? 7
+      : period === "monthly"
+        ? 30
+        : period === "quarterly"
+          ? 90
+          : 0;
+
+  return (
+    <div className="bg-pink-50 p-3 rounded-lg text-pink-800 mb-4">
+      <p className="text-sm">
+        <strong>Rental:</strong> {new Date(startDate).toLocaleDateString()} to{" "}
+        {new Date(endDate).toLocaleDateString()}
+      </p>
+      {period && (
+        <p className="text-sm mt-1">
+          <strong>Duration:</strong> {openDays} open shop days
+          {calendarDays ? ` (${calendarDays} calendar days)` : ""}
+        </p>
+      )}
+    </div>
+  );
+};
+
 export default function RentCubbyPage() {
   const [rentalPeriod, setRentalPeriod] = useState<string | null>(null);
   const [listingType, setListingType] = useState<string | null>(null);
@@ -37,6 +75,17 @@ export default function RentCubbyPage() {
   const [systemSettings, setSystemSettings] = useState({
     gracePickupDays: 7, // Default: 7 days grace period for pickup after rental expires
     lastChanceDays: 3, // Default: 3 days before expiration when seller can change preference
+  });
+
+  // Shop open days settings - fetched from system_settings table
+  const [openDays, setOpenDays] = useState({
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: true,
+    sunday: false,
   });
 
   // Rental fee structure - will be dynamically updated from system settings
@@ -67,51 +116,51 @@ export default function RentCubbyPage() {
     const ensureSettingsExist = async () => {
       try {
         console.log("Ensuring system settings exist...");
-        
+
         // Check if unsold_settings exists
         const { data: unsoldCheck, error: unsoldCheckError } = await supabase
           .from("system_settings")
           .select("id")
           .eq("setting_key", "unsold_settings")
           .maybeSingle();
-          
+
         if (unsoldCheckError) {
           console.error("Error checking unsold settings:", unsoldCheckError);
         } else if (!unsoldCheck) {
           // Settings don't exist, try to insert them
           console.log("Unsold settings don't exist, inserting default...");
-          
+
           const { error: insertError } = await supabase
             .from("system_settings")
             .insert({
               setting_key: "unsold_settings",
               setting_value: {
                 gracePickupDays: 7,
-                lastChanceDays: 3
+                lastChanceDays: 3,
               },
-              description: "Settings for end of rental unsold item handling"
+              description: "Settings for end of rental unsold item handling",
             });
-            
+
           if (insertError) {
             console.error("Error inserting unsold settings:", insertError);
           } else {
             console.log("Successfully inserted unsold settings");
           }
         }
-        
+
         // Check if rental fees exist
         const { data: feesCheck, error: feesCheckError } = await supabase
           .from("system_settings")
           .select("id")
           .eq("setting_key", "cubby_rental_fees")
           .maybeSingle();
-          
+
         if (feesCheckError) {
           console.error("Error checking rental fees:", feesCheckError);
         } else if (!feesCheck) {
           // Fees don't exist, insert them
           console.log("Rental fees don't exist, inserting default...");
-          
+
           const { error: insertError } = await supabase
             .from("system_settings")
             .insert({
@@ -119,116 +168,164 @@ export default function RentCubbyPage() {
               setting_value: {
                 weekly: 10,
                 monthly: 35,
-                quarterly: 90
+                quarterly: 90,
               },
-              description: "Cubby rental fees for different time periods"
+              description: "Cubby rental fees for different time periods",
             });
-            
+
           if (insertError) {
             console.error("Error inserting rental fees:", insertError);
           } else {
             console.log("Successfully inserted rental fees");
           }
         }
-        
+
         // Check if commission rates exist
         const { data: commCheck, error: commCheckError } = await supabase
           .from("system_settings")
           .select("id")
           .eq("setting_key", "commission_rates")
           .maybeSingle();
-          
+
         if (commCheckError) {
           console.error("Error checking commission rates:", commCheckError);
         } else if (!commCheck) {
           // Commission rates don't exist, insert them
           console.log("Commission rates don't exist, inserting default...");
-          
+
           const { error: insertError } = await supabase
             .from("system_settings")
             .insert({
               setting_key: "commission_rates",
               setting_value: {
                 self_listed: 15,
-                staff_listed: 25
+                staff_listed: 25,
               },
-              description: "Commission rates for seller items"
+              description: "Commission rates for seller items",
             });
-            
+
           if (insertError) {
             console.error("Error inserting commission rates:", insertError);
           } else {
             console.log("Successfully inserted commission rates");
           }
         }
-        
+
+        // Check if shop open days exist
+        const { data: openDaysCheck, error: openDaysCheckError } =
+          await supabase
+            .from("system_settings")
+            .select("id")
+            .eq("setting_key", "shop_open_days")
+            .maybeSingle();
+
+        if (openDaysCheckError) {
+          console.error("Error checking shop open days:", openDaysCheckError);
+        } else if (!openDaysCheck) {
+          // Shop open days don't exist, insert them
+          console.log("Shop open days don't exist, inserting default...");
+
+          const { error: insertError } = await supabase
+            .from("system_settings")
+            .insert({
+              setting_key: "shop_open_days",
+              setting_value: {
+                monday: true,
+                tuesday: true,
+                wednesday: true,
+                thursday: true,
+                friday: true,
+                saturday: true,
+                sunday: false,
+              },
+              description: "Days when the shop is open for business",
+            });
+
+          if (insertError) {
+            console.error("Error inserting shop open days:", insertError);
+          } else {
+            console.log("Successfully inserted shop open days");
+          }
+        }
       } catch (err) {
         console.error("Error ensuring settings exist:", err);
       }
     };
-    
+
     // Run this first to ensure we have the data
     ensureSettingsExist().then(() => {
       // After ensuring data exists, fetch the settings
       fetchSystemSettings();
     });
-    
+
     // Fetch commission rates and other system settings
     const fetchSystemSettings = async () => {
       try {
         console.log("Starting to fetch system settings...");
-        
+
         // First, ensure we can connect to supabase properly
         try {
           const { data: testData, error: testError } = await supabase
             .from("system_settings")
             .select("count(*)")
             .limit(1);
-            
+
           if (testError) {
             console.error("Initial test query failed:", testError);
           } else {
-            console.log("Successfully connected to system_settings table, count:", testData);
+            console.log(
+              "Successfully connected to system_settings table, count:",
+              testData,
+            );
           }
         } catch (testErr) {
           console.error("Exception during test query:", testErr);
         }
-        
+
         // Commission rates logic update to handle different formats
         try {
           console.log("Fetching commission rates...");
-          const { data: commissionData, error: commissionError } = await supabase
-            .from("system_settings")
-            .select("setting_value")
-            .eq("setting_key", "commission_rates")
-            .single();
+          const { data: commissionData, error: commissionError } =
+            await supabase
+              .from("system_settings")
+              .select("setting_value")
+              .eq("setting_key", "commission_rates")
+              .single();
 
           if (commissionError) {
             console.error("Error fetching commission rates:", commissionError);
             // Continue with default values
           } else if (commissionData && commissionData.setting_value) {
-            console.log("Commission rates fetched:", commissionData.setting_value);
-            
+            console.log(
+              "Commission rates fetched:",
+              commissionData.setting_value,
+            );
+
             // Map database values to state
             // Handle different possible naming variations for backward compatibility
             // Also handle percentages stored as whole numbers (e.g., 15 instead of 0.15)
-            const selfRate = commissionData.setting_value.self_listed || 
-                  commissionData.setting_value.self || 
-                  commissionData.setting_value.default || 15;
-                  
-            const staffRate = commissionData.setting_value.staff_listed || 
-                   commissionData.setting_value.staff || 
-                   commissionData.setting_value.premium || 25;
-            
+            const selfRate =
+              commissionData.setting_value.self_listed ||
+              commissionData.setting_value.self ||
+              commissionData.setting_value.default ||
+              15;
+
+            const staffRate =
+              commissionData.setting_value.staff_listed ||
+              commissionData.setting_value.staff ||
+              commissionData.setting_value.premium ||
+              25;
+
             // Convert percentages if needed (if > 1, assume it's a percentage like 15 instead of 0.15)
             const normalizedSelfRate = selfRate > 1 ? selfRate / 100 : selfRate;
-            const normalizedStaffRate = staffRate > 1 ? staffRate / 100 : staffRate;
-            
+            const normalizedStaffRate =
+              staffRate > 1 ? staffRate / 100 : staffRate;
+
             const commRates = {
               self: normalizedSelfRate,
-              staff: normalizedStaffRate
+              staff: normalizedStaffRate,
             };
-            
+
             console.log("Commission rates set to:", commRates);
             setCommissionRates(commRates);
           }
@@ -257,7 +354,7 @@ export default function RentCubbyPage() {
               monthly: rentalFeesData.setting_value.monthly || 35,
               quarterly: rentalFeesData.setting_value.quarterly || 90,
             };
-            
+
             console.log("Rental fees set to:", fees);
             setRentalFees(fees);
           }
@@ -287,14 +384,14 @@ export default function RentCubbyPage() {
               "Unsold settings fetched:",
               unsoldSettingsData.setting_value,
             );
-            
+
             const unsoldSettings = {
               gracePickupDays:
                 unsoldSettingsData.setting_value.gracePickupDays || 7,
               lastChanceDays:
                 unsoldSettingsData.setting_value.lastChanceDays || 3,
             };
-            
+
             console.log("Unsold settings set to:", unsoldSettings);
             setSystemSettings(unsoldSettings);
           }
@@ -302,36 +399,109 @@ export default function RentCubbyPage() {
           console.error("Exception fetching unsold settings:", unsoldErr);
           // Continue with default values
         }
-        
+
+        // Fetch shop open days settings
+        try {
+          console.log("Fetching shop open days settings...");
+          const { data: openDaysData, error: openDaysError } = await supabase
+            .from("system_settings")
+            .select("setting_value")
+            .eq("setting_key", "shop_open_days")
+            .single();
+
+          if (openDaysError) {
+            console.error(
+              "Error fetching shop open days settings:",
+              openDaysError,
+            );
+            // Continue with default values
+          } else if (openDaysData?.setting_value) {
+            console.log(
+              "Shop open days settings fetched:",
+              openDaysData.setting_value,
+            );
+
+            const shopOpenDays = {
+              monday:
+                openDaysData.setting_value.monday !== undefined
+                  ? openDaysData.setting_value.monday
+                  : true,
+              tuesday:
+                openDaysData.setting_value.tuesday !== undefined
+                  ? openDaysData.setting_value.tuesday
+                  : true,
+              wednesday:
+                openDaysData.setting_value.wednesday !== undefined
+                  ? openDaysData.setting_value.wednesday
+                  : true,
+              thursday:
+                openDaysData.setting_value.thursday !== undefined
+                  ? openDaysData.setting_value.thursday
+                  : true,
+              friday:
+                openDaysData.setting_value.friday !== undefined
+                  ? openDaysData.setting_value.friday
+                  : true,
+              saturday:
+                openDaysData.setting_value.saturday !== undefined
+                  ? openDaysData.setting_value.saturday
+                  : true,
+              sunday:
+                openDaysData.setting_value.sunday !== undefined
+                  ? openDaysData.setting_value.sunday
+                  : false,
+            };
+
+            console.log("Shop open days settings set to:", shopOpenDays);
+            setOpenDays(shopOpenDays);
+          }
+        } catch (openDaysErr) {
+          console.error(
+            "Exception fetching shop open days settings:",
+            openDaysErr,
+          );
+          // Continue with default values
+        }
+
         // Try an alternative approach if needed - fetch all settings at once
         try {
           console.log("Fetching all settings as backup...");
           const { data: allSettings, error: allSettingsError } = await supabase
             .from("system_settings")
             .select("setting_key, setting_value");
-            
+
           if (allSettingsError) {
             console.error("Error fetching all settings:", allSettingsError);
           } else if (allSettings && allSettings.length > 0) {
             console.log("All settings fetched:", allSettings);
-            
+
             // Process each setting separately
             for (const setting of allSettings) {
-              console.log(`Processing setting: ${setting.setting_key}`, setting.setting_value);
-              
-              if (setting.setting_key === "commission_rates" && !commissionRates.self) {
+              console.log(
+                `Processing setting: ${setting.setting_key}`,
+                setting.setting_value,
+              );
+
+              if (
+                setting.setting_key === "commission_rates" &&
+                !commissionRates.self
+              ) {
                 const commRates = {
-                  self: setting.setting_value.self_listed || 
-                        setting.setting_value.self || 
-                        setting.setting_value.default || 15,
-                  staff: setting.setting_value.staff_listed || 
-                        setting.setting_value.staff || 
-                        setting.setting_value.premium || 25,
+                  self:
+                    setting.setting_value.self_listed ||
+                    setting.setting_value.self ||
+                    setting.setting_value.default ||
+                    15,
+                  staff:
+                    setting.setting_value.staff_listed ||
+                    setting.setting_value.staff ||
+                    setting.setting_value.premium ||
+                    25,
                 };
                 console.log("Setting commission rates from backup:", commRates);
                 setCommissionRates(commRates);
               }
-              
+
               if (setting.setting_key === "cubby_rental_fees") {
                 const fees = {
                   weekly: setting.setting_value.weekly || 10,
@@ -341,21 +511,61 @@ export default function RentCubbyPage() {
                 console.log("Setting rental fees from backup:", fees);
                 setRentalFees(fees);
               }
-              
+
               if (setting.setting_key === "unsold_settings") {
                 const unsoldSettings = {
                   gracePickupDays: setting.setting_value.gracePickupDays || 7,
                   lastChanceDays: setting.setting_value.lastChanceDays || 3,
                 };
-                console.log("Setting unsold settings from backup:", unsoldSettings);
+                console.log(
+                  "Setting unsold settings from backup:",
+                  unsoldSettings,
+                );
                 setSystemSettings(unsoldSettings);
+              }
+
+              if (setting.setting_key === "shop_open_days") {
+                const shopOpenDays = {
+                  monday:
+                    setting.setting_value.monday !== undefined
+                      ? setting.setting_value.monday
+                      : true,
+                  tuesday:
+                    setting.setting_value.tuesday !== undefined
+                      ? setting.setting_value.tuesday
+                      : true,
+                  wednesday:
+                    setting.setting_value.wednesday !== undefined
+                      ? setting.setting_value.wednesday
+                      : true,
+                  thursday:
+                    setting.setting_value.thursday !== undefined
+                      ? setting.setting_value.thursday
+                      : true,
+                  friday:
+                    setting.setting_value.friday !== undefined
+                      ? setting.setting_value.friday
+                      : true,
+                  saturday:
+                    setting.setting_value.saturday !== undefined
+                      ? setting.setting_value.saturday
+                      : true,
+                  sunday:
+                    setting.setting_value.sunday !== undefined
+                      ? setting.setting_value.sunday
+                      : false,
+                };
+                console.log(
+                  "Setting shop open days from backup:",
+                  shopOpenDays,
+                );
+                setOpenDays(shopOpenDays);
               }
             }
           }
         } catch (allErr) {
           console.error("Exception fetching all settings:", allErr);
         }
-        
       } catch (err) {
         console.error("Error in fetchSystemSettings:", err);
         // Keep default values if there's an error
@@ -365,41 +575,76 @@ export default function RentCubbyPage() {
     // Initial fetch happens within the ensureSettingsExist chain
   }, [supabase]);
 
-  // Calculate end date based on start date and rental period
+  // Helper function to check if a date is a shop open day
+  const isShopOpenDay = (date: Date) => {
+    const dayOfWeek = date
+      .toLocaleDateString("en-US", {
+        weekday: "long",
+      })
+      .toLowerCase();
+    return openDays[dayOfWeek as keyof typeof openDays] === true;
+  };
+
+  // Calculate end date based on start date and rental period, counting only open days
   const calculateEndDate = (start: string, period: string) => {
     const startDateObj = new Date(start);
-    const endDateObj = new Date(startDateObj);
+    let endDateObj = new Date(startDateObj);
 
+    // Determine how many open days we need based on the rental period
+    let requiredOpenDays = 0;
     if (period === "weekly") {
-      endDateObj.setDate(endDateObj.getDate() + 7);
+      requiredOpenDays = 7;
     } else if (period === "monthly") {
-      endDateObj.setMonth(endDateObj.getMonth() + 1);
+      requiredOpenDays = 30; // Simplified to 30 days for a month
     } else if (period === "quarterly") {
-      endDateObj.setMonth(endDateObj.getMonth() + 3);
+      requiredOpenDays = 90; // Simplified to 90 days for a quarter
     }
 
+    // Count forward from the start date, only counting days when the shop is open
+    let openDaysCount = 0;
+    let currentDate = new Date(startDateObj);
+    let maxIterations = 365; // Safety to prevent infinite loop
+    let iterations = 0;
+
+    while (openDaysCount < requiredOpenDays && iterations < maxIterations) {
+      // Move to the next day
+      currentDate.setDate(currentDate.getDate() + 1);
+      iterations++;
+
+      // Check if this day is a shop open day
+      if (isShopOpenDay(currentDate)) {
+        openDaysCount++;
+      }
+    }
+
+    // Set the end date to the last counted day
+    endDateObj = new Date(currentDate);
     return endDateObj.toISOString().split("T")[0];
   };
 
-  // Calculate end date based on start date and rental period
+  // Calculate end date string based on start date and rental period, counting only open days
   const calculateEndDateString = (start: string, period: string) => {
     if (!start) return "";
-    const startDateObj = new Date(start);
-    const endDateObj = new Date(startDateObj);
+    return calculateEndDate(start, period);
+  };
 
-    if (period === "weekly") {
-      endDateObj.setDate(endDateObj.getDate() + 7);
-    } else if (period === "monthly") {
-      endDateObj.setMonth(endDateObj.getMonth() + 1);
-    } else if (period === "quarterly") {
-      endDateObj.setMonth(endDateObj.getMonth() + 3);
-    }
-
-    return endDateObj.toISOString().split("T")[0];
+  // Calculate the actual number of calendar days in the rental period
+  const calculateCalendarDays = (start: string, end: string) => {
+    if (!start || !end) return 0;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   // Get the calculated end date based on the selected start date and rental period
-  const calculatedEndDate = calculateEndDateString(startDate, rentalPeriod || "");
+  const calculatedEndDate = calculateEndDateString(
+    startDate,
+    rentalPeriod || "",
+  );
+
+  // Calculate the actual calendar days in the rental period
+  const calendarDays = calculateCalendarDays(startDate, calculatedEndDate);
 
   // Use the cubby availability hook at the component level
   const {
@@ -472,20 +717,36 @@ export default function RentCubbyPage() {
       // Calculate rental dates
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(calculateEndDate(startDate, rentalPeriod));
-      
+
+      // Log the rental period details for debugging
+      console.log("Rental period details:", {
+        startDate: startDateObj.toISOString(),
+        endDate: endDateObj.toISOString(),
+        rentalPeriod,
+        calendarDays: calculateCalendarDays(
+          startDate,
+          endDateObj.toISOString().split("T")[0],
+        ),
+        openDaysSettings: openDays,
+      });
+
       // Calculate grace period date (days after rental expires)
       const gracePeriodDateObj = new Date(endDateObj);
-      gracePeriodDateObj.setDate(gracePeriodDateObj.getDate() + systemSettings.gracePickupDays);
-      
+      gracePeriodDateObj.setDate(
+        gracePeriodDateObj.getDate() + systemSettings.gracePickupDays,
+      );
+
       // Calculate editable until date (days AFTER rental expires, not before)
       const editableUntilDateObj = new Date(endDateObj);
-      editableUntilDateObj.setDate(editableUntilDateObj.getDate() + systemSettings.lastChanceDays);
-      
+      editableUntilDateObj.setDate(
+        editableUntilDateObj.getDate() + systemSettings.lastChanceDays,
+      );
+
       console.log("Rental period:", {
         start: startDateObj.toISOString(),
         end: endDateObj.toISOString(),
         gracePeriodEnd: gracePeriodDateObj.toISOString(),
-        editableUntil: editableUntilDateObj.toISOString()
+        editableUntil: editableUntilDateObj.toISOString(),
       });
 
       // Create cubby rental record
@@ -503,10 +764,10 @@ export default function RentCubbyPage() {
           commission_rate:
             commissionRates[listingType as keyof typeof commissionRates],
           unsold_option: pickupPreference, // Store the seller's unsold items preference
-          
+
           // Keep the timestamp fields that do exist in the database
           grace_period_date: gracePeriodDateObj.toISOString(),
-          editable_until_date: editableUntilDateObj.toISOString()
+          editable_until_date: editableUntilDateObj.toISOString(),
         })
         .select();
 
@@ -639,12 +900,16 @@ export default function RentCubbyPage() {
                               }
                             }}
                           >
-                            <RadioGroupItem value="weekly" id="weekly" className="sr-only" />
+                            <RadioGroupItem
+                              value="weekly"
+                              id="weekly"
+                              className="sr-only"
+                            />
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-medium">Weekly Rental</p>
                                 <p className="text-sm text-gray-500">
-                                  7 days access to your cubby
+                                  7 open shop days access to your cubby
                                 </p>
                               </div>
                               <p
@@ -665,12 +930,16 @@ export default function RentCubbyPage() {
                               }
                             }}
                           >
-                            <RadioGroupItem value="monthly" id="monthly" className="sr-only" />
+                            <RadioGroupItem
+                              value="monthly"
+                              id="monthly"
+                              className="sr-only"
+                            />
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-medium">Monthly Rental</p>
                                 <p className="text-sm text-gray-500">
-                                  30 days access to your cubby
+                                  30 open shop days access to your cubby
                                 </p>
                               </div>
                               <p
@@ -691,12 +960,16 @@ export default function RentCubbyPage() {
                               }
                             }}
                           >
-                            <RadioGroupItem value="quarterly" id="quarterly" className="sr-only" />
+                            <RadioGroupItem
+                              value="quarterly"
+                              id="quarterly"
+                              className="sr-only"
+                            />
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-medium">Quarterly Rental</p>
                                 <p className="text-sm text-gray-500">
-                                  90 days access to your cubby
+                                  90 open shop days access to your cubby
                                 </p>
                               </div>
                               <p
@@ -721,6 +994,17 @@ export default function RentCubbyPage() {
                                 {new Date(
                                   calculatedEndDate,
                                 ).toLocaleDateString()}
+                              </p>
+                              <p className="text-sm mt-1">
+                                <strong>Duration:</strong>{" "}
+                                {rentalPeriod === "weekly"
+                                  ? "7"
+                                  : rentalPeriod === "monthly"
+                                    ? "30"
+                                    : rentalPeriod === "quarterly"
+                                      ? "90"
+                                      : "0"}{" "}
+                                open shop days ({calendarDays} calendar days)
                               </p>
                             </div>
 
@@ -1168,7 +1452,9 @@ export default function RentCubbyPage() {
                         </RadioGroup>
 
                         <div className="mt-4 text-center text-xs text-gray-500 italic">
-                          *You can modify this preference up to {systemSettings.lastChanceDays} days after your rental expires.
+                          *You can modify this preference up to{" "}
+                          {systemSettings.lastChanceDays} days after your rental
+                          expires.
                         </div>
                       </div>
                     </TabsContent>
@@ -1208,15 +1494,35 @@ export default function RentCubbyPage() {
                       </h3>
                       <div>
                         <p className="text-sm font-medium text-gray-900">
-                          {rentalPeriod ? (rentalPeriod.charAt(0).toUpperCase() + rentalPeriod.slice(1)) : "Select a rental period"}
+                          {rentalPeriod
+                            ? rentalPeriod.charAt(0).toUpperCase() +
+                              rentalPeriod.slice(1)
+                            : "Select a rental period"}
                         </p>
                         {startDate && (
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            {new Date(startDate).toLocaleDateString()} to{" "}
-                            {new Date(
-                              calculateEndDate(startDate, rentalPeriod || ""),
-                            ).toLocaleDateString()}
-                          </p>
+                          <>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              {new Date(startDate).toLocaleDateString()} to{" "}
+                              {new Date(
+                                calculateEndDate(startDate, rentalPeriod || ""),
+                              ).toLocaleDateString()}
+                            </p>
+                            {rentalPeriod && (
+                              <p className="text-xs text-pink-600 mt-0.5">
+                                {rentalPeriod === "weekly"
+                                  ? "7"
+                                  : rentalPeriod === "monthly"
+                                    ? "30"
+                                    : "90"}{" "}
+                                open shop days (
+                                {calculateCalendarDays(
+                                  startDate,
+                                  calculateEndDate(startDate, rentalPeriod),
+                                )}{" "}
+                                calendar days)
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -1306,10 +1612,14 @@ export default function RentCubbyPage() {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900">
-                              {listingType === "self" ? "Self-Listing" : "Staff-Managed"}
+                              {listingType === "self"
+                                ? "Self-Listing"
+                                : "Staff-Managed"}
                             </p>
                             <p className="text-xs text-gray-600 mt-0.5">
-                              {listingType === "self" ? "You manage listings" : "Staff manages listings"}
+                              {listingType === "self"
+                                ? "You manage listings"
+                                : "Staff manages listings"}
                             </p>
                           </div>
                         </div>
@@ -1330,7 +1640,9 @@ export default function RentCubbyPage() {
                             <line x1="12" y1="8" x2="12" y2="16" />
                             <line x1="8" y1="12" x2="16" y2="12" />
                           </svg>
-                          <p className="text-sm italic">Please select a listing type</p>
+                          <p className="text-sm italic">
+                            Please select a listing type
+                          </p>
                         </div>
                       )}
                     </div>
@@ -1364,10 +1676,14 @@ export default function RentCubbyPage() {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900">
-                              {pickupPreference === "pickup" ? "I'll collect my items" : "Donate unsold items"}
+                              {pickupPreference === "pickup"
+                                ? "I'll collect my items"
+                                : "Donate unsold items"}
                             </p>
                             <p className="text-xs text-gray-600 mt-0.5">
-                              {pickupPreference === "pickup" ? `${systemSettings.gracePickupDays} day grace period` : "Items will be donated"}
+                              {pickupPreference === "pickup"
+                                ? `${systemSettings.gracePickupDays} day grace period`
+                                : "Items will be donated"}
                             </p>
                           </div>
                         </div>
@@ -1388,7 +1704,9 @@ export default function RentCubbyPage() {
                             <line x1="12" y1="8" x2="12" y2="16" />
                             <line x1="8" y1="12" x2="16" y2="12" />
                           </svg>
-                          <p className="text-sm italic">Please select a preference</p>
+                          <p className="text-sm italic">
+                            Please select a preference
+                          </p>
                         </div>
                       )}
                     </div>
@@ -1414,9 +1732,13 @@ export default function RentCubbyPage() {
                           Rental Fee:
                         </span>
                         <span className="font-medium text-sm">
-                          {rentalPeriod ? formatPrice(
-                            rentalFees[rentalPeriod as keyof typeof rentalFees],
-                          ) : "--"}
+                          {rentalPeriod
+                            ? formatPrice(
+                                rentalFees[
+                                  rentalPeriod as keyof typeof rentalFees
+                                ],
+                              )
+                            : "--"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center mb-3">
@@ -1438,9 +1760,13 @@ export default function RentCubbyPage() {
                           Commission Rate:
                         </span>
                         <span className="font-medium text-sm">
-                          {listingType ? `${(commissionRates[
-                            listingType as keyof typeof commissionRates
-                          ] * 100).toFixed(0)}%` : "--"}
+                          {listingType
+                            ? `${(
+                                commissionRates[
+                                  listingType as keyof typeof commissionRates
+                                ] * 100
+                              ).toFixed(0)}%`
+                            : "--"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center mt-4 pt-3 border-t bg-pink-50 p-3 rounded-lg shadow-sm">
@@ -1448,9 +1774,13 @@ export default function RentCubbyPage() {
                           Total Due Now:
                         </span>
                         <span className="text-lg font-bold text-pink-600">
-                          {rentalPeriod ? formatPrice(
-                            rentalFees[rentalPeriod as keyof typeof rentalFees],
-                          ) : "--"}
+                          {rentalPeriod
+                            ? formatPrice(
+                                rentalFees[
+                                  rentalPeriod as keyof typeof rentalFees
+                                ],
+                              )
+                            : "--"}
                         </span>
                       </div>
                     </div>

@@ -45,27 +45,75 @@ function ExtendCubbyInner() {
     quarterly: 90,
   });
 
-  // Calculate new end date based on current end date and rental period
+  // Shop open days settings - fetched from system_settings table
+  const [openDays, setOpenDays] = useState({
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: true,
+    sunday: false,
+  });
+
+  // Helper function to check if a date is a shop open day
+  const isShopOpenDay = (date: Date) => {
+    const dayOfWeek = date
+      .toLocaleDateString("en-US", {
+        weekday: "long",
+      })
+      .toLowerCase();
+    return openDays[dayOfWeek as keyof typeof openDays] === true;
+  };
+
+  // Calculate new end date based on current end date and rental period, counting only open days
   const calculatedNewEndDate = useMemo(() => {
     if (!currentRental) return null;
 
     const currentEndDate = new Date(currentRental.end_date);
-    const newEndDate = new Date(currentEndDate);
 
+    // Determine how many open days we need based on the rental period
+    let requiredOpenDays = 0;
     if (rentalPeriod === "weekly") {
-      newEndDate.setDate(newEndDate.getDate() + 7);
+      requiredOpenDays = 7;
     } else if (rentalPeriod === "monthly") {
-      newEndDate.setMonth(newEndDate.getMonth() + 1);
+      requiredOpenDays = 30; // Simplified to 30 days for a month
     } else if (rentalPeriod === "quarterly") {
-      newEndDate.setMonth(newEndDate.getMonth() + 3);
+      requiredOpenDays = 90; // Simplified to 90 days for a quarter
     }
 
-    return newEndDate;
-  }, [currentRental, rentalPeriod]);
+    // Count forward from the current end date, only counting days when the shop is open
+    let openDaysCount = 0;
+    let currentDate = new Date(currentEndDate);
+    let maxIterations = 365; // Safety to prevent infinite loop
+    let iterations = 0;
+
+    while (openDaysCount < requiredOpenDays && iterations < maxIterations) {
+      // Move to the next day
+      currentDate.setDate(currentDate.getDate() + 1);
+      iterations++;
+
+      // Check if this day is a shop open day
+      if (isShopOpenDay(currentDate)) {
+        openDaysCount++;
+      }
+    }
+
+    return currentDate;
+  }, [currentRental, rentalPeriod, openDays]);
 
   // Format dates for display and API calls
   const formattedCurrentEndDate = currentRental?.end_date || "";
   const formattedNewEndDate = calculatedNewEndDate?.toISOString() || "";
+
+  // Calculate the actual number of calendar days in the rental period
+  const calendarDays = useMemo(() => {
+    if (!currentRental || !calculatedNewEndDate) return 0;
+    const startDate = new Date(currentRental.end_date);
+    const endDate = calculatedNewEndDate;
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, [currentRental, calculatedNewEndDate]);
 
   // Always call the hook but with empty strings when not checking availability
   // This follows React's rules about hooks being called in same order
@@ -240,6 +288,43 @@ function ExtendCubbyInner() {
           }
         }
 
+        // Check if shop open days exist and insert if not
+        const { data: openDaysCheck, error: openDaysCheckError } =
+          await supabase
+            .from("system_settings")
+            .select("id")
+            .eq("setting_key", "shop_open_days")
+            .maybeSingle();
+
+        if (openDaysCheckError) {
+          console.error("Error checking shop open days:", openDaysCheckError);
+        } else if (!openDaysCheck) {
+          // Shop open days don't exist, insert them
+          console.log("Shop open days don't exist, inserting default...");
+
+          const { error: insertError } = await supabase
+            .from("system_settings")
+            .insert({
+              setting_key: "shop_open_days",
+              setting_value: {
+                monday: true,
+                tuesday: true,
+                wednesday: true,
+                thursday: true,
+                friday: true,
+                saturday: true,
+                sunday: false,
+              },
+              description: "Days when the shop is open for business",
+            });
+
+          if (insertError) {
+            console.error("Error inserting shop open days:", insertError);
+          } else {
+            console.log("Successfully inserted shop open days");
+          }
+        }
+
         // Fetch rental fees
         console.log("Fetching rental fees...");
         const { data: rentalFeesData, error: rentalFeesError } = await supabase
@@ -262,6 +347,69 @@ function ExtendCubbyInner() {
 
           console.log("Rental fees set to:", fees);
           setRentalFees(fees);
+        }
+
+        // Fetch shop open days settings
+        try {
+          console.log("Fetching shop open days settings...");
+          const { data: openDaysData, error: openDaysError } = await supabase
+            .from("system_settings")
+            .select("setting_value")
+            .eq("setting_key", "shop_open_days")
+            .single();
+
+          if (openDaysError) {
+            console.error(
+              "Error fetching shop open days settings:",
+              openDaysError,
+            );
+            // Continue with default values
+          } else if (openDaysData?.setting_value) {
+            console.log(
+              "Shop open days settings fetched:",
+              openDaysData.setting_value,
+            );
+
+            const shopOpenDays = {
+              monday:
+                openDaysData.setting_value.monday !== undefined
+                  ? openDaysData.setting_value.monday
+                  : true,
+              tuesday:
+                openDaysData.setting_value.tuesday !== undefined
+                  ? openDaysData.setting_value.tuesday
+                  : true,
+              wednesday:
+                openDaysData.setting_value.wednesday !== undefined
+                  ? openDaysData.setting_value.wednesday
+                  : true,
+              thursday:
+                openDaysData.setting_value.thursday !== undefined
+                  ? openDaysData.setting_value.thursday
+                  : true,
+              friday:
+                openDaysData.setting_value.friday !== undefined
+                  ? openDaysData.setting_value.friday
+                  : true,
+              saturday:
+                openDaysData.setting_value.saturday !== undefined
+                  ? openDaysData.setting_value.saturday
+                  : true,
+              sunday:
+                openDaysData.setting_value.sunday !== undefined
+                  ? openDaysData.setting_value.sunday
+                  : false,
+            };
+
+            console.log("Shop open days settings set to:", shopOpenDays);
+            setOpenDays(shopOpenDays);
+          }
+        } catch (openDaysErr) {
+          console.error(
+            "Exception fetching shop open days settings:",
+            openDaysErr,
+          );
+          // Continue with default values
         }
 
         // Try an alternative approach if needed - fetch all settings at once
@@ -288,6 +436,45 @@ function ExtendCubbyInner() {
               };
               console.log("Setting rental fees from backup:", fees);
               setRentalFees(fees);
+            }
+
+            // Look for shop open days in all settings
+            const openDaysSetting = allSettings.find(
+              (s) => s.setting_key === "shop_open_days",
+            );
+            if (openDaysSetting && openDaysSetting.setting_value) {
+              const shopOpenDays = {
+                monday:
+                  openDaysSetting.setting_value.monday !== undefined
+                    ? openDaysSetting.setting_value.monday
+                    : true,
+                tuesday:
+                  openDaysSetting.setting_value.tuesday !== undefined
+                    ? openDaysSetting.setting_value.tuesday
+                    : true,
+                wednesday:
+                  openDaysSetting.setting_value.wednesday !== undefined
+                    ? openDaysSetting.setting_value.wednesday
+                    : true,
+                thursday:
+                  openDaysSetting.setting_value.thursday !== undefined
+                    ? openDaysSetting.setting_value.thursday
+                    : true,
+                friday:
+                  openDaysSetting.setting_value.friday !== undefined
+                    ? openDaysSetting.setting_value.friday
+                    : true,
+                saturday:
+                  openDaysSetting.setting_value.saturday !== undefined
+                    ? openDaysSetting.setting_value.saturday
+                    : true,
+                sunday:
+                  openDaysSetting.setting_value.sunday !== undefined
+                    ? openDaysSetting.setting_value.sunday
+                    : false,
+              };
+              console.log("Setting shop open days from backup:", shopOpenDays);
+              setOpenDays(shopOpenDays);
             }
           }
         } catch (allErr) {
@@ -584,7 +771,7 @@ function ExtendCubbyInner() {
                                     Weekly Extension
                                   </p>
                                   <p className="text-sm text-gray-500">
-                                    Add 7 more days
+                                    Add 7 open shop days
                                   </p>
                                 </div>
                                 <p
@@ -614,7 +801,7 @@ function ExtendCubbyInner() {
                                     Monthly Extension
                                   </p>
                                   <p className="text-sm text-gray-500">
-                                    Add 30 more days
+                                    Add 30 open shop days
                                   </p>
                                 </div>
                                 <p
@@ -644,7 +831,7 @@ function ExtendCubbyInner() {
                                     Quarterly Extension
                                   </p>
                                   <p className="text-sm text-gray-500">
-                                    Add 90 more days
+                                    Add 90 open shop days
                                   </p>
                                 </div>
                                 <p
@@ -715,11 +902,22 @@ function ExtendCubbyInner() {
                             New End Date
                           </h3>
                           {rentalPeriod ? (
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-5 w-5 text-pink-600" />
-                              <p className="text-lg font-medium">
-                                {calculatedNewEndDate?.toLocaleDateString() ||
-                                  ""}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-pink-600" />
+                                <p className="text-lg font-medium">
+                                  {calculatedNewEndDate?.toLocaleDateString() ||
+                                    ""}
+                                </p>
+                              </div>
+                              <p className="text-xs text-pink-600">
+                                <strong>Duration:</strong>{" "}
+                                {rentalPeriod === "weekly"
+                                  ? "7"
+                                  : rentalPeriod === "monthly"
+                                    ? "30"
+                                    : "90"}{" "}
+                                open shop days ({calendarDays} calendar days)
                               </p>
                             </div>
                           ) : (
